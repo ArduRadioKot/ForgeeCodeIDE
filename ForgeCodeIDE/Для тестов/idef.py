@@ -14,9 +14,9 @@ import subprocess
 import os
 #Create a Tkinter window
 root = tk.Tk()
-root.geometry('800x600')
+root.geometry('1000x1000')
 # Create a Tkinter-compatible photo image from the PIL image
-img = Image.open('FogeCod.png')
+img = Image.open('FCI.png')
 tk_img = ImageTk.PhotoImage(img)
 
 # Create a label with the photo image
@@ -49,7 +49,7 @@ class IDE(tk.Tk):
         self.config(menu=self.menu)
 
         # Create a text editor widget for the IDE
-        self.text_editor = tk.Text(self, width=150, height=40)
+        self.text_editor = tk.Text(self, width=160, height=40)
 
         # Pack the text editor widget into the IDE window
         self.text_editor.pack()
@@ -76,7 +76,7 @@ class IDE(tk.Tk):
         save_button.grid(row=1, column=0)
 
         # Create a new tab button
-        new_tab_button = tk.Button(button_frame, text="New Tab", bd=2, padx=5, pady=5, command=self.new_tab)
+        new_tab_button = tk.Button(button_frame, text="New Tab", bd=2,  padx=5, pady=5, command=self.new_tab)
 
         # Grid the new tab button in the third row and first column of the button frame
         new_tab_button.grid(row=2, column=0)
@@ -134,17 +134,18 @@ class IDE(tk.Tk):
         self.text_editor.insert(tk.END, highlighted_code)
 
     def open_file(self):
-        # Open a file dialog to select a file to open
-        file_path = filedialog.askopenfilename(filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'), ('Python files', '*.py'),('WEB(HTML) files', '*.html')])
-        # If a file was selected, open it and insert its contentsinto the text editor
-        if file_path:
-            with open(file_path, 'r') as file:
-                code = file.read()
-                self.text_editor.insert(tk.END, code)
+    # Open a file dialog to select a file to open
+      file_path = filedialog.askopenfilename(filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'), ('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
+    # If a file was selected, open it and insert its contents into the text editor
+      if file_path:
+          with open(file_path, 'r') as file:
+              code = file.read()
+              self.text_editor.delete('1.0', tk.END)
+              self.text_editor.insert(tk.END, code)
 
     def save_file(self):
         # Open a file dialog to select a file to save
-        file_path = filedialog.asksaveasfilename(defaultextension=".cppx", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html')])
+        file_path = filedialog.asksaveasfilename(defaultextension=".cppx", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
         # If a file was selected, save the contents of the text editor to the file
         if file_path:
             with open(file_path, 'w') as file:

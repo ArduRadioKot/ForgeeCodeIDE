@@ -12,13 +12,11 @@ from tkinter.filedialog import asksaveasfilename, askopenfilename
 import subprocess
 
 import os
-#======================================================================
-img = Image.open('FogeCod.png')
-
-# Create a Tkinter window
+#Create a Tkinter window
 root = tk.Tk()
 root.geometry('800x600')
 # Create a Tkinter-compatible photo image from the PIL image
+img = Image.open('FogeCod.png')
 tk_img = ImageTk.PhotoImage(img)
 
 # Create a label with the photo image
@@ -32,8 +30,6 @@ root.after(5000, root.destroy)
 root.mainloop()
 
 # Define the main IDE class
-#===================================================================
-#Define the main IDE class
 class IDE(tk.Tk):
 
     def __init__(self):
@@ -53,7 +49,7 @@ class IDE(tk.Tk):
         self.config(menu=self.menu)
 
         # Create a text editor widget for the IDE
-        self.text_editor = tk.Text(self, width=150, height=40)
+        self.text_editor = tk.Text(self, width=160, height=40)
 
         # Pack the text editor widget into the IDE window
         self.text_editor.pack()
@@ -62,29 +58,41 @@ class IDE(tk.Tk):
         self.text_editor.bind("<Key>", self.on_key_press)
 
         # Create a frame for the open and save file buttons
+        # Create a frame for the open and save file buttons
         button_frame = tk.Frame(self)
 
-        # Pack the button frame into the IDE window
-        button_frame.pack(side=tk.LEFT)
+# Pack the button frame into the IDE window
+        button_frame.pack(side=tk.LEFT, fill=tk.Y)
 
-        # Create an open file button
+# Create an open file button
         open_button = tk.Button(button_frame, text="Open File", bd=2, padx=5, pady=5, command=self.open_file)
 
-        # Grid the open file button in the first row and first column of the button frame
-        open_button.grid(row=0, column=0)
+# Grid the open file button in the first row and first column of the button frame
+        open_button.grid(row=0, column=0, sticky=tk.N+tk.W)
 
-        # Create a save file button
+# Create a save file button
         save_button = tk.Button(button_frame, text="Save File", bd=2, padx=5, pady=5, command=self.save_file)
 
-        # Grid the save file button in the second row and first column of the button frame
-        save_button.grid(row=1, column=0)
+# Grid the save file button in the second row and first column of the button frame
+        save_button.grid(row=1, column=0, sticky=tk.N+tk.W)
 
-        # Create a new tab button
+# Create a new tab button
         new_tab_button = tk.Button(button_frame, text="New Tab", bd=2, padx=5, pady=5, command=self.new_tab)
 
-        # Grid the new tab button in the third row and first column of the button frame
-        new_tab_button.grid(row=2, column=0)
+# Grid the new tab button in the third row and first column of the button frame
+        new_tab_button.grid(row=2, column=0, sticky=tk.N+tk.W)
 
+# Create a clear terminal button
+        clear_terminal_button = tk.Button(button_frame, text="Clear Terminal", bd=2, padx=5, pady=5, command=self.clear_terminal)
+
+# Grid the clear terminal button in the fourth row and first column of the button frame
+        clear_terminal_button.grid(row=3, column=0, sticky=tk.N+tk.W)
+
+# Create a settings button
+        settings_button = tk.Button(button_frame, text="Settings", bd=2, padx=5, pady=5, command=self.settings)
+
+# Grid the settings button in the fifth row and first column of the button frame
+        settings_button.grid(row=4, column=0, sticky=tk.N+tk.W)
         # Initialize an empty list to store the tabs
         self.tabs = []
 
@@ -126,17 +134,18 @@ class IDE(tk.Tk):
         self.text_editor.insert(tk.END, highlighted_code)
 
     def open_file(self):
-        # Open a file dialog to select a file to open
-        file_path = filedialog.askopenfilename(filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'), ('Python files', '*.py'),('WEB(HTML) files', '*.html')])
-        # If a file was selected, open it and insert its contents into the text editor
-        if file_path:
-            with open(file_path, 'r') as file:
-                code = file.read()
-                self.text_editor.insert(tk.END, code)
+    # Open a file dialog to select a file to open
+      file_path = filedialog.askopenfilename(filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'), ('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
+    # If a file was selected, open it and insert its contents into the text editor
+      if file_path:
+          with open(file_path, 'r') as file:
+              code = file.read()
+              self.text_editor.delete('1.0', tk.END)
+              self.text_editor.insert(tk.END, code)
 
     def save_file(self):
         # Open a file dialog to select a file to save
-        file_path = filedialog.asksaveasfilename(defaultextension=".cppx", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html')])
+        file_path = filedialog.asksaveasfilename(defaultextension=".cppx", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
         # If a file was selected, save the contents of the text editor to the file
         if file_path:
             with open(file_path, 'w') as file:
@@ -172,8 +181,53 @@ class IDE(tk.Tk):
                 self.co_res.config(fg='red')
                 self.co_res.insert(END, error)
 
+    def clear_terminal(self):
+        # Clear the contents of the terminal widget
+        self.co_res.delete('1.0', tk.END)
+
     def exit(self):
         self.quit()
+
+    def settings(self):
+        # Create a settings window
+        settings_window = tk.Toplevel(self)
+
+        # Create a label for the settings window
+        settings_label = tk.Label(settings_window, text="Settings")
+
+        # Pack the label into the settings window
+        settings_label.pack()
+
+        # Create a frame for the font size settings
+        font_size_frame = tk.Frame(settings_window)
+
+        # Pack the frame into the settings window
+        font_size_frame.pack()
+
+        # Create a label for the font size settings
+        font_size_label = tk.Label(font_size_frame, text="Font Size:")
+
+        # Pack the label into the frame
+        font_size_label.pack(side=tk.LEFT)
+
+        # Create a spinbox for the font size settings
+        self.font_size = tk.Spinbox(font_size_frame, from_=8, to=72, increment=2)
+
+        # Pack the spinbox into the frame
+        self.font_size.pack(side=tk.LEFT)
+
+        # Create a button to apply the font size settings
+        apply_button = tk.Button(settings_window, text="Apply", command=self.apply_font_size)
+
+        # Pack the button into the settings window
+        apply_button.pack()
+
+    def apply_font_size(self):
+        # Get the font size from the spinbox
+        font_size = int(self.font_size.get())
+
+        # Set the font size of the text editor
+        self.text_editor.config(font=("Consolas", font_size))
 
 class Tab:
     def __init__(self, master):
@@ -182,7 +236,7 @@ class Tab:
         self.top = tk.Toplevel(self.master)
 
         # Create a text editor widget for the tab
-        self.text_editor = tk.Text(self.top)
+        self.text_editor = tk.Text(self.top,  width=160, height=40)
 
         # Pack the text editor widget into the tab window
         self.text_editor.pack()
