@@ -14,9 +14,9 @@ import subprocess
 import os
 #Create a Tkinter window
 root = tk.Tk()
-root.geometry('800x600')
+root.geometry('1000x1000')
 # Create a Tkinter-compatible photo image from the PIL image
-img = Image.open('FogeCod.png')
+img = Image.open('FCI.png')
 tk_img = ImageTk.PhotoImage(img)
 
 # Create a label with the photo image
