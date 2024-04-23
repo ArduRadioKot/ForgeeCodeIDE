@@ -14,9 +14,9 @@ import subprocess
 import os
 #Create a Tkinter window
 root = tk.Tk()
-root.geometry('1000x10000')
+root.geometry('1000x1000')
 # Create a Tkinter-compatible photo image from the PIL image
-img = Image.open('FFCI.png')
+img = Image.open('FCI.png')
 tk_img = ImageTk.PhotoImage(img)
 
 # Create a label with the photo image
@@ -58,41 +58,41 @@ class IDE(tk.Tk):
         self.text_editor.bind("<Key>", self.on_key_press)
 
         # Create a frame for the open and save file buttons
-        # Create a frame for the open and save file buttons
         button_frame = tk.Frame(self)
 
-# Pack the button frame into the IDE window
-        button_frame.pack(side=tk.LEFT, fill=tk.Y)
+        # Pack the button frame into the IDE window
+        button_frame.pack(side=tk.LEFT)
 
-# Create an open file button
+        # Create an open file button
         open_button = tk.Button(button_frame, text="Open File", bd=2, padx=5, pady=5, command=self.open_file)
 
-# Grid the open file button in the first row and first column of the button frame
-        open_button.grid(row=0, column=0, sticky=tk.N+tk.W)
+        # Grid the open file button in the first row and first column of the button frame
+        open_button.grid(row=0, column=0)
 
-# Create a save file button
+        # Create a save file button
         save_button = tk.Button(button_frame, text="Save File", bd=2, padx=5, pady=5, command=self.save_file)
 
-# Grid the save file button in the second row and first column of the button frame
-        save_button.grid(row=1, column=0, sticky=tk.N+tk.W)
+        # Grid the save file button in the second row and first column of the button frame
+        save_button.grid(row=1, column=0)
 
-# Create a new tab button
-        new_tab_button = tk.Button(button_frame, text="New Tab", bd=2, padx=5, pady=5, command=self.new_tab)
+        # Create a new tab button
+        new_tab_button = tk.Button(button_frame, text="New Tab", bd=2,  padx=5, pady=5, command=self.new_tab)
 
-# Grid the new tab button in the third row and first column of the button frame
-        new_tab_button.grid(row=2, column=0, sticky=tk.N+tk.W)
+        # Grid the new tab button in the third row and first column of the button frame
+        new_tab_button.grid(row=2, column=0)
 
-# Create a clear terminal button
+        # Create a clear terminal button
         clear_terminal_button = tk.Button(button_frame, text="Clear Terminal", bd=2, padx=5, pady=5, command=self.clear_terminal)
 
-# Grid the clear terminal button in the fourth row and first column of the button frame
-        clear_terminal_button.grid(row=3, column=0, sticky=tk.N+tk.W)
+        # Grid the clear terminal button in the fourth row and first column of the button frame
+        clear_terminal_button.grid(row=3, column=0)
 
-# Create a settings button
+        # Create a settings button
         settings_button = tk.Button(button_frame, text="Settings", bd=2, padx=5, pady=5, command=self.settings)
 
-# Grid the settings button in the fifth row and first column of the button frame
-        settings_button.grid(row=4, column=0, sticky=tk.N+tk.W)
+        # Grid the settings button in the fifth row and first column of the button frame
+        settings_button.grid(row=4, column=0)
+
         # Initialize an empty list to store the tabs
         self.tabs = []
 
@@ -236,7 +236,7 @@ class Tab:
         self.top = tk.Toplevel(self.master)
 
         # Create a text editor widget for the tab
-        self.text_editor = tk.Text(self.top,  width=160, height=40)
+        self.text_editor = tk.Text(self.top)
 
         # Pack the text editor widget into the tab window
         self.text_editor.pack()
