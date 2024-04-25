@@ -49,6 +49,8 @@ class IDE(tk.Tk):
         # Create a menu for the IDE
         self.menu = Menu(self)
 
+    
+
         # Configure the IDE to use the created menu
         self.config(menu=self.menu)
 
