@@ -58,41 +58,41 @@ class IDE(tk.Tk):
         self.text_editor.bind("<Key>", self.on_key_press)
 
         # Create a frame for the open and save file buttons
-        # Create a frame for the open and save file buttons
         button_frame = tk.Frame(self)
 
-# Pack the button frame into the IDE window
-        button_frame.pack(side=tk.LEFT, fill=tk.Y)
+        # Pack the button frame into the IDE window
+        button_frame.pack(side=tk.LEFT)
 
-# Create an open file button
+        # Create an open file button
         open_button = tk.Button(button_frame, text="Open File", bd=2, padx=5, pady=5, command=self.open_file)
 
-# Grid the open file button in the first row and first column of the button frame
-        open_button.grid(row=0, column=0, sticky=tk.N+tk.W)
+        # Grid the open file button in the first row and first column of the button frame
+        open_button.grid(row=0, column=0)
 
-# Create a save file button
+        # Create a save file button
         save_button = tk.Button(button_frame, text="Save File", bd=2, padx=5, pady=5, command=self.save_file)
 
-# Grid the save file button in the second row and first column of the button frame
-        save_button.grid(row=1, column=0, sticky=tk.N+tk.W)
+        # Grid the save file button in the second row and first column of the button frame
+        save_button.grid(row=1, column=0)
 
-# Create a new tab button
-        new_tab_button = tk.Button(button_frame, text="New Tab", bd=2, padx=5, pady=5, command=self.new_tab)
+        # Create a new tab button
+        new_tab_button = tk.Button(button_frame, text="New Tab", bd=2,  padx=5, pady=5, command=self.new_tab)
 
-# Grid the new tab button in the third row and first column of the button frame
-        new_tab_button.grid(row=2, column=0, sticky=tk.N+tk.W)
+        # Grid the new tab button in the third row and first column of the button frame
+        new_tab_button.grid(row=2, column=0)
 
-# Create a clear terminal button
+        # Create a clear terminal button
         clear_terminal_button = tk.Button(button_frame, text="Clear Terminal", bd=2, padx=5, pady=5, command=self.clear_terminal)
 
-# Grid the clear terminal button in the fourth row and first column of the button frame
-        clear_terminal_button.grid(row=3, column=0, sticky=tk.N+tk.W)
+        # Grid the clear terminal button in the fourth row and first column of the button frame
+        clear_terminal_button.grid(row=3, column=0)
 
-# Create a settings button
+        # Create a settings button
         settings_button = tk.Button(button_frame, text="Settings", bd=2, padx=5, pady=5, command=self.settings)
 
-# Grid the settings button in the fifth row and first column of the button frame
-        settings_button.grid(row=4, column=0, sticky=tk.N+tk.W)
+        # Grid the settings button in the fifth row and first column of the button frame
+        settings_button.grid(row=4, column=0)
+
         # Initialize an empty list to store the tabs
         self.tabs = []
 
@@ -188,6 +188,9 @@ class IDE(tk.Tk):
     def exit(self):
         self.quit()
 
+
+    #...
+
     def settings(self):
         # Create a settings window
         settings_window = tk.Toplevel(self)
@@ -222,12 +225,58 @@ class IDE(tk.Tk):
         # Pack the button into the settings window
         apply_button.pack()
 
+        # Create a frame for the theme settings
+        theme_frame = tk.Frame(settings_window)
+
+        # Pack the frame into the settings window
+        theme_frame.pack()
+
+        # Create a label for the theme settings
+        theme_label = tk.Label(theme_frame, text="Theme:")
+
+        # Pack the label into the frame
+        theme_label.pack(side=tk.LEFT)
+
+        # Create a variable to store the theme selection
+        self.theme_var = tk.StringVar()
+
+        # Create a radio button for the light theme
+        light_theme_radio = tk.Radiobutton(theme_frame, text="Light", variable=self.theme_var, value="light")
+
+        # Pack the radio button into the frame
+        light_theme_radio.pack(side=tk.LEFT)
+
+        # Create a radio button for the dark theme
+        dark_theme_radio = tk.Radiobutton(theme_frame, text="Dark", variable=self.theme_var, value="dark")
+
+        # Pack the radio button into the frame
+        dark_theme_radio.pack(side=tk.LEFT)
+
+        # Create a button to apply the theme settings
+        apply_theme_button = tk.Button(settings_window, text="Apply", command=self.apply_theme)
+
+        # Pack the button into the settings window
+        apply_theme_button.pack()
+
     def apply_font_size(self):
         # Get the font size from the spinbox
         font_size = int(self.font_size.get())
 
         # Set the font size of the text editor
         self.text_editor.config(font=("Consolas", font_size))
+
+    def apply_theme(self):
+        # Get the theme selection from the radio buttons
+        theme = self.theme_var.get()
+
+        # Apply the theme to the text editor
+        if theme == "light":
+            self.text_editor.config(bg="white", fg="black")
+        elif theme == "dark":
+            self.text_editor.config(bg="black", fg="white")
+
+        # Apply the theme to the terminal widget
+        self.co_res.config(bg="black" if theme == "dark" else "white", fg="white" if theme == "dark" else "black")
 
 class Tab:
     def __init__(self, master):
@@ -236,7 +285,7 @@ class Tab:
         self.top = tk.Toplevel(self.master)
 
         # Create a text editor widget for the tab
-        self.text_editor = tk.Text(self.top,  width=160, height=40)
+        self.text_editor = tk.Text(self.top)
 
         # Pack the text editor widget into the tab window
         self.text_editor.pack()
@@ -255,7 +304,7 @@ class Tab:
 
     def save_tab(self):
         # Open a file dialog to select a file to save
-        file_path = filedialog.asksaveasfilename(defaultextension=".cpp", filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('C files', '*.c'), ('Python files', ' *.py'), 'WEB files', '*.html'])
+        file_path = filedialog.asksaveasfilename(defaultextension=".cpp", filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ' C files', '*.C'])
 
         # If a file was selected, save the contents of the tab's text editor to the file
         if file_path:

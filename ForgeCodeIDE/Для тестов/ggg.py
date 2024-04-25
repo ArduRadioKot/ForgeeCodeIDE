@@ -188,6 +188,9 @@ class IDE(tk.Tk):
     def exit(self):
         self.quit()
 
+
+    #...
+
     def settings(self):
         # Create a settings window
         settings_window = tk.Toplevel(self)
@@ -222,12 +225,58 @@ class IDE(tk.Tk):
         # Pack the button into the settings window
         apply_button.pack()
 
+        # Create a frame for the theme settings
+        theme_frame = tk.Frame(settings_window)
+
+        # Pack the frame into the settings window
+        theme_frame.pack()
+
+        # Create a label for the theme settings
+        theme_label = tk.Label(theme_frame, text="Theme:")
+
+        # Pack the label into the frame
+        theme_label.pack(side=tk.LEFT)
+
+        # Create a variable to store the theme selection
+        self.theme_var = tk.StringVar()
+
+        # Create a radio button for the light theme
+        light_theme_radio = tk.Radiobutton(theme_frame, text="Light", variable=self.theme_var, value="light")
+
+        # Pack the radio button into the frame
+        light_theme_radio.pack(side=tk.LEFT)
+
+        # Create a radio button for the dark theme
+        dark_theme_radio = tk.Radiobutton(theme_frame, text="Dark", variable=self.theme_var, value="dark")
+
+        # Pack the radio button into the frame
+        dark_theme_radio.pack(side=tk.LEFT)
+
+        # Create a button to apply the theme settings
+        apply_theme_button = tk.Button(settings_window, text="Apply", command=self.apply_theme)
+
+        # Pack the button into the settings window
+        apply_theme_button.pack()
+
     def apply_font_size(self):
         # Get the font size from the spinbox
         font_size = int(self.font_size.get())
 
         # Set the font size of the text editor
         self.text_editor.config(font=("Consolas", font_size))
+
+    def apply_theme(self):
+        # Get the theme selection from the radio buttons
+        theme = self.theme_var.get()
+
+        # Apply the theme to the text editor
+        if theme == "light":
+            self.text_editor.config(bg="white", fg="black")
+        elif theme == "dark":
+            self.text_editor.config(bg="black", fg="white")
+
+        # Apply the theme to the terminal widget
+        self.co_res.config(bg="black" if theme == "dark" else "white", fg="white" if theme == "dark" else "black")
 
 class Tab:
     def __init__(self, master):
@@ -255,7 +304,7 @@ class Tab:
 
     def save_tab(self):
         # Open a file dialog to select a file to save
-        file_path = filedialog.asksaveasfilename(defaultextension=".cpp", filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino')])
+        file_path = filedialog.asksaveasfilename(defaultextension=".cpp", filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ' C files', '*.C'])
 
         # If a file was selected, save the contents of the tab's text editor to the file
         if file_path:
