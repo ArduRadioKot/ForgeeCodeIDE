@@ -47,7 +47,7 @@ class IDE(tk.Tk):
 
         # Configure the IDE to use the created menu
         self.config(menu=self.menu)
-
+  
         # Create a text editor widget for the IDE
         self.text_editor = tk.Text(self, width=160, height=40)
 
