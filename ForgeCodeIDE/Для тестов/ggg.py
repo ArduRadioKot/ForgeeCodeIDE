@@ -6,15 +6,15 @@ from pygments.lexers import CppLexer
 from pygments.formatters import TerminalFormatter
 from PIL import Image, ImageTk
 from tkinter import Tk, Menu, Text, END, BOTH, Toplevel, Label
-
 from tkinter.filedialog import asksaveasfilename, askopenfilename
-
 import subprocess
-
 import os
+
+
+
 #Create a Tkinter window
 root = tk.Tk()
-root.geometry('1000x1000')
+root.geometry('500x500')
 # Create a Tkinter-compatible photo image from the PIL image
 img = Image.open('FCI.png')
 tk_img = ImageTk.PhotoImage(img)
