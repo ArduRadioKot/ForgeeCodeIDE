@@ -9,6 +9,7 @@ from tkinter import Tk, Menu, Text, END, BOTH, Toplevel, Label
 from tkinter.filedialog import asksaveasfilename, askopenfilename
 import subprocess
 import os
+from tkinter import scrolledtext
 
 
 
@@ -35,7 +36,7 @@ class IDE(tk.Tk):
     def __init__(self):
         # Initialize the superclass (tk.Tk)
         super().__init__()
-
+        
         # Set the window title
         self.title("ForgeCodeIDE")
 
@@ -49,8 +50,8 @@ class IDE(tk.Tk):
         self.config(menu=self.menu)
 
         # Create a text editor widget for the IDE
-        self.text_editor = tk.Text(self, width=160, height=40)
-
+        #self.text_editor = tk.Text(self, width=160, height=40)
+        self.text_editor = scrolledtext.ScrolledText(self, width=160, height=40)
         # Pack the text editor widget into the IDE window
         self.text_editor.pack()
 
@@ -420,5 +421,6 @@ class Tab:
 
 # Start the IDE
 if __name__ == "__main__":
+
     ide = IDE()
     ide.mainloop()
