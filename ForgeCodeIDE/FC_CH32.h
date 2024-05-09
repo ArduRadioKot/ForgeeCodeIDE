@@ -38,7 +38,7 @@ void delay(uint32_t delay_ms) {
     SysTick_Delay(delay_ticks); // use SysTick timer to generate delay
  }
 
- long map(long value, long fromLow, long fromHigh, long toLow, long toHigh) {
+ void map(long value, long fromLow, long fromHigh, long toLow, long toHigh) {
   return (value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow) + toLow;
 }
 
@@ -100,7 +100,13 @@ void analogWrite(uint32_t pin, uint32_t value) {
     Error_Handler();
   }
 }
-
+void digitalBlink(uint32_t pin, uint32_t delayms )
+{
+  digitalWrite(pin, HIHG);
+  delay(delayms);
+  digitalWrite(pin, LOW);
+  delay(delayms);
+}
 /** delay function for CH32V003 microcontroller */
 // void delay(uint32_t delay_ms) {
 //     volatile uint32_t start_time = SysTick_GetValue(); // get current SysTick value
