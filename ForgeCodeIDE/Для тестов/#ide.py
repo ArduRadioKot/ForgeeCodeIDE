@@ -53,11 +53,11 @@ class IDE(tk.Tk):
         #self.text_editor = tk.Text(self, width=160, height=40)
         self.text_editor = scrolledtext.ScrolledText(self, width=160, height=40)
         # Pack the text editor widget into the IDE window
-        self.text_editor.pack()
+        self.text_editor.pack(side=tk.TOP)
 
         # Bind the on_key_press function to the text editor widget
         self.text_editor.bind("<Key>", self.on_key_press)
-
+        self.text_editor.bind("<KeyRelease>", self.auto_brace)
         # Create a frame for the open and save file buttons
         button_frame = tk.Frame(self)
 
@@ -101,7 +101,7 @@ class IDE(tk.Tk):
         self.co_res = Text(height=12, fg='white')
 
         # Pack the terminal widget into the IDE window
-        self.co_res.pack(expand=1, fill=BOTH)
+        self.co_res.pack(expand=1, fill=BOTH, side=tk.BOTTOM)
 
         # Create a menu for the IDE
         menu_bar = Menu(self)
@@ -312,6 +312,17 @@ class IDE(tk.Tk):
         # Set the font size of the text editor
         self.text_editor.config(font=("Consolas", font_size))
 
+
+    def auto_brace(self, event):
+        if event.char in "{}[]()<>":
+            self.text_editor.insert(tk.INSERT, event.char)
+            self.text_editor.insert(tk.INSERT, self.get_closing_brace(event.char))
+            self.text_editor.mark_set("insert", tk.INSERT + 1)
+
+    def get_closing_brace(self, char):
+        braces = {"{": "}", "[": "]", "(": ")", "<":">"}
+        return braces[char]
+
     
 
     def apply_theme(self):
@@ -385,7 +396,7 @@ class Tab:
 
         # Create a text editor widget for the tab
         self.text_editor = tk.Text(self.top)
-
+        self.text_editor.bind("<KeyRelease>", self.auto_brace)
         # Pack the text editor widget into the tab window
         self.text_editor.pack()
 
@@ -417,6 +428,16 @@ class Tab:
 
         # Remove the tab from the list of tabs in the IDE
         self.master.tabs.remove(self)
+
+    def auto_brace(self, event):
+        if event.char in "{}[]()<>":
+            self.text_editor.insert(tk.INSERT, event.char)
+            self.text_editor.insert(tk.INSERT, self.get_closing_brace(event.char))
+            self.text_editor.mark_set("insert", tk.INSERT + 1)
+
+    def get_closing_brace(self, char):
+        braces = {"{": "}", "[": "]", "(": ")", "<":">"}
+        return braces[char]
 
 
 # Start the IDE
