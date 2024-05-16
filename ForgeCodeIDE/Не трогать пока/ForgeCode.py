@@ -53,7 +53,7 @@ class IDE(tk.Tk):
         #self.text_editor = tk.Text(self, width=160, height=40)
         self.text_editor = scrolledtext.ScrolledText(self, width=160, height=40)
         # Pack the text editor widget into the IDE window
-        self.text_editor.pack()
+        self.text_editor.pack(side=tk.TOP)
 
         # Bind the on_key_press function to the text editor widget
         self.text_editor.bind("<Key>", self.on_key_press)
@@ -101,7 +101,7 @@ class IDE(tk.Tk):
         self.co_res = Text(height=12, fg='white')
 
         # Pack the terminal widget into the IDE window
-        self.co_res.pack(expand=1, fill=BOTH)
+        self.co_res.pack(expand=1, fill=BOTH, side=tk.BOTTOM)
 
         # Create a menu for the IDE
         menu_bar = Menu(self)
