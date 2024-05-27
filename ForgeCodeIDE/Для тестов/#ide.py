@@ -58,11 +58,16 @@ class IDE(tk.Tk):
         # Bind the on_key_press function to the text editor widget
         self.text_editor.bind("<Key>", self.on_key_press)
         self.text_editor.bind("<KeyRelease>", self.auto_brace)
+  
         # Create a frame for the open and save file buttons
         button_frame = tk.Frame(self)
 
         # Pack the button frame into the IDE window
         button_frame.pack(side=tk.LEFT)
+        
+        self.line_number_area = tk.Text(self, width=5, height=40)
+        self.line_number_area.pack(side=tk.LEFT, fill=tk.Y)
+        self.update_line_numbers()
 
         # Create an open file button
         open_button = tk.Button(button_frame, text="Open File", bd=2, padx=5, pady=5, command=self.open_file)
@@ -188,6 +193,13 @@ class IDE(tk.Tk):
 
     def exit(self):
         self.quit()
+
+
+    def update_line_numbers(self):
+        self.line_number_area.delete(1.0, tk.END)
+        for i, line in enumerate(self.text_editor.get("1.0", tk.END).split("\n"), start=1):
+            self.line_number_area.insert(tk.END, f"{i}\n")
+        self.after(100, self.update_line_numbers)
 
 
     #...
@@ -395,7 +407,7 @@ class Tab:
         self.top = tk.Toplevel(self.master)
 
         # Create a text editor widget for the tab
-        self.text_editor = tk.Text(self.top)
+        self.text_editor = tk.Text(self.top, width=160, height=40)
         self.text_editor.bind("<KeyRelease>", self.auto_brace)
         # Pack the text editor widget into the tab window
         self.text_editor.pack()
