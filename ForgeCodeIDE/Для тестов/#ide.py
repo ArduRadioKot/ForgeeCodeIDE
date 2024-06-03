@@ -55,6 +55,18 @@ class IDE(tk.Tk):
         # Pack the text editor widget into the IDE window
         self.text_editor.pack(side=tk.TOP)
 
+        default_text = """
+#include "FC_CH32.h"
+
+void launch(){
+    // you setup code
+}
+
+void endless_loop(){
+    // you loop code
+}
+"""
+        self.text_editor.insert(tk.END, default_text)
         # Bind the on_key_press function to the text editor widget
         self.text_editor.bind("<Key>", self.on_key_press)
         self.text_editor.bind("<KeyRelease>", self.auto_brace)
@@ -64,10 +76,6 @@ class IDE(tk.Tk):
 
         # Pack the button frame into the IDE window
         button_frame.pack(side=tk.LEFT)
-        
-        self.line_number_area = tk.Text(self, width=5, height=40)
-        self.line_number_area.pack(side=tk.LEFT, fill=tk.Y)
-        self.update_line_numbers()
 
         # Create an open file button
         open_button = tk.Button(button_frame, text="Open File", bd=2, padx=5, pady=5, command=self.open_file)

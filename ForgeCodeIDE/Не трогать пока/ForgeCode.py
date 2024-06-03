@@ -51,7 +51,7 @@ class IDE(tk.Tk):
 
         # Create a text editor widget for the IDE
         #self.text_editor = tk.Text(self, width=160, height=40)
-        self.text_editor = scrolledtext.ScrolledText(self, width=160, height=40)
+        self.text_editor = scrolledtext.ScrolledText(self, width=160, height=40, )
         # Pack the text editor widget into the IDE window
         self.text_editor.pack(side=tk.TOP)
 
@@ -122,6 +122,7 @@ class IDE(tk.Tk):
         self.config(menu=menu_bar)
 
     def on_key_press(self, event):
+        
         # Get the code from the text editor
         code = self.text_editor.get("1.0", tk.END)
 
@@ -146,7 +147,7 @@ class IDE(tk.Tk):
 
     def save_file(self):
         # Open a file dialog to select a file to save
-        file_path = filedialog.asksaveasfilename(defaultextension=".cppx", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
+        file_path = filedialog.asksaveasfilename(defaultextension=".fce", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
         # If a file was selected, save the contents of the text editor to the file
         if file_path:
             with open(file_path, 'w') as file:
@@ -154,9 +155,23 @@ class IDE(tk.Tk):
                 file.write(code)
 
     def new_tab(self):
-        # Create a new tab and add it to the list of tabs
-        new_tab = Tab(self)
-        self.tabs.append(new_tab)
+    # Create a new tab and add it to the list of tabs
+       new_tab = Tab(self)
+       self.tabs.append(new_tab)
+  
+    # Set the default text for the new tab
+       default_text = """
+#include "FC_CH32.h"
+
+void launch(){
+    // you setup code
+}
+
+void endless_loop(){
+    // you loop code
+}
+"""
+       new_tab.text_editor.insert(tk.END, default_text)
 
     def run(self):
         # Open a file dialog to select a file to run
