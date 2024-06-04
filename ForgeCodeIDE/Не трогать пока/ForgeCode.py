@@ -60,7 +60,18 @@ class IDE(tk.Tk):
         self.text_editor.bind("<KeyRelease>", self.auto_brace)
         # Create a frame for the open and save file buttons
         button_frame = tk.Frame(self)
+        default_text = """
+#include "FC_CH32.h"
 
+void launch(){
+    // you setup code
+}
+
+void endless_loop(){
+    // you loop code
+}
+"""
+        self.text_editor.insert(tk.END, default_text)
         # Pack the button frame into the IDE window
         button_frame.pack(side=tk.LEFT)
 
