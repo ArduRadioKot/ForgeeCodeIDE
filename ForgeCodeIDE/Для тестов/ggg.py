@@ -331,6 +331,50 @@ void endless_loop(){
         # Pack the button into the settings window
         apply_theme_button.pack()
 
+        plugins_frame = tk.Frame(settings_window)
+
+        # Pack the frame into the settings window
+        plugins_frame.pack()
+
+        # Create a label for the plugins settings
+        plugins_label = tk.Label(plugins_frame, text="Plugins:")
+
+        # Pack the label into the frame
+        plugins_label.pack(side=tk.LEFT)
+
+        # Create a listbox for the plugins
+        self.plugins_listbox = tk.Listbox(plugins_frame, width=40)
+
+        # Pack the listbox into the frame
+        self.plugins_listbox.pack(side=tk.LEFT)
+
+        # Create a button to add a plugin
+        add_plugin_button = tk.Button(plugins_frame, text="Add Plugin", command=self.add_plugin)
+
+        # Pack the button into the frame
+        add_plugin_button.pack(side=tk.LEFT)
+
+        # Create a button to remove a plugin
+        remove_plugin_button = tk.Button(plugins_frame, text="Remove Plugin", command=self.remove_plugin)
+
+        # Pack the button into the frame
+        remove_plugin_button.pack(side=tk.LEFT)
+
+    def add_plugin(self):
+        # Open a file dialog to select a plugin to add
+        file_path = filedialog.askopenfilename(filetypes=[('Plugin files', '*.py')])
+
+        # If a file was selected, add it to the list of plugins
+        if file_path:
+            self.plugins_listbox.insert(tk.END, file_path)
+
+    def remove_plugin(self):
+        # Get the selected pluginfrom the listbox
+        plugin = self.plugins_listbox.get(self.plugins_listbox.curselection())
+
+        # Remove the plugin from the list of plugins
+        self.plugins_listbox.delete(self.plugins_listbox.curselection())
+
     def apply_font_size(self):
         # Get the font size from the spinbox
         font_size = int(self.font_size.get())
