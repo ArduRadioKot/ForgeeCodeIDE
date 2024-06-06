@@ -47,7 +47,13 @@ class codeBlock:
         self.export_button = tk.Button(self.button_frame, text="Custom element", command=self.create_custom_element)
         self.export_button.pack(fill="x")
 
+        self.export_button = tk.Button(self.button_frame, text="Clear", command=self.delete_logical_elements)
+        self.export_button.pack(fill="x")
+
         self.export_button = tk.Button(self.button_frame, text="Export to C", command=self.export_to_c)
+        self.export_button.pack(fill="x")   
+
+        self.export_button = tk.Button(self.button_frame, text="Quit", command=self.quit)
         self.export_button.pack(fill="x")
 
     def create_buttons(self):
@@ -105,6 +111,9 @@ class codeBlock:
             with open(file_path, "w") as f:
                f.write(code)
 
+    def quit(self):
+        self.root.destroy()
+
     def save_logical_elements(self):
         file_path = filedialog.asksaveasfilename(defaultextension=".fcb", filetypes=[('ForgeeCodeIDE_block', '*.fcb')])
         if file_path:
@@ -149,6 +158,8 @@ class codeBlock:
         self.elements.append(custom_element)
         self.canvas.create_window(10, 10, window=custom_element)
 
+
+
     # Save the custom element's source code to a separate Python file
         file_path = filedialog.asksaveasfilename(defaultextension=".py", filetypes=[('Python files', '*.py')])
         if file_path:
@@ -160,6 +171,11 @@ class codeBlock:
                   f.write("custom_element.bind('<B1-Motion>', self.drag)\n")
                   f.write("self.elements.append(custom_element)\n")
                   f.write("self.canvas.create_window(10, 10, window=custom_element)\n")
+
+    def delete_logical_elements(self):
+        for element in self.elements:
+            element.destroy()
+        self.elements = []
 
 root = tk.Tk()
 drag_and_drop_constructor = codeBlock(root)
