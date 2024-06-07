@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, simpledialog, messagebox
 from tkinter.scrolledtext import ScrolledText
 
 class codeBlock:
@@ -7,37 +7,39 @@ class codeBlock:
         self.master = master
         self.master.title("blockcoding")
         self.master.geometry("1367x768")
+
         self.canvas = tk.Canvas(self.master, width=1200, height=1000000, bg="gray")
         self.canvas.pack(side="left")
-        self.scroll_region = (0, 0, 1000, 1000)  # Set the scroll region to be larger than the canvas size
+        self.scroll_region = (0, 0, 1000, 1000)
         self.canvas.config(scrollregion=self.scroll_region)
         
         self.elements = []
+
         self.trash_zone = tk.Frame(self.master, bg="red", width=100, height=200)
         self.trash_zone.pack(side="right", fill="both", expand=True)
         
         self.button_frame = tk.Frame(self.master)
         self.button_frame.pack()
+
         self.v_scroll = tk.Scrollbar(self.master, orient=tk.VERTICAL, command=self.canvas.yview)
         self.v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.canvas.config(yscrollcommand=self.v_scroll.set)
         
         self.blocks = {
-            'ledON': {'code': 'digitalWrite(LED_PIN, HIGH);', 'params': []},
-            'ledOFF': {'code': 'digitalWrite(LED_PIN, LOW);', 'params': []},
-            'loop': {'code': 'void endless_loop()', 'params': []},
-            'if': {'code': 'if (%s) {\n    %s\n}', 'params': ['condition', 'body']},
-            'buttonON': {'code': 'if (digitalRead(buttonPin) == HIGH)', 'params': []},
-            'buttonOFF': {'code': 'if (digitalRead(buttonPin) == LOW)', 'params': []},
-            'else': {'code': 'else', 'params':[]},
-            'do': {'code': '{', 'params':[]},
-            'end': {'code': '}', 'params':[]},
-
-            # Add more blocks with corresponding C code
+            'ledON': {'code': 'digitalWrite(LED_PIN, HIGH);', 'params': [], 'index': 1},
+            'ledOFF': {'code': 'digitalWrite(LED_PIN, LOW);', 'params': [], 'index': 2},
+            'loop': {'code': 'void endless_loop()', 'params': [], 'index': 3},
+            'if': {'code': 'if (%s) {\n    %s\n}', 'params': ['condition', 'body'], 'index': 4},
+            'buttonON': {'code': 'if (digitalRead(buttonPin) == HIGH)', 'params': [], 'index': 5},
+            'buttonOFF': {'code': 'if (digitalRead(buttonPin) == LOW)', 'params': [], 'index': 6},
+            'else': {'code': 'else', 'params': [], 'index': 7},
+            'do': {'code': '{', 'params': [], 'index': 8},
+            'end': {'code': '}', 'params': [], 'index': 9},
+            'delay': {'code': 'sleep(1000);', 'params': [], 'index': 10},
         }
         
         self.create_buttons()
-        
+
         self.export_button = tk.Button(self.button_frame, text="Save", command=self.save_logical_elements)
         self.export_button.pack(fill="x")
 
@@ -47,13 +49,7 @@ class codeBlock:
         self.export_button = tk.Button(self.button_frame, text="Custom element", command=self.create_custom_element)
         self.export_button.pack(fill="x")
 
-        self.export_button = tk.Button(self.button_frame, text="Clear", command=self.delete_logical_elements)
-        self.export_button.pack(fill="x")
-
         self.export_button = tk.Button(self.button_frame, text="Export to C", command=self.export_to_c)
-        self.export_button.pack(fill="x")   
-
-        self.export_button = tk.Button(self.button_frame, text="Quit", command=self.quit)
         self.export_button.pack(fill="x")
 
     def create_buttons(self):
@@ -63,11 +59,13 @@ class codeBlock:
 
     def create_block(self, block_name):
         block_info = self.blocks[block_name]
-        block = tk.Label(self.master, text=block_name, bg="white", fg="black")
+        block = tk.Label(self.master, text=f"{block_name} ({block_info['index']})", bg="white", fg="black")
         block.draggable = True
+        block.params = block_info['params']
         block.bind("<ButtonPress-1>", self.start_drag)
         block.bind("<ButtonRelease-1>", self.stop_drag)
         block.bind("<B1-Motion>", self.drag)
+        block.bind("<Button-3>", self.show_context_menu)
         self.elements.append(block)
         self.canvas.create_window(10, 10, window=block)
 
@@ -103,16 +101,20 @@ class codeBlock:
     def export_to_c(self):
         code = ""
         for element in self.elements:
-            block_name = element.cget("text")
+            block_name = element.cget("text").split(" (")[0]
             block_info = self.blocks[block_name]
-            code += block_info["code"] % tuple(param.get() for param in block_info["params"]) + "\n"
+            params = self.get_block_params(block_name)
+            code += block_info["code"] % tuple(params) + "\n"
         file_path = filedialog.asksaveasfilename(defaultextension=".c", filetypes=[('C files', '*.c')])
         if file_path:
             with open(file_path, "w") as f:
                f.write(code)
 
-    def quit(self):
-        self.root.destroy()
+    def get_block_params(self, block_name):
+        block_info = self.blocks[block_name]
+        if block_info['params']:
+            return [simpledialog.askstring("Parameter", f"Enter value for {param}") for param in block_info["params"]]
+        return []
 
     def save_logical_elements(self):
         file_path = filedialog.asksaveasfilename(defaultextension=".fcb", filetypes=[('ForgeeCodeIDE_block', '*.fcb')])
@@ -131,12 +133,14 @@ class codeBlock:
                 for line in f:
                     text, x, y = line.strip().split()
                     x, y = int(x), int(y)
+                    block_name = text.split(" (")[0]
                     element = tk.Label(self.master, text=text, bg="white", fg="black", width=5, height=2)
                     element.place(x=x, y=y)
                     element.draggable = True
                     element.bind("<ButtonPress-1>", self.start_drag)
                     element.bind("<ButtonRelease-1>", self.stop_drag)
                     element.bind("<B1-Motion>", self.drag)
+                    element.bind("<Button-3>", self.show_context_menu)
                     self.elements.append(element)
 
     def create_custom_element(self):
@@ -155,12 +159,10 @@ class codeBlock:
         custom_element.bind("<ButtonPress-1>", self.start_drag)
         custom_element.bind("<ButtonRelease-1>", self.stop_drag)
         custom_element.bind("<B1-Motion>", self.drag)
+        custom_element.bind("<Button-3>", self.show_context_menu)
         self.elements.append(custom_element)
         self.canvas.create_window(10, 10, window=custom_element)
 
-
-
-    # Save the custom element's source code to a separate Python file
         file_path = filedialog.asksaveasfilename(defaultextension=".py", filetypes=[('Python files', '*.py')])
         if file_path:
              with open(file_path, "w") as f:
@@ -172,10 +174,20 @@ class codeBlock:
                   f.write("self.elements.append(custom_element)\n")
                   f.write("self.canvas.create_window(10, 10, window=custom_element)\n")
 
-    def delete_logical_elements(self):
-        for element in self.elements:
-            element.destroy()
-        self.elements = []
+    def show_context_menu(self, event: tk.Event):
+        context_menu = tk.Menu(self.master, tearoff=0)
+        context_menu.add_command(label="Delete", command=lambda: self.delete_element(event.widget))
+        context_menu.add_command(label="Edit Parameters", command=lambda: self.edit_parameters(event.widget))
+        context_menu.post(event.x_root, event.y_root)
+
+    def edit_parameters(self, element):
+        block_name = element.cget("text").split(" (")[0]
+        block_info = self.blocks[block_name]
+        if block_info["params"]:
+            params = [simpledialog.askstring("Parameter", f"Enter value for {param}") for param in block_info["params"]]
+            block_info["code"] = block_info["code"] % tuple(params)
+        else:
+            messagebox.showinfo("No Parameters", "This block has no parameters to edit.")
 
 root = tk.Tk()
 drag_and_drop_constructor = codeBlock(root)
