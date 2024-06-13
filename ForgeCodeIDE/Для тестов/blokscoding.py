@@ -35,7 +35,7 @@ class codeBlock:
             'else': {'code': 'else', 'params': [], 'index': 7},
             'do': {'code': '{', 'params': [], 'index': 8},
             'end': {'code': '}', 'params': [], 'index': 9},
-            'delay': {'code': 'sleep(1000);', 'params': [], 'index': 10},
+            'delay': {'code': 'delay(10)', 'params': [], 'index': 10},
         }
         
         self.create_buttons()
@@ -192,3 +192,4 @@ class codeBlock:
 root = tk.Tk()
 drag_and_drop_constructor = codeBlock(root)
 root.mainloop()
+ 
