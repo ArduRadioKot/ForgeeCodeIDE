@@ -10,6 +10,8 @@ from tkinter.filedialog import asksaveasfilename, askopenfilename
 import subprocess
 import os
 from tkinter import scrolledtext
+import tempfile
+import sys
 
 
 
@@ -51,10 +53,15 @@ class IDE(tk.Tk):
 
         # Create a text editor widget for the IDE
         #self.text_editor = tk.Text(self, width=160, height=40)
-        self.text_editor = scrolledtext.ScrolledText(self, width=160, height=40)
+        self.text_editor = scrolledtext.ScrolledText(self, width=160, height=40, )
         # Pack the text editor widget into the IDE window
         self.text_editor.pack(side=tk.TOP)
 
+        # Bind the on_key_press function to the text editor widget
+        self.text_editor.bind("<Key>", self.on_key_press)
+        self.text_editor.bind("<KeyRelease>", self.auto_brace)
+        # Create a frame for the open and save file buttons
+        button_frame = tk.Frame(self)
         default_text = """
 #include "FC_CH32.h"
 
@@ -67,13 +74,6 @@ void endless_loop(){
 }
 """
         self.text_editor.insert(tk.END, default_text)
-        # Bind the on_key_press function to the text editor widget
-        self.text_editor.bind("<Key>", self.on_key_press)
-        self.text_editor.bind("<KeyRelease>", self.auto_brace)
-  
-        # Create a frame for the open and save file buttons
-        button_frame = tk.Frame(self)
-
         # Pack the button frame into the IDE window
         button_frame.pack(side=tk.LEFT)
 
@@ -135,6 +135,7 @@ void endless_loop(){
         self.config(menu=menu_bar)
 
     def on_key_press(self, event):
+        
         # Get the code from the text editor
         code = self.text_editor.get("1.0", tk.END)
 
@@ -159,7 +160,7 @@ void endless_loop(){
 
     def save_file(self):
         # Open a file dialog to select a file to save
-        file_path = filedialog.asksaveasfilename(defaultextension=".cppx", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
+        file_path = filedialog.asksaveasfilename(defaultextension=".fce", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
         # If a file was selected, save the contents of the text editor to the file
         if file_path:
             with open(file_path, 'w') as file:
@@ -167,47 +168,65 @@ void endless_loop(){
                 file.write(code)
 
     def new_tab(self):
-        # Create a new tab and add it to the list of tabs
-        new_tab = Tab(self)
-        self.tabs.append(new_tab)
+    # Create a new tab and add it to the list of tabs
+       new_tab = Tab(self)
+       self.tabs.append(new_tab)
+  
+    # Set the default text for the new tab
+       default_text = """
+#include "FC_CH32.h"
+
+void launch(){
+    // you setup code
+}
+
+void endless_loop(){
+    // you loop code
+}
+"""
+       new_tab.text_editor.insert(tk.END, default_text)
 
     def run(self):
-        # Open a file dialog to select a file to run
-        file_path = filedialog.askopenfilename(filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html')])
-        # If a file was selected, run it and display the output in the terminal widget
-        if file_path:
-            command = f'python {file_path}'
-            process = subprocess.Popen(['cmd.exe', '/k', command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            output, error = process.communicate()
-            self.co_res.insert(END, os.getcwd())
-            self.co_res.insert(END, '\>')
-            self.co_res.insert(END, '\n')
-            self.co_res.insert(END, 'output:')
-            self.co_res.insert(END, '\n')
-            self.co_res.insert(END, output)
-            self.co_res.insert(END, '\n')
-            self.co_res.insert(END, 'error:')
-            self.co_res.insert(END, '\n')
-            if error == b'':
-                self.co_res.config(fg='green')
-                self.co_res.insert(END, 'No errors')
-            else:
-                self.co_res.config(fg='red')
-                self.co_res.insert(END, error)
+    # Get the code from the text editor
+        code = self.text_editor.get("1.0", tk.END)
 
+    # Create a temporary file to store the code
+        temp_file = tempfile.NamedTemporaryFile(suffix='.py', delete=False)
+        temp_file.write(code.encode())
+        temp_file.close()
+
+    # Run the Python program using the Python executable
+        python_executable = sys.executable
+        command = [python_executable, temp_file.name]
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+
+    # Display the output and error in the terminal widget
+        self.co_res.insert(END, os.getcwd())
+        self.co_res.insert(END, '>\n')
+        self.co_res.insert(END, 'output:\n')
+        self.co_res.insert(END, output.decode())
+        self.co_res.insert(END, '\nerror:\n')
+        if error == b'':
+            self.co_res.config(fg='green')
+            self.co_res.insert(END, 'No errors')
+        else:
+            self.co_res.config(fg='red')
+            self.co_res.insert(END, error.decode())
+
+    # Remove the temporary file
+        os.remove(temp_file.name)
+
+       
+
+
+    
     def clear_terminal(self):
         # Clear the contents of the terminal widget
         self.co_res.delete('1.0', tk.END)
 
     def exit(self):
         self.quit()
-
-
-    def update_line_numbers(self):
-        self.line_number_area.delete(1.0, tk.END)
-        for i, line in enumerate(self.text_editor.get("1.0", tk.END).split("\n"), start=1):
-            self.line_number_area.insert(tk.END, f"{i}\n")
-        self.after(100, self.update_line_numbers)
 
 
     #...
@@ -325,6 +344,50 @@ void endless_loop(){
         # Pack the button into the settings window
         apply_theme_button.pack()
 
+        plugins_frame = tk.Frame(settings_window)
+
+        # Pack the frame into the settings window
+        plugins_frame.pack()
+
+        # Create a label for the plugins settings
+        plugins_label = tk.Label(plugins_frame, text="Plugins:")
+
+        # Pack the label into the frame
+        plugins_label.pack(side=tk.LEFT)
+
+        # Create a listbox for the plugins
+        self.plugins_listbox = tk.Listbox(plugins_frame, width=40)
+
+        # Pack the listbox into the frame
+        self.plugins_listbox.pack(side=tk.LEFT)
+
+        # Create a button to add a plugin
+        add_plugin_button = tk.Button(plugins_frame, text="Add Plugin", command=self.add_plugin)
+
+        # Pack the button into the frame
+        add_plugin_button.pack(side=tk.LEFT)
+
+        # Create a button to remove a plugin
+        remove_plugin_button = tk.Button(plugins_frame, text="Remove Plugin", command=self.remove_plugin)
+
+        # Pack the button into the frame
+        remove_plugin_button.pack(side=tk.LEFT)
+
+    def add_plugin(self):
+        # Open a file dialog to select a plugin to add
+        file_path = filedialog.askopenfilename(filetypes=[('Plugin files', '*.py')])
+
+        # If a file was selected, add it to the list of plugins
+        if file_path:
+            self.plugins_listbox.insert(tk.END, file_path)
+
+    def remove_plugin(self):
+        # Get the selected pluginfrom the listbox
+        plugin = self.plugins_listbox.get(self.plugins_listbox.curselection())
+
+        # Remove the plugin from the list of plugins
+        self.plugins_listbox.delete(self.plugins_listbox.curselection())
+
     def apply_font_size(self):
         # Get the font size from the spinbox
         font_size = int(self.font_size.get())
@@ -415,7 +478,7 @@ class Tab:
         self.top = tk.Toplevel(self.master)
 
         # Create a text editor widget for the tab
-        self.text_editor = tk.Text(self.top, width=160, height=40)
+        self.text_editor = tk.Text(self.top)
         self.text_editor.bind("<KeyRelease>", self.auto_brace)
         # Pack the text editor widget into the tab window
         self.text_editor.pack()

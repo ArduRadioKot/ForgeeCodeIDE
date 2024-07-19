@@ -10,6 +10,8 @@ from tkinter.filedialog import asksaveasfilename, askopenfilename
 import subprocess
 import os
 from tkinter import scrolledtext
+import tempfile
+import sys
 
 
 
@@ -185,29 +187,40 @@ void endless_loop(){
        new_tab.text_editor.insert(tk.END, default_text)
 
     def run(self):
-        # Open a file dialog to select a file to run
-        file_path = filedialog.askopenfilename(filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html')])
-        # If a file was selected, run it and display the output in the terminal widget
-        if file_path:
-            command = f'python {file_path}'
-            process = subprocess.Popen(['cmd.exe', '/k', command], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            output, error = process.communicate()
-            self.co_res.insert(END, os.getcwd())
-            self.co_res.insert(END, '\>')
-            self.co_res.insert(END, '\n')
-            self.co_res.insert(END, 'output:')
-            self.co_res.insert(END, '\n')
-            self.co_res.insert(END, output)
-            self.co_res.insert(END, '\n')
-            self.co_res.insert(END, 'error:')
-            self.co_res.insert(END, '\n')
-            if error == b'':
-                self.co_res.config(fg='green')
-                self.co_res.insert(END, 'No errors')
-            else:
-                self.co_res.config(fg='red')
-                self.co_res.insert(END, error)
+    # Get the code from the text editor
+        code = self.text_editor.get("1.0", tk.END)
 
+    # Create a temporary file to store the code
+        temp_file = tempfile.NamedTemporaryFile(suffix='.py', delete=False)
+        temp_file.write(code.encode())
+        temp_file.close()
+
+    # Run the Python program using the Python executable
+        python_executable = sys.executable
+        command = [python_executable, temp_file.name]
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+
+    # Display the output and error in the terminal widget
+        self.co_res.insert(END, os.getcwd())
+        self.co_res.insert(END, '>\n')
+        self.co_res.insert(END, 'output:\n')
+        self.co_res.insert(END, output.decode())
+        self.co_res.insert(END, '\nerror:\n')
+        if error == b'':
+            self.co_res.config(fg='green')
+            self.co_res.insert(END, 'No errors')
+        else:
+            self.co_res.config(fg='red')
+            self.co_res.insert(END, error.decode())
+
+    # Remove the temporary file
+        os.remove(temp_file.name)
+
+       
+
+
+    
     def clear_terminal(self):
         # Clear the contents of the terminal widget
         self.co_res.delete('1.0', tk.END)
