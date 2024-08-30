@@ -13,25 +13,6 @@ from tkinter import scrolledtext
 import tempfile
 import sys
 
-
-
-#Create a Tkinter window
-root = tk.Tk()
-root.geometry('500x500')
-# Create a Tkinter-compatible photo image from the PIL image
-img = Image.open('FCI.png')
-tk_img = ImageTk.PhotoImage(img)
-
-# Create a label with the photo image
-label = tk.Label(root, image=tk_img)
-label.pack()
-
-# Schedule a callback function to destroy the window after a delay
-root.after(5000, root.destroy)
-
-# Run the Tkinter event loop
-root.mainloop()
-
 # Define the main IDE class
 class IDE(tk.Tk):
 
@@ -281,68 +262,7 @@ void endless_loop(){
         self.theme_var = tk.StringVar()
 
         # Create a radio button for the light theme
-        light_theme_radio = tk.Radiobutton(theme_frame, text="Light", variable=self.theme_var, value="light")
-
-        # Pack the radio button into the frame
-        light_theme_radio.pack(side=tk.LEFT)
-
         # Create a radio button for the dark theme
-        dark_theme_radio = tk.Radiobutton(theme_frame, text="Dark", variable=self.theme_var, value="dark")
-
-        # Pack the radio button into the frame
-        dark_theme_radio.pack(side=tk.LEFT)
-
-        # Create a radio button for the monokai theme
-        monokai_theme_radio = tk.Radiobutton(theme_frame, text="Monokai", variable=self.theme_var, value="monokai")
-
-        # Pack the radio button into the frame
-        monokai_theme_radio.pack(side=tk.LEFT)
-
-        # Create a radio button for the solarized dark theme
-        solarized_dark_theme_radio = tk.Radiobutton(theme_frame, text="Solarized Dark", variable=self.theme_var, value="solarized_dark")
-
-        # Pack the radio button into the frame
-        solarized_dark_theme_radio.pack(side=tk.LEFT)
-
-        # Create a radio button for the solarized light theme
-        solarized_light_theme_radio = tk.Radiobutton(theme_frame, text="Solarized Light", variable=self.theme_var, value="solarized_light")
-
-        solarized_dark_theme_radio.pack(side=tk.LEFT)
-
-        gd_theme_radio = tk.Radiobutton(theme_frame, text="Gruvbox_dark", variable=self.theme_var, value="gruvbox_dark")
-
-        gd_theme_radio.pack(side=tk.LEFT)
-
-        gl_theme_radio = tk.Radiobutton(theme_frame, text="Gruvbox_light", variable=self.theme_var, value="gruvbox_light")
-
-        gl_theme_radio.pack(side=tk.LEFT)
-
-        d_theme_radio = tk.Radiobutton(theme_frame, text="Dracula", variable=self.theme_var, value="dracula")
-
-        d_theme_radio.pack(side=tk.LEFT)
-
-        n_theme_radio = tk.Radiobutton(theme_frame, text="Nord", variable=self.theme_var, value="nord")
-
-        n_theme_radio.pack(side=tk.LEFT)
-        
-        od_theme_radio = tk.Radiobutton(theme_frame, text="One dark", variable=self.theme_var, value="one_dark")
-
-        od_theme_radio.pack(side=tk.LEFT)
-        
-        ol_theme_radio = tk.Radiobutton(theme_frame, text="One light", variable=self.theme_var, value="one_light")
-
-        ol_theme_radio.pack(side=tk.LEFT)
-
-
-
-        # Pack the radio button into the frame
-        solarized_light_theme_radio.pack(side=tk.LEFT)
-
-        # Create a button to apply the theme settings
-        apply_theme_button = tk.Button(settings_window, text="Apply", command=self.apply_theme)
-
-        # Pack the button into the settings window
-        apply_theme_button.pack()
 
         plugins_frame = tk.Frame(settings_window)
 
@@ -405,71 +325,6 @@ void endless_loop(){
     def get_closing_brace(self, char):
         braces = {"{": "}", "[": "]", "(": ")", "<":">"}
         return braces[char]
-
-    
-
-    def apply_theme(self):
-        # Get the theme selection from the radio buttons
-        theme = self.theme_var.get()
-
-        # Apply the theme to the text editor
-        if theme == "light":
-            self.text_editor.config(bg="white", fg="black")
-            self.co_res.config(bg="white", fg="black")
-            # self.config(bg="white")
-        elif theme == "dark":
-            self.text_editor.config(bg="black", fg="white")
-            self.co_res.config(bg="black", fg="white")
-            # self.config(bg="black")
-        elif theme == "monokai":
-            self.text_editor.config(bg="black", fg="white", insertbackground="green")
-            self.co_res.config(bg="black", fg="green")
-            # self.config(bg="black")
-        elif theme == "solarized_dark":
-            self.text_editor.config(bg="#002b36", fg="white", insertbackground="green")
-            self.co_res.config(bg="#002b36", fg="green")
-            # self.config(bg="#002b36")
-        elif theme == "solarized_light":
-            self.text_editor.config(bg="#fdf6e3", fg="black", insertbackground="blue")
-            self.co_res.config(bg="#fdf6e3", fg="blue")
-            # self.config(bg="#fdf6e3")
-        elif theme == "gruvbox_dark":
-            self.text_editor.config(bg="#282828", fg="white", insertbackground="green")
-            self.co_res.config(bg="#282828", fg="green")
-            # self.config(bg="#282828")
-        elif theme == "gruvbox_light":
-            self.text_editor.config(bg="#fbf1c7", fg="black", insertbackground="blue")
-            self.co_res.config(bg="#fbf1c7", fg="blue")
-            # self.config(bg="#fbf1c7")
-        elif theme == "dracula":
-            self.text_editor.config(bg="#282a36", fg="white", insertbackground="green")
-            self.co_res.config(bg="#282a36", fg="green")
-            # self.config(bg="#282a36")
-        elif theme == "nord":
-            self.text_editor.config(bg="#2e3440", fg="white", insertbackground="green")
-            self.co_res.config(bg="#2e3440", fg="green")
-            # self.config(bg="#2e3440")
-        elif theme == "one_dark":
-            self.text_editor.config(bg="#282c34", fg="white", insertbackground="green")
-            self.co_res.config(bg="#282c34", fg="green")
-            # self.config(bg="#282c34")
-        elif theme == "one_light":
-            self.text_editor.config(bg="#fafafa", fg="black", insertbackground="blue")
-            self.co_res.config(bg="#fafafa", fg="blue")
-            # self.config(bg="#fafafa")
-
-        # Apply the theme to the buttons
-        # for widget in self.winfo_children():
-        #     if isinstance(widget, tk.Button):
-        #         if theme == "light":
-        #             widget.config(bg="white", fg="black")
-        #         elif theme == "dark":
-        #             widget.config(bg="black", fg="white")
-        #         elif theme == "monokai":
-        #             widget.config(bg="black", fg="white")
-        #         elif theme == "solarized_dark":
-        #             widget.config(bg="#
-
 
 class Tab:
     def __init__(self, master):
