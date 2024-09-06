@@ -10,34 +10,40 @@ ctk.set_default_color_theme("green")
 class FrogeeCode(ctk.CTk):
     def __init__(self, master=None):
         super().__init__()
-        run_image = Image.open("run.png")
+        run_image = Image.open("./FCIDEimages/run.png")
         run_image = run_image.resize((20, 20))
         run_icon = ImageTk.PhotoImage(run_image)
 
-        new_image = Image.open("new.png")
+        new_image = Image.open("./FCIDEimages/new.png")
         new_image = new_image.resize((20, 20))
         new_icon = ImageTk.PhotoImage(new_image)
 
-        open_image = Image.open("open.png")
+        open_image = Image.open("./FCIDEimages/open.png")
         open_image = open_image.resize((20, 20))
         open_icon = ImageTk.PhotoImage(open_image)
 
-        save_image = Image.open("save.png")
+        save_image = Image.open("./FCIDEimages/save.png")
         save_image = save_image.resize((20, 20))
         save_icon = ImageTk.PhotoImage(save_image)
 
-        settings_image = Image.open("settings.png")
+        settings_image = Image.open("./FCIDEimages/settings.png")
         settings_image = settings_image.resize((20, 20))
         settings_icon = ImageTk.PhotoImage(settings_image)
 
-        quit_image = Image.open("quit.png")
+        quit_image = Image.open("./FCIDEimages/quit.png")
         quit_image = quit_image.resize((20, 20))
         quit_icon = ImageTk.PhotoImage(quit_image)
         
         self.title("FrogeeCodeIDE")
         self.geometry("800x600")
         self.root = ctk.CTk()
-        self.text_area = tk.Text(self, font=("Consolas", 12))
+        self.scrollbar = tk.Scrollbar(self)
+        self.scrollbar.pack(side="right", fill="y")
+
+        self.text_area = tk.Text(self, font=("Consolas", 12), width=16, height=4, yscrollcommand=self.scrollbar.set)
+        self.text_area.pack(fill="both", side=ctk.RIGHT, padx=0)
+
+        self.scrollbar.config(command=self.text_area.yview)
         self.text_area.pack(fill="both", side=ctk.RIGHT, expand=True, padx=0)
         self.text_area.tag_config('keyword', foreground='#ad82e0')  # purple
         self.text_area.tag_config('builtin', foreground='#3ea8e5')  # blue-violet
@@ -54,12 +60,12 @@ class FrogeeCode(ctk.CTk):
         self.comments = ['#']
         self.clas = ['class', 'def']
 
-        self.toolbar = ctk.CTkFrame(self.master, width=15, height=768)
+        self.toolbar = ctk.CTkFrame(self.master, width=20, height=768)
         self.toolbar.pack(side="left", fill="y")
-        # self.text_area.bind("<KeyRelease>", self.auto_brace)
+        self.text_area.bind("<Key>", self.auto_brace)
         self.text_area.bind("<KeyRelease>", self.highlight_syntax_realtime)  
-        self.line_number_area = tk.Text(self, width=5, height=400, font=("Consolas", 12))
-        self.line_number_area.pack(side=ctk.LEFT, fill="y", padx=10)
+        self.line_number_area = tk.Text(self, width=5, height=40, font=("Consolas", 12))
+        self.line_number_area.pack(side=ctk.LEFT, fill="y", padx=0)
         
         self.new_button = ctk.CTkButton(self.toolbar, image=new_icon, text="", width=15)
         self.new_button.pack(fill="x", pady=10)
@@ -74,14 +80,14 @@ class FrogeeCode(ctk.CTk):
         self.run_button = ctk.CTkButton(self.toolbar, image=run_icon, text="", width=15 )
         self.run_button.pack(fill="x", pady=10)
 
-        self.settings_button = ctk.CTkButton(self.toolbar, image=settings_icon, text="", width=15)
-        self.settings_button.pack(fill="x", pady=170)
+        self.settings_button = ctk.CTkButton(self.toolbar, image=settings_icon, text="", width=15, command=self.open_settings)
+        self.settings_button.pack(fill="x", pady=190)
 
         self.quit_button = ctk.CTkButton(self.toolbar, image=quit_icon, text="", width=15)
         self.quit_button.pack(fill="x", pady=10)
 
         self.update_line_numbers()
-        
+       
     def auto_brace(self, event):
         if event.char in "{}[]()<>":
             self.text_area.insert("insert", event.char)
@@ -176,7 +182,71 @@ class FrogeeCode(ctk.CTk):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
 
+    def open_settings(self):
+        self.settings_window = ctk.CTkToplevel(self)
+        self.settings_window.title("Settings")
+        self.settings_window.geometry("300x200")
 
+        self.font_size_label = ctk.CTkLabel(self.settings_window, text="Font Size:")
+        self.font_size_label.pack(pady=10)
+
+        self.font_size_entry = ctk.CTkEntry(self.settings_window, width=20)
+        self.font_size_entry.pack(pady=10)
+
+        self.theme_label = ctk.CTkLabel(self.settings_window, text="Theme:")
+        self.theme_label.pack(pady=10)
+
+        self.appearance_mode_label = ctk.CTkLabel(self.settings_window, text="Appearance Mode:")
+        self.appearance_mode_label.pack(fill="x", pady=10)
+        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.settings_window, values=["Dark", "Light", "System"],
+                                                                       command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.pack(fill="x", pady=10)
+        self.scaling_label = ctk.CTkLabel(self.settings_window, text="UI Scaling:")
+        self.scaling_label.pack(fill="x", pady=10)
+        self.scaling_optionemenu = ctk.CTkOptionMenu(self.settings_window, values=["80%", "90%", "100%", "110%", "120%"],
+                                                               command=self.change_scaling_event)
+
+        self.scaling_entry = ctk.CTkEntry(self.settings_window, width=20)
+        self.scaling_entry.pack(pady=10)
+
+        self.apply_button = ctk.CTkButton(self.settings_window, text="Apply", command=self.apply_settings)
+        self.apply_button.pack(pady=10)
+
+        self.cancel_button = ctk.CTkButton(self.settings_window, text="Cancel", command=self.settings_window.destroy)
+        self.cancel_button.pack(pady=10)
+
+    def apply_settings(self):
+        font_size = int(self.font_size_entry.get())
+        theme = self.theme_option.get()
+        scaling = int(self.scaling_entry.get()) / 100
+
+    # Save settings to a file or database
+        with open("settings.cfg", "w") as f:
+            f.write(f"font_size={font_size}\n")
+            f.write(f"theme={theme}\n")
+            f.write(f"scaling={scaling}\n")
+
+    # Apply settings to the main application
+        self.change_appearance_mode_event(theme)
+        self.change_scaling_event(f"{scaling*100}%")
+        self.text_area.config(font=("Consolas", font_size))  # Update the text area font
+        self.line_number_area.config(font=("Consolas", font_size))  # Update the line number area font
+
+        
+    def update_widgets(self):
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkButton):
+                widget.config(font=("Consolas", int(self.scaling_entry.get())))
+            elif isinstance(widget, ctk.CTkLabel):
+                widget.config(font=("Consolas", int(self.scaling_entry.get())))
+        # Update other widgets as needed
+
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        ctk.set_appearance_mode(new_appearance_mode)
+
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        ctk.set_widget_scaling(new_scaling_float)
 
     def run(self):
         self.mainloop()

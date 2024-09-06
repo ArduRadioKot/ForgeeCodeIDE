@@ -30,8 +30,8 @@ class TextEditor(tk.Tk):
         self.project_tree.insert(parent="", index=0, iid=0, text="Project", values=("My Project"))
 
         # Create the child items under the Project item
-        self.project_tree.insert(parent="Project", index=0, iid=1, text="", values=("File 1.txt"))
-        self.project_tree.insert(parent="Project", index=1, iid=2, text="", values=("File 2.txt"))
+        self.project_tree.insert(parent="Project", index=0, iid=1, text="" )
+        self.project_tree.insert(parent="Project", index=1, iid=2, text="")
 
         self.project_tree.bind("<<TreeviewSelect>>", self.on_tree_select)
 
