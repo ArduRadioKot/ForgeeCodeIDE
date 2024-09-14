@@ -198,13 +198,11 @@ class FrogeeCode(ctk.CTk):
 
         self.appearance_mode_label = ctk.CTkLabel(self.settings_window, text="Appearance Mode:")
         self.appearance_mode_label.pack(fill="x", pady=10)
-        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.settings_window, values=["Dark", "Light", "System"],
-                                                                       command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.settings_window, values=["Dark", "Light", "System"], command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.pack(fill="x", pady=10)
         self.scaling_label = ctk.CTkLabel(self.settings_window, text="UI Scaling:")
         self.scaling_label.pack(fill="x", pady=10)
-        self.scaling_optionemenu = ctk.CTkOptionMenu(self.settings_window, values=["80%", "90%", "100%", "110%", "120%"],
-                                                               command=self.change_scaling_event)
+        self.scaling_optionemenu = ctk.CTkOptionMenu(self.settings_window, values=["80%", "90%", "100%", "110%", "120%"], command=self.change_scaling_event)
 
         self.scaling_entry = ctk.CTkEntry(self.settings_window, width=20)
         self.scaling_entry.pack(pady=10)
