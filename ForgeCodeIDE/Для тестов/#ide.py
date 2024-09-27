@@ -3,6 +3,7 @@ from tkinter import simpledialog, filedialog, messagebox
 from customtkinter import CTk, CTkLabel, CTkButton,  CTkToplevel, CTkImage
 import tkinter as tk
 from PIL import Image, ImageTk
+import os
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("green") 
 
@@ -10,30 +11,15 @@ ctk.set_default_color_theme("green")
 class FrogeeCode(ctk.CTk):
     def __init__(self, master=None):
         super().__init__()
-        run_image = Image.open("./FCIDEimages/run.png")
-        run_image = run_image.resize((20, 20))
-        run_icon = ImageTk.PhotoImage(run_image)
+        current_dir = os.path.dirname(__file__)
+        image_dir = os.path.join(current_dir, 'FCIDEimages')
 
-        new_image = Image.open("./FCIDEimages/new.png")
-        new_image = new_image.resize((20, 20))
-        new_icon = ImageTk.PhotoImage(new_image)
-
-        open_image = Image.open("./FCIDEimages/open.png")
-        open_image = open_image.resize((20, 20))
-        open_icon = ImageTk.PhotoImage(open_image)
-
-        save_image = Image.open("./FCIDEimages/save.png")
-        save_image = save_image.resize((20, 20))
-        save_icon = ImageTk.PhotoImage(save_image)
-
-        settings_image = Image.open("./FCIDEimages/settings.png")
-        settings_image = settings_image.resize((20, 20))
-        settings_icon = ImageTk.PhotoImage(settings_image)
-
-        quit_image = Image.open("./FCIDEimages/quit.png")
-        quit_image = quit_image.resize((20, 20))
-        quit_icon = ImageTk.PhotoImage(quit_image)
-        
+        self.run_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "run.png")).resize((20, 20)))
+        self.new_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "new.png")).resize((20, 20)))
+        self.open_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "open.png")).resize((20, 20)))
+        self.save_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "save.png")).resize((20, 20)))
+        self.settings_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "settings.png")).resize((20, 20)))
+        self.quit_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "quit.png")).resize((20, 20)))
         self.title("FrogeeCodeIDE")
         self.geometry("800x600")
         self.root = ctk.CTk()
@@ -67,27 +53,26 @@ class FrogeeCode(ctk.CTk):
         self.line_number_area = tk.Text(self, width=5, height=40, font=("Consolas", 12))
         self.line_number_area.pack(side=ctk.LEFT, fill="y", padx=0)
         
-        self.new_button = ctk.CTkButton(self.toolbar, image=new_icon, text="", width=15)
+        self.new_button = ctk.CTkButton(self.toolbar, image=self.new_icon, text="", width=15)
         self.new_button.pack(fill="x", pady=10)
 
-        self.open_button = ctk.CTkButton(self.toolbar, image=open_icon, text="", width=15)
+        self.open_button = ctk.CTkButton(self.toolbar, image=self.open_icon, text="", width=15)
         self.open_button.pack(fill="x", pady=10)
 
-        self.save_button = ctk.CTkButton(self.toolbar, image=save_icon, text="", width=15)
+        self.save_button = ctk.CTkButton(self.toolbar, image=self.save_icon, text="", width=15)
         self.save_button.pack(fill="x", pady=10)
 
 
-        self.run_button = ctk.CTkButton(self.toolbar, image=run_icon, text="", width=15 )
+        self.run_button = ctk.CTkButton(self.toolbar, image=self.run_icon, text="", width=15 )
         self.run_button.pack(fill="x", pady=10)
 
-        self.settings_button = ctk.CTkButton(self.toolbar, image=settings_icon, text="", width=15, command=self.open_settings)
+        self.settings_button = ctk.CTkButton(self.toolbar, image=self.settings_icon, text="", width=15, command=self.open_settings)
         self.settings_button.pack(fill="x", pady=190)
 
-        self.quit_button = ctk.CTkButton(self.toolbar, image=quit_icon, text="", width=15)
+        self.quit_button = ctk.CTkButton(self.toolbar, image=self.quit_icon, text="", width=15)
         self.quit_button.pack(fill="x", pady=10)
 
         self.update_line_numbers()
-       
     def auto_brace(self, event):
         if event.char in "{}[]()<>":
             self.text_area.insert("insert", event.char)

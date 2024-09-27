@@ -1,385 +1,237 @@
-# Import necessary libraries
+import customtkinter as ctk
+from tkinter import simpledialog, filedialog, messagebox
+from customtkinter import CTk, CTkLabel, CTkButton,  CTkToplevel, CTkImage
 import tkinter as tk
-from tkinter import filedialog
-from pygments import highlight
-from pygments.lexers import CppLexer
-from pygments.formatters import TerminalFormatter
 from PIL import Image, ImageTk
-from tkinter import Tk, Menu, Text, END, BOTH, Toplevel, Label
-from tkinter.filedialog import asksaveasfilename, askopenfilename
-import subprocess
 import os
-from tkinter import scrolledtext
-import tempfile
-import sys
+ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+ctk.set_default_color_theme("green") 
 
-# Define the main IDE class
-class IDE(tk.Tk):
 
-    def __init__(self):
-        # Initialize the superclass (tk.Tk)
+class FrogeeCode(ctk.CTk):
+    def __init__(self, master=None):
         super().__init__()
-        
-        # Set the window title
-        self.title("ForgeCodeIDE")
+        current_dir = os.path.dirname(__file__)
+        image_dir = os.path.join(current_dir, 'FCIDEimages')
 
-        # Set the window size to 800x600 pixels
-        self.geometry("1624x865")
+        self.run_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "run.png")).resize((20, 20)))
+        self.new_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "new.png")).resize((20, 20)))
+        self.open_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "open.png")).resize((20, 20)))
+        self.save_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "save.png")).resize((20, 20)))
+        self.settings_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "settings.png")).resize((20, 20)))
+        self.quit_icon = ImageTk.PhotoImage(Image.open(os.path.join(image_dir, "quit.png")).resize((20, 20)))
+        self.title("FrogeeCodeIDE")
+        self.geometry("800x600")
+        self.root = ctk.CTk()
+        self.scrollbar = tk.Scrollbar(self)
+        self.scrollbar.pack(side="right", fill="y")
 
-        # Create a menu for the IDE
-        self.menu = Menu(self)
+        code_frame = tk.Frame(self)
+        code_frame.pack(fill="both", side=tk.TOP, expand=True, padx=0)
 
-        # Configure the IDE to use the created menu
-        self.config(menu=self.menu)
+        self.line_number_area = tk.Text(code_frame, width=5, height=40, font=("Consolas", 12))
+        self.line_number_area.pack(side=tk.LEFT, fill="y", padx=0)
 
-        # Create a text editor widget for the IDE
-        #self.text_editor = tk.Text(self, width=160, height=40)
-        self.text_editor = scrolledtext.ScrolledText(self, width=160, height=40, )
-        # Pack the text editor widget into the IDE window
-        self.text_editor.pack(side=tk.TOP)
+        self.text_area = tk.Text(code_frame, font=("Consolas", 12), width=16, height=4, yscrollcommand=self.scrollbar.set)
+        self.text_area.pack(side=tk.LEFT, fill="both", expand=True, padx=0)
 
-        # Bind the on_key_press function to the text editor widget
-        self.text_editor.bind("<Key>", self.on_key_press)
-        self.text_editor.bind("<KeyRelease>", self.auto_brace)
-        # Create a frame for the open and save file buttons
-        button_frame = tk.Frame(self)
-        default_text = """
-#include "FC_CH32.h"
+        self.toolbar = ctk.CTkFrame(self, width=20, height=768)
+        self.toolbar.pack(side="left", fill="y")
 
-void launch(){
-    // you setup code
-}
+        self.new_button = ctk.CTkButton(self.toolbar, image=self.new_icon, text="", width=15)
+        self.new_button.pack(fill="x", pady=10)
 
-void endless_loop(){
-    // you loop code
-}
-"""
-        self.text_editor.insert(tk.END, default_text)
-        # Pack the button frame into the IDE window
-        button_frame.pack(side=tk.LEFT)
+        self.open_button = ctk.CTkButton(self.toolbar, image=self.open_icon, text="", width=15)
+        self.open_button.pack(fill="x", pady=10)
 
-        # Create an open file button
-        open_button = tk.Button(button_frame, text="Open File", bd=2, padx=5, pady=5, command=self.open_file)
+        self.save_button = ctk.CTkButton(self.toolbar, image=self.save_icon, text="", width=15)
+        self.save_button.pack(fill="x", pady=10)
 
-        # Grid the open file button in the first row and first column of the button frame
-        open_button.grid(row=0, column=0)
+        self.run_button = ctk.CTkButton(self.toolbar, image=self.run_icon, text="", width=15)
+        self.run_button.pack(fill="x", pady=10)
 
-        # Create a save file button
-        save_button = tk.Button(button_frame, text="Save File", bd=2, padx=5, pady=5, command=self.save_file)
+        self.settings_button = ctk.CTkButton(self.toolbar, image=self.settings_icon, text="", width=15, command=self.open_settings)
+        self.settings_button.pack(fill="x", pady=190)
 
-        # Grid the save file button in the second row and first column of the button frame
-        save_button.grid(row=1, column=0)
+        self.quit_button = ctk.CTkButton(self.toolbar, image=self.quit_icon, text="", width=15)
+        self.quit_button.pack(fill="x", pady=10)
 
-        # Create a new tab button
-        new_tab_button = tk.Button(button_frame, text="New Tab", bd=2,  padx=5, pady=5, command=self.new_tab)
+        terminal_frame = tk.Frame(self)
+        terminal_frame.pack(fill="both", side=tk.BOTTOM, padx=0, pady=10)
 
-        # Grid the new tab button in the third row and first column of the button frame
-        new_tab_button.grid(row=2, column=0)
+        self.terminal_output = tk.Text(terminal_frame, font=("Consolas", 12), width=80, height=10)
+        self.terminal_output.pack(fill="both", expand=True, padx=0)
 
-        # Create a clear terminal button
-        clear_terminal_button = tk.Button(button_frame, text="Clear Terminal", bd=2, padx=5, pady=5, command=self.clear_terminal)
-
-        # Grid the clear terminal button in the fourth row and first column of the button frame
-        clear_terminal_button.grid(row=3, column=0)
-
-        # Create a settings button
-        settings_button = tk.Button(button_frame, text="Settings", bd=2, padx=5, pady=5, command=self.settings)
-
-        # Grid the settings button in the fifth row and first column of the button frame
-        settings_button.grid(row=4, column=0)
-
-        # Initialize an empty list to store the tabs
-        self.tabs = []
-
-        # Create a terminal widget for the IDE
-        self.co_res = Text(height=12, fg='white')
-
-        # Pack the terminal widget into the IDE window
-        self.co_res.pack(expand=1, fill=BOTH, side=tk.BOTTOM)
-
-        # Create a menu for the IDE
-        menu_bar = Menu(self)
-
-        # Add a file menu to the menu bar
-        file_menu = Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label='Open', command=self.open_file)
-        file_menu.add_command(label='Save', command=self.save_file)
-        file_menu.add_command(label='Save As', command=self.save_file)
-        file_menu.add_command(label='Run', command=self.run)
-        file_menu.add_command(label='Exit', command=self.exit)
-        menu_bar.add_cascade(label='File', menu=file_menu)
-
-        # Add a run menu to the menu bar
-        menu_bar.add_command(label='Run', command=self.run)
-
-        # Configure the IDE to use the created menu
-        self.config(menu=menu_bar)
-
-    def on_key_press(self, event):
-        
-        # Get the code from the text editor
-        code = self.text_editor.get("1.0", tk.END)
-
-        # Highlight the code using the CppLexer
-        highlighted_code = highlight(code, CppLexer())
-
-        # Delete the existing code in the text editor
-        self.text_editor.delete("1.0", tk.END)
-
-        # Insert the highlighted code back into the text editor
-        self.text_editor.insert(tk.END, highlighted_code)
-
-    def open_file(self):
-    # Open a file dialog to select a file to open
-      file_path = filedialog.askopenfilename(filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'), ('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
-    # If a file was selected, open it and insert its contents into the text editor
-      if file_path:
-          with open(file_path, 'r') as file:
-              code = file.read()
-              self.text_editor.delete('1.0', tk.END)
-              self.text_editor.insert(tk.END, code)
-
-    def save_file(self):
-        # Open a file dialog to select a file to save
-        file_path = filedialog.asksaveasfilename(defaultextension=".fce", filetypes=[ ('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ('ForgeCode', '*.fce'),('Python files', '*.py'),('WEB(HTML) files', '*.html'), ('C files', '*.c')])
-        # If a file was selected, save the contents of the text editor to the file
-        if file_path:
-            with open(file_path, 'w') as file:
-                code = self.text_editor.get("1.0", tk.END)
-                file.write(code)
-
-    def new_tab(self):
-    # Create a new tab and add it to the list of tabs
-       new_tab = Tab(self)
-       self.tabs.append(new_tab)
-  
-    # Set the default text for the new tab
-       default_text = """
-#include "FC_CH32.h"
-
-void launch(){
-    // you setup code
-}
-
-void endless_loop(){
-    // you loop code
-}
-"""
-       new_tab.text_editor.insert(tk.END, default_text)
+        self.update_line_numbers()
+    # ... rest of your code ...
 
     def run(self):
-    # Get the code from the text editor
-        code = self.text_editor.get("1.0", tk.END)
-
-    # Create a temporary file to store the code
-        temp_file = tempfile.NamedTemporaryFile(suffix='.py', delete=False)
-        temp_file.write(code.encode())
-        temp_file.close()
-
-    # Run the Python program using the Python executable
-        python_executable = sys.executable
-        command = [python_executable, temp_file.name]
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Run the code in the text area
+        code = self.text_area.get("1.0", "end-1c")
+        process = subprocess.Popen(['python', '-c', code], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = process.communicate()
-
-    # Display the output and error in the terminal widget
-        self.co_res.insert(END, os.getcwd())
-        self.co_res.insert(END, '>\n')
-        self.co_res.insert(END, 'output:\n')
-        self.co_res.insert(END, output.decode())
-        self.co_res.insert(END, '\nerror:\n')
-        if error == b'':
-            self.co_res.config(fg='green')
-            self.co_res.insert(END, 'No errors')
-        else:
-            self.co_res.config(fg='red')
-            self.co_res.insert(END, error.decode())
-
-    # Remove the temporary file
-        os.remove(temp_file.name)
-
-       
-
-
-    
-    def clear_terminal(self):
-        # Clear the contents of the terminal widget
-        self.co_res.delete('1.0', tk.END)
-
-    def exit(self):
-        self.quit()
-
-
-    #...
-
-    def settings(self):
-        # Create a settings window
-        settings_window = tk.Toplevel(self)
-
-        # Create a label for the settings window
-        settings_label = tk.Label(settings_window, text="Settings")
-
-        # Pack the label into the settings window
-        settings_label.pack()
-
-        # Create a frame for the font size settings
-        font_size_frame = tk.Frame(settings_window)
-
-        # Pack the frame into the settings window
-        font_size_frame.pack()
-
-        # Create a label for the font size settings
-        font_size_label = tk.Label(font_size_frame, text="Font Size:")
-
-        # Pack the label into the frame
-        font_size_label.pack(side=tk.LEFT)
-
-        # Create a spinbox for the font size settings
-        self.font_size = tk.Spinbox(font_size_frame, from_=8, to=72, increment=2)
-
-        # Pack the spinbox into the frame
-        self.font_size.pack(side=tk.LEFT)
-
-        # Create a button to apply the font size settings
-        apply_button = tk.Button(settings_window, text="Apply", command=self.apply_font_size)
-
-        # Pack the button into the settings window
-        apply_button.pack()
-
-        # Create a frame for the theme settings
-        theme_frame = tk.Frame(settings_window)
-
-        # Pack the frame into the settings window
-        theme_frame.pack()
-
-        # Create a label for the theme settings
-        theme_label = tk.Label(theme_frame, text="Theme:")
-
-        # Pack the label into the frame
-        theme_label.pack(side=tk.LEFT)
-
-        # Create a variable to store the theme selection
-        self.theme_var = tk.StringVar()
-
-        # Create a radio button for the light theme
-        # Create a radio button for the dark theme
-
-        plugins_frame = tk.Frame(settings_window)
-
-        # Pack the frame into the settings window
-        plugins_frame.pack()
-
-        # Create a label for the plugins settings
-        plugins_label = tk.Label(plugins_frame, text="Plugins:")
-
-        # Pack the label into the frame
-        plugins_label.pack(side=tk.LEFT)
-
-        # Create a listbox for the plugins
-        self.plugins_listbox = tk.Listbox(plugins_frame, width=40)
-
-        # Pack the listbox into the frame
-        self.plugins_listbox.pack(side=tk.LEFT)
-
-        # Create a button to add a plugin
-        add_plugin_button = tk.Button(plugins_frame, text="Add Plugin", command=self.add_plugin)
-
-        # Pack the button into the frame
-        add_plugin_button.pack(side=tk.LEFT)
-
-        # Create a button to remove a plugin
-        remove_plugin_button = tk.Button(plugins_frame, text="Remove Plugin", command=self.remove_plugin)
-
-        # Pack the button into the frame
-        remove_plugin_button.pack(side=tk.LEFT)
-
-    def add_plugin(self):
-        # Open a file dialog to select a plugin to add
-        file_path = filedialog.askopenfilename(filetypes=[('Plugin files', '*.py')])
-
-        # If a file was selected, add it to the list of plugins
-        if file_path:
-            self.plugins_listbox.insert(tk.END, file_path)
-
-    def remove_plugin(self):
-        # Get the selected pluginfrom the listbox
-        plugin = self.plugins_listbox.get(self.plugins_listbox.curselection())
-
-        # Remove the plugin from the list of plugins
-        self.plugins_listbox.delete(self.plugins_listbox.curselection())
-
-    def apply_font_size(self):
-        # Get the font size from the spinbox
-        font_size = int(self.font_size.get())
-
-        # Set the font size of the text editor
-        self.text_editor.config(font=("Consolas", font_size))
-
-
+        self.terminal_output.insert("end", output.decode("utf-8") + error.decode("utf-8"))
     def auto_brace(self, event):
         if event.char in "{}[]()<>":
-            self.text_editor.insert(tk.INSERT, event.char)
-            self.text_editor.insert(tk.INSERT, self.get_closing_brace(event.char))
-            self.text_editor.mark_set("insert", tk.INSERT + 1)
+            self.text_area.insert("insert", event.char)
+            self.text_area.insert("insert", self.get_closing_brace(event.char))
+            self.text_area.mark_set("insert", "insert -1c")
 
     def get_closing_brace(self, char):
         braces = {"{": "}", "[": "]", "(": ")", "<":">"}
         return braces[char]
 
-class Tab:
-    def __init__(self, master):
-        # Initialize the superclass (tk.Toplevel)
-        self.master = master
-        self.top = tk.Toplevel(self.master)
+    def update_line_numbers(self):
+        self.line_number_area.delete("1.0", "end")
+        for i, line in enumerate(self.text_area.get("1.0", "end").split("\n"), start=1):
+            self.line_number_area.insert("end", f"{i}\n")
+        self.after(100, self.update_line_numbers)
 
-        # Create a text editor widget for the tab
-        self.text_editor = tk.Text(self.top)
-        self.text_editor.bind("<KeyRelease>", self.auto_brace)
-        # Pack the text editor widget into the tab window
-        self.text_editor.pack()
+    def highlight_syntax_realtime(self, event):
+        self.text_area.tag_remove('keyword', '1.0', 'end')
+        self.text_area.tag_remove('builtin', '1.0', 'end')
+        self.text_area.tag_remove('string', '1.0', 'end')
+        self.text_area.tag_remove('comment', '1.0', 'end')
+        self.text_area.tag_remove('unknown', '1.0', 'end')
+        self.text_area.tag_remove('class', '1.0', 'end')
+        self.text_area.tag_remove('clas', '1.0', 'end')
+        self.text_area.tag_remove('def_func', '1.0', 'end')
 
-        # Create a save tab button
-        save_tab_button = tk.Button(self.top, text="Save Tab", bd=2, padx=5, pady=5, command=self.save_tab)
+        text = self.text_area.get('1.0', 'end-1c')
+        lines = text.split('\n')
 
-        # Pack the save tab button into the tab window
-        save_tab_button.pack(side=tk.RIGHT)
+        for i, line in enumerate(lines, 1):
+            words = line.split()
+            for j, word in enumerate(words):
+                if word in self.keywords:
+                    start = f'{i}.{line.index(word)}'
+                    end = f'{i}.{line.index(word) + len(word)}'
+                    self.text_area.tag_add('keyword', start, end)
 
-        # Create a close tab button
-        close_button = tk.Button(self.top, text="Close Tab", bd=2, padx=5, pady=5, command=self.close_tab)
+                elif word in self.builtins:
+                    start = f'{i}.{line.index(word)}'
+                    end = f'{i}.{line.index(word) + len(word)}'
+                    self.text_area.tag_add('builtin', start, end)
 
-        # Pack the close tab button into the tab window
-        close_button.pack(side=tk.RIGHT)
+                elif word == 'class':
+                    start = f'{i}.{line.index(word)}'
+                    end = f'{i}.{line.index(word) + len(word)}'
+                    self.text_area.tag_add('clas', start, end)
 
-    def save_tab(self):
-        # Open a file dialog to select a file to save
-        file_path = filedialog.asksaveasfilename(defaultextension=".cpp", filetypes=[('C++ files', '*.h'), ('C++ files', '*.cpp'), ('Arduino files', '*.ino'), ' C files', '*.C'])
+                    if j + 1 < len(words):
+                        next_word = words[j + 1]
+                        start = f'{i}.{line.index(next_word)}'
+                        end = f'{i}.{line.index(next_word) + len(next_word)}'
+                        self.text_area.tag_add('class', start, end)
 
-        # If a file was selected, save the contents of the tab's text editor to the file
-        if file_path:
-            with open(file_path, 'w') as file:
-                code = self.text_editor.get("1.0", tk.END)
-                file.write(code)
+                elif word == 'def':
+                    start = f'{i}.{line.index(word)}'
+                    end = f'{i}.{line.index(word) + len(word)}'
+                    self.text_area.tag_add('clas', start, end)
 
-    def close_tab(self):
-        # Destroy the tab window
-        self.top.destroy()
+                    if j + 1 < len(words):
+                        next_word = words[j + 1]
+                        start = f'{i}.{line.index(next_word)}'
+                        end = f'{i}.{line.index(next_word) + len(next_word)}'
+                        self.text_area.tag_add('def_func', start, end)
 
-        # Remove the tab from the list of tabs in the IDE
-        self.master.tabs.remove(self)
+                elif word.endswith('__') or word.endswith('.__'):  # Check for class names
+                    start = f'{i}.{line.index(word)}'
+                    end = f'{i}.{line.index(word) + len(word)}'
+                    self.text_area.tag_add('class', start, end)
 
-    def auto_brace(self, event):
-        if event.char in "{}[]()<>":
-            self.text_editor.insert(tk.INSERT, event.char)
-            self.text_editor.insert(tk.INSERT, self.get_closing_brace(event.char))
-            self.text_editor.mark_set("insert", tk.INSERT + 1)
+                elif word not in self.keywords and word not in self.builtins and not word.isdigit():
+                    start = f'{i}.{line.index(word)}'
+                    end = f'{i}.{line.index(word) + len(word)}'
+                    self.text_area.tag_add('unknown', start, end)
 
-    def get_closing_brace(self, char):
-        braces = {"{": "}", "[": "]", "(": ")", "<":">"}
-        return braces[char]
+            for string in self.strings:
+                if string in line:
+                    start = f'{i}.{line.index(string)}'
+                    end = f'{i}.{line.index(string) + len(string)}'
+                    self.text_area.tag_add('string', start, end)
+
+            for comment in self.comments:
+                if comment in line:
+                    start = f'{i}.{line.index(comment)}'
+                    end = f'{i}.end'
+                    self.text_area.tag_add('comment', start, end)
 
 
-# Start the IDE
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        ctk.set_appearance_mode(new_appearance_mode)
+
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        ctk.set_widget_scaling(new_scaling_float)
+
+    def open_settings(self):
+        self.settings_window = ctk.CTkToplevel(self)
+        self.settings_window.title("Settings")
+        self.settings_window.geometry("300x200")
+
+        self.font_size_label = ctk.CTkLabel(self.settings_window, text="Font Size:")
+        self.font_size_label.pack(pady=10)
+
+        self.font_size_entry = ctk.CTkEntry(self.settings_window, width=20)
+        self.font_size_entry.pack(pady=10)
+
+        self.theme_label = ctk.CTkLabel(self.settings_window, text="Theme:")
+        self.theme_label.pack(pady=10)
+
+        self.appearance_mode_label = ctk.CTkLabel(self.settings_window, text="Appearance Mode:")
+        self.appearance_mode_label.pack(fill="x", pady=10)
+        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.settings_window, values=["Dark", "Light", "System"], command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.pack(fill="x", pady=10)
+        self.scaling_label = ctk.CTkLabel(self.settings_window, text="UI Scaling:")
+        self.scaling_label.pack(fill="x", pady=10)
+        self.scaling_optionemenu = ctk.CTkOptionMenu(self.settings_window, values=["80%", "90%", "100%", "110%", "120%"], command=self.change_scaling_event)
+
+        self.scaling_entry = ctk.CTkEntry(self.settings_window, width=20)
+        self.scaling_entry.pack(pady=10)
+
+        self.apply_button = ctk.CTkButton(self.settings_window, text="Apply", command=self.apply_settings)
+        self.apply_button.pack(pady=10)
+
+        self.cancel_button = ctk.CTkButton(self.settings_window, text="Cancel", command=self.settings_window.destroy)
+        self.cancel_button.pack(pady=10)
+
+    def apply_settings(self):
+        font_size = int(self.font_size_entry.get())
+        theme = self.theme_option.get()
+        scaling = int(self.scaling_entry.get()) / 100
+
+    # Save settings to a file or database
+        with open("settings.cfg", "w") as f:
+            f.write(f"font_size={font_size}\n")
+            f.write(f"theme={theme}\n")
+            f.write(f"scaling={scaling}\n")
+
+    # Apply settings to the main application
+        self.change_appearance_mode_event(theme)
+        self.change_scaling_event(f"{scaling*100}%")
+        self.text_area.config(font=("Consolas", font_size))  # Update the text area font
+        self.line_number_area.config(font=("Consolas", font_size))  # Update the line number area font
+
+        
+    def update_widgets(self):
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkButton):
+                widget.config(font=("Consolas", int(self.scaling_entry.get())))
+            elif isinstance(widget, ctk.CTkLabel):
+                widget.config(font=("Consolas", int(self.scaling_entry.get())))
+        # Update other widgets as needed
+
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        ctk.set_appearance_mode(new_appearance_mode)
+
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        ctk.set_widget_scaling(new_scaling_float)
+
+    def run(self):
+        self.mainloop()
+
 if __name__ == "__main__":
-
-    ide = IDE()
-    ide.mainloop()
+    app = FrogeeCode()
+    app.run()
