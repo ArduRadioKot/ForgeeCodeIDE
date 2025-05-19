@@ -16,21 +16,21 @@ import sys
 
 
 #Create a Tkinter window
-root = tk.Tk()
-root.geometry('500x500')
-# Create a Tkinter-compatible photo image from the PIL image
-img = Image.open('FCI.png')
-tk_img = ImageTk.PhotoImage(img)
+# root = tk.Tk()
+# root.geometry('500x500')
+# # Create a Tkinter-compatible photo image from the PIL image
+# img = Image.open('FCI.png')
+# tk_img = ImageTk.PhotoImage(img)
 
-# Create a label with the photo image
-label = tk.Label(root, image=tk_img)
-label.pack()
+# # Create a label with the photo image
+# label = tk.Label(root, image=tk_img)
+# label.pack()
 
-# Schedule a callback function to destroy the window after a delay
-root.after(5000, root.destroy)
+# # Schedule a callback function to destroy the window after a delay
+# root.after(5000, root.destroy)
 
-# Run the Tkinter event loop
-root.mainloop()
+# # Run the Tkinter event loop
+# root.mainloop()
 
 # Define the main IDE class
 class IDE(tk.Tk):
