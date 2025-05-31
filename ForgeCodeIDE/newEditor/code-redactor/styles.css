@@ -9,6 +9,8 @@
     --tab-inactive-bg: #282a36;
     --transition-speed: 0.3s;
     --minimap-width: 60px;
+    --tree-item-hover: #44475a;
+    --tree-item-active: #6272a4;
 }
 
 * {
