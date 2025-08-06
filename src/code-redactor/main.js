@@ -63,30 +63,92 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// Функции для работы с файлами
+// Обработчики IPC
 ipcMain.handle('open-file', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile'],
-    filters: [
-      { name: 'Все файлы', extensions: ['*'] },
-      { name: 'Текстовые файлы', extensions: ['txt', 'md', 'js', 'py', 'html', 'css', 'json', 'xml', 'csv'] },
-      { name: 'JavaScript', extensions: ['js', 'jsx', 'ts', 'tsx'] },
-      { name: 'Python', extensions: ['py', 'pyw'] },
-      { name: 'HTML', extensions: ['html', 'htm'] },
-      { name: 'CSS', extensions: ['css', 'scss', 'sass'] }
-    ]
-  });
-  
-  if (!result.canceled && result.filePaths.length > 0) {
-    const filePath = result.filePaths[0];
-    try {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'All Files', extensions: ['*'] },
+        { name: 'Text Files', extensions: ['txt', 'md', 'js', 'py', 'html', 'css', 'json'] }
+      ]
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0];
       const content = await fs.readFile(filePath, 'utf8');
       return { success: true, filePath, content };
-    } catch (error) {
-      return { success: false, error: error.message };
     }
+    return { success: false, error: 'No file selected' };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
-  return { success: false, canceled: true };
+});
+
+ipcMain.handle('open-folder', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory']
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const folderPath = result.filePaths[0];
+      return { success: true, folderPath };
+    }
+    return { success: false, error: 'No folder selected' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('open-file-or-folder', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile', 'openDirectory'],
+      filters: [
+        { name: 'All Files', extensions: ['*'] },
+        { name: 'Text Files', extensions: ['txt', 'md', 'js', 'py', 'html', 'css', 'json'] }
+      ]
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const path = result.filePaths[0];
+      const stats = await fs.stat(path);
+      
+      if (stats.isDirectory()) {
+        return { success: true, isDirectory: true, path };
+      } else {
+        const content = await fs.readFile(path, 'utf8');
+        return { success: true, isDirectory: false, filePath: path, content };
+      }
+    }
+    return { success: false, error: 'No file or folder selected' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('list-files', async (event, folderPath) => {
+  try {
+    const files = await fs.readdir(folderPath, { withFileTypes: true });
+    const fileList = files.map(file => ({
+      name: file.name,
+      isDirectory: file.isDirectory(),
+      path: path.join(folderPath, file.name)
+    }));
+    return { success: true, files: fileList };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-file-content', async (event, filePath) => {
+  try {
+    const content = await fs.readFile(filePath, 'utf8');
+    return { success: true, content };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 ipcMain.handle('save-file', async (event, content) => {
@@ -120,28 +182,6 @@ ipcMain.handle('save-file-as', async (event, content) => {
 
 ipcMain.handle('new-file', async () => {
   return { success: true, content: '' };
-});
-
-ipcMain.handle('get-file-content', async (event, filePath) => {
-  try {
-    const content = await fs.readFile(filePath, 'utf8');
-    return { success: true, content };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('list-files', async (event, directory) => {
-  try {
-    const files = await fs.readdir(directory, { withFileTypes: true });
-    return files.map(file => ({
-      name: file.name,
-      isDirectory: file.isDirectory(),
-      path: path.join(directory, file.name)
-    }));
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
 });
 
 // Функции для работы с OpenRouter

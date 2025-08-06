@@ -7,6 +7,8 @@ let openRouterModels = [];
 let currentAiProvider = 'ollama'; // ollama, openrouter
 let currentAiModel = 'llama3';
 let isTyping = false;
+let currentFolder = null; // Текущая открытая папка
+let fileExplorerItems = []; // Элементы в file explorer
 
 // Элементы DOM
 const editor = document.getElementById('editor');
@@ -92,9 +94,6 @@ function initializeApp() {
     showWelcomePage();
   } else {
     hideWelcomePage();
-    if (currentTabs.length === 0) {
-      createWelcomeTab();
-    }
   }
 }
 
@@ -165,6 +164,12 @@ function setupEventListeners() {
   
   // Кнопки файлов
   newFileBtn.addEventListener('click', createNewFile);
+  
+  // Кнопки explorer
+  const openFolderBtn = document.getElementById('open-folder-btn');
+  if (openFolderBtn) {
+    openFolderBtn.addEventListener('click', openFolder);
+  }
   
   // Действия стартовой страницы
   newFileAction.addEventListener('click', handleNewFileAction);
@@ -309,7 +314,7 @@ function handleNewFileAction() {
 
 function handleOpenFileAction() {
   hideWelcomePage();
-  openFile();
+  openFileOrFolder();
 }
 
 function handleAiChatAction() {
@@ -361,22 +366,35 @@ function showExplorerPanel() {
   activityPanel.innerHTML = `
     <div class="activity-header">
       <h3>EXPLORER</h3>
-      <button class="activity-btn" title="Новый файл" id="new-file-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M12 5v14m-7-7h14" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
+      <div class="activity-buttons">
+        <button class="activity-btn" title="Открыть папку" id="open-folder-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+          </svg>
+        </button>
+        <button class="activity-btn" title="Новый файл" id="new-file-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <div id="file-explorer" class="file-explorer">
-      <div class="file-item" data-path="welcome.txt">
-        <span class="file-icon">📄</span>
-        <span class="file-name">welcome.txt</span>
-      </div>
+      <div class="file-explorer-placeholder">Откройте папку для просмотра файлов</div>
     </div>
   `;
   
-  // Переподключаем обработчик для новой кнопки
+  // Переподключаем обработчики для новых кнопок
+  document.getElementById('open-folder-btn').addEventListener('click', openFolder);
   document.getElementById('new-file-btn').addEventListener('click', createNewFile);
+  
+  // Обновляем explorer если папка уже открыта
+  if (currentFolder) {
+    updateFileExplorer();
+  }
 }
 
 function showSearchPanel() {
@@ -529,6 +547,10 @@ function createTab(name, content = '', filePath = null) {
   };
   
   currentTabs.push(tab);
+  
+  // Закрываем стартовую страницу при создании вкладки
+  hideWelcomePage();
+  
   updateTabsList();
   switchToTab(currentTabs.length - 1);
   saveTabs();
@@ -577,10 +599,11 @@ function closeTab(index) {
     currentTabs.splice(index, 1);
     
     if (currentTabs.length === 0) {
-      createWelcomeTab();
+      // Если нет вкладок, показываем стартовую страницу
+      showWelcomePage();
     } else if (activeTabIndex >= currentTabs.length) {
       switchToTab(currentTabs.length - 1);
-  } else {
+    } else {
       switchToTab(activeTabIndex);
     }
     
@@ -610,53 +633,40 @@ function updateTabTitle() {
   }
 }
 
-function createWelcomeTab() {
-  const welcomeContent = `Добро пожаловать в FrogeeCodeIDE!
-
-Это современный редактор кода с поддержкой:
-• Множественных вкладок
-• Различных языков программирования
-• Темной и светлой темы
-• Чат с AI (Ollama и OpenRouter)
-• Боковая панель в стиле VS Code
-• Нумерация строк
-• Стартовая страница в стиле VS Code
-
-Начните писать код или откройте файл!
-
-Пример кода на JavaScript:
-function hello() {
-    console.log("Hello, World!");
-}
-
-Пример кода на Python:
-def hello():
-    print("Hello, World!")
-
-Пример HTML:
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Hello</title>
-</head>
-<body>
-    <h1>Hello, World!</h1>
-</body>
-</html>`;
-
-  createTab('welcome.txt', welcomeContent);
-  updateLineNumbers();
-}
-
 // Функции для работы с файлами
 async function openFile() {
   try {
     const result = await window.electronAPI.openFile();
     if (result.success) {
+      // Закрываем стартовую страницу при открытии файла
+      hideWelcomePage();
       createTab(path.basename(result.filePath), result.content, result.filePath);
     }
   } catch (error) {
     console.error('Ошибка открытия файла:', error);
+  }
+}
+
+async function openFileOrFolder() {
+  try {
+    const result = await window.electronAPI.openFileOrFolder();
+    if (result.success) {
+      if (result.isDirectory) {
+        // Открываем папку в explorer
+        currentFolder = result.path;
+        await loadFolderContents(currentFolder);
+        // Переключаемся на explorer если он не активен
+        if (currentActivity !== 'explorer') {
+          switchActivity('explorer');
+        }
+      } else {
+        // Открываем файл в редакторе
+        hideWelcomePage();
+        createTab(path.basename(result.filePath), result.content, result.filePath);
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка открытия файла или папки:', error);
   }
 }
 
@@ -1085,3 +1095,149 @@ window.electronAPI.onStreamUpdate((event, data) => {
     }, 10);
   }
 }); 
+
+// Функции для работы с папками и файлами
+async function openFolder() {
+  try {
+    const result = await window.electronAPI.openFolder();
+    if (result.success) {
+      currentFolder = result.folderPath;
+      await loadFolderContents(currentFolder);
+    }
+  } catch (error) {
+    console.error('Ошибка открытия папки:', error);
+  }
+}
+
+async function loadFolderContents(folderPath) {
+  try {
+    const result = await window.electronAPI.listFiles(folderPath);
+    if (result.success) {
+      fileExplorerItems = result.files;
+      updateFileExplorer();
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки содержимого папки:', error);
+  }
+}
+
+function updateFileExplorer() {
+  const fileExplorer = document.getElementById('file-explorer');
+  if (!fileExplorer) return;
+  
+  fileExplorer.innerHTML = '';
+  
+  if (!currentFolder) {
+    fileExplorer.innerHTML = '<div class="file-explorer-placeholder">Откройте папку для просмотра файлов</div>';
+    return;
+  }
+  
+  // Сортируем: сначала папки, потом файлы
+  const sortedItems = fileExplorerItems.sort((a, b) => {
+    if (a.isDirectory && !b.isDirectory) return -1;
+    if (!a.isDirectory && b.isDirectory) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  
+  sortedItems.forEach(item => {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item';
+    fileItem.dataset.path = item.path;
+    fileItem.dataset.isDirectory = item.isDirectory;
+    
+    const icon = item.isDirectory ? '📁' : getFileIcon(item.name);
+    const name = item.name;
+    
+    fileItem.innerHTML = `
+      <span class="file-icon">${icon}</span>
+      <span class="file-name">${name}</span>
+    `;
+    
+    fileItem.addEventListener('click', () => handleFileItemClick(item));
+    fileExplorer.appendChild(fileItem);
+  });
+}
+
+function getFileIcon(fileName) {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  const iconMap = {
+    'js': '📄',
+    'py': '🐍',
+    'html': '🌐',
+    'css': '🎨',
+    'json': '📋',
+    'md': '📝',
+    'txt': '📄',
+    'xml': '📄',
+    'csv': '📊',
+    'jsx': '⚛️',
+    'ts': '📄',
+    'tsx': '⚛️',
+    'vue': '💚',
+    'php': '🐘',
+    'java': '☕',
+    'cpp': '⚙️',
+    'c': '⚙️',
+    'h': '⚙️',
+    'go': '🐹',
+    'rs': '🦀',
+    'rb': '💎',
+    'swift': '🍎',
+    'kt': '☕',
+    'scala': '☕',
+    'r': '📊',
+    'sql': '🗄️',
+    'sh': '🐚',
+    'bat': '🪟',
+    'ps1': '🪟',
+    'yml': '⚙️',
+    'yaml': '⚙️',
+    'toml': '⚙️',
+    'ini': '⚙️',
+    'conf': '⚙️',
+    'log': '📋',
+    'lock': '🔒',
+    'gitignore': '🚫',
+    'dockerfile': '🐳',
+    'docker-compose': '🐳',
+    'package': '📦',
+    'requirements': '📦',
+    'pom': '📦',
+    'gradle': '📦',
+    'makefile': '⚙️',
+    'cmake': '⚙️',
+    'readme': '📖',
+    'license': '⚖️',
+    'changelog': '📝',
+    'contributing': '🤝',
+    'codeowners': '👥',
+    'gitattributes': '🔧',
+    'gitmodules': '🔧',
+    'gitkeep': '📁',
+    'git': '📁'
+  };
+  
+  return iconMap[ext] || '📄';
+}
+
+async function handleFileItemClick(item) {
+  if (item.isDirectory) {
+    // Открываем папку
+    currentFolder = item.path;
+    await loadFolderContents(currentFolder);
+  } else {
+    // Открываем файл в новой вкладке
+    try {
+      const result = await window.electronAPI.getFileContent(item.path);
+      if (result.success) {
+        // Закрываем стартовую страницу при открытии файла
+        hideWelcomePage();
+        createTab(item.name, result.content, item.path);
+      }
+    } catch (error) {
+      console.error('Ошибка открытия файла:', error);
+    }
+  }
+}
+
+// Функции для работы с активностью 
