@@ -93,6 +93,7 @@
             <img src="images/icon.png" alt="FrogeeCodeIDE Logo" class="logo-image">
           </div>
           <h1 class="welcome-title">FrogeeCodeIDE</h1>
+          <p class="welcome-subtitle">Editing evolved</p>
         </div>
         
         <div class="welcome-content">
@@ -196,46 +197,46 @@
       
       <div class="chat-content">
         <div id="chat-messages" class="chat-messages"></div>
+      </div>
+      
+      <div class="chat-input-area">
+        <div class="chat-controls">
+          <div class="ai-provider-selector">
+            <select id="ai-provider-select" class="ai-provider-select">
+              <option value="ollama">🤖 Ollama</option>
+              <option value="openrouter">🌐 OpenRouter</option>
+            </select>
+          </div>
+          <div class="ai-model-selector">
+            <select id="ai-model-select" class="ai-model-select">
+              <option value="llama3">llama3</option>
+            </select>
+          </div>
+        </div>
         
-        <div class="chat-input-area">
-          <div class="chat-controls">
-            <div class="ai-provider-selector">
-              <select id="ai-provider-select" class="ai-provider-select">
-                <option value="ollama">🤖 Ollama</option>
-                <option value="openrouter">🌐 OpenRouter</option>
-              </select>
-            </div>
-            <div class="ai-model-selector">
-              <select id="ai-model-select" class="ai-model-select">
-                <option value="llama3">llama3</option>
-              </select>
+        <div class="chat-input-container">
+          <div class="input-wrapper">
+            <textarea 
+              id="user-input" 
+              class="chat-textarea" 
+              placeholder="Введите сообщение... (Shift+Enter для новой строки)"
+              rows="1"
+            ></textarea>
+            <div class="input-actions">
+              <button type="button" id="send-btn" class="send-btn" title="Отправить (Enter)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m22 2-7 20-4-9-9-4 20-7z"/>
+                  <path d="M22 2 11 13"/>
+                </svg>
+              </button>
             </div>
           </div>
-          
-          <div class="chat-input-container">
-            <div class="input-wrapper">
-              <textarea 
-                id="user-input" 
-                class="chat-textarea" 
-                placeholder="Введите сообщение... (Shift+Enter для новой строки)"
-                rows="1"
-              ></textarea>
-              <div class="input-actions">
-                <button type="button" id="send-btn" class="send-btn" title="Отправить (Enter)">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m22 2-7 20-4-9-9-4 20-7z"/>
-                    <path d="M22 2 11 13"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <button type="button" id="stop-btn" class="stop-btn" title="Остановить ответ" style="display:none;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="6" y="6" width="12" height="12"/>
-              </svg>
-              Остановить
-            </button>
-          </div>
+          <button type="button" id="stop-btn" class="stop-btn" title="Остановить ответ" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="6" y="6" width="12" height="12"/>
+            </svg>
+            Остановить
+          </button>
         </div>
       </div>
     </div>

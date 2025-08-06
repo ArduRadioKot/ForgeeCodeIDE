@@ -484,13 +484,15 @@ body {
 }
 
 .welcome-logo {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
 }
 
 .logo-image {
   width: 120px;
   height: 120px;
-  border-radius: 20px;
+  border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -806,49 +808,48 @@ body {
 
 /* Панель чата */
 .chat-panel {
-  width: 350px;
-  background: #252526;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 400px;
+  height: 100vh;
+  background: #1e1e1e;
   border-left: 1px solid #3c3c3c;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
+  z-index: 1000;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
 }
 
 .chat-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #3c3c3c;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
+  justify-content: space-between;
+  padding: 16px 20px;
   background: #2a2d2e;
+  border-bottom: 1px solid #3c3c3c;
+  flex-shrink: 0;
 }
 
 .chat-header-left {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 12px;
 }
 
-.chat-header h3 {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff;
+.chat-header-left h3 {
   margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #d4d4d4;
 }
 
 .chat-status {
-  font-size: 11px;
-  color: #4caf50;
-  font-weight: 500;
-}
-
-.chat-status.typing {
-  color: #ff9800;
-}
-
-.chat-status.error {
-  color: #f44336;
+  font-size: 12px;
+  color: #6a6a6a;
+  padding: 4px 8px;
+  background: #1e1e1e;
+  border-radius: 4px;
 }
 
 .chat-header-right {
@@ -859,44 +860,35 @@ body {
 .chat-header-btn {
   background: none;
   border: none;
-  color: #cccccc;
+  color: #6a6a6a;
   cursor: pointer;
   padding: 6px;
   border-radius: 4px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
 }
 
 .chat-header-btn:hover {
   background: #3c3c3c;
-  color: #ffffff;
-}
-
-.chat-header-btn svg {
-  color: #cccccc;
-  transition: color 0.2s;
-}
-
-.chat-header-btn:hover svg {
-  color: #ffffff;
+  color: #d4d4d4;
 }
 
 .chat-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  overflow: hidden;
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
-  background: #1e1e1e;
-  max-height: 500px;
-  min-height: 300px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* Стили для скроллбара в чате */
@@ -1056,9 +1048,9 @@ body {
 
 /* Область ввода чата */
 .chat-input-area {
-  padding: 16px;
   background: #2a2d2e;
   border-top: 1px solid #3c3c3c;
+  padding: 16px 20px;
   flex-shrink: 0;
 }
 
@@ -1672,11 +1664,11 @@ body.light-theme .welcome-page {
 }
 
 body.light-theme .logo-image {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
 body.light-theme .logo-image:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
 body.light-theme .welcome-title {

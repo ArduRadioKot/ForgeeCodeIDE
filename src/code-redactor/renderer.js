@@ -40,8 +40,6 @@ const showWelcomeCheckbox = document.getElementById('show-welcome-checkbox');
 // Элементы действий стартовой страницы
 const newFileAction = document.getElementById('new-file-action');
 const openFileAction = document.getElementById('open-file-action');
-const cloneRepoAction = document.getElementById('clone-repo-action');
-const connectAction = document.getElementById('connect-action');
 const aiChatAction = document.getElementById('ai-chat-action');
 
 // Элементы чата
@@ -69,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeApp();
   setupEventListeners();
   loadSettings();
-  createWelcomeTab();
   initializeOpenRouter();
 });
 
@@ -172,8 +169,6 @@ function setupEventListeners() {
   // Действия стартовой страницы
   newFileAction.addEventListener('click', handleNewFileAction);
   openFileAction.addEventListener('click', handleOpenFileAction);
-  cloneRepoAction.addEventListener('click', handleCloneRepoAction);
-  connectAction.addEventListener('click', handleConnectAction);
   aiChatAction.addEventListener('click', handleAiChatAction);
   
   // Чекбокс стартовой страницы
@@ -277,7 +272,7 @@ async function saveOpenRouterKey() {
       }
       
       alert('API ключ OpenRouter успешно сохранен!');
-    } else {
+      } else {
       alert('Ошибка сохранения API ключа: ' + result.error);
     }
   } catch (error) {
@@ -315,16 +310,6 @@ function handleNewFileAction() {
 function handleOpenFileAction() {
   hideWelcomePage();
   openFile();
-}
-
-function handleCloneRepoAction() {
-  // Пока просто показываем сообщение
-  alert('Функция клонирования Git репозитория будет добавлена в будущих версиях.');
-}
-
-function handleConnectAction() {
-  // Пока просто показываем сообщение
-  alert('Функция подключения к удаленному хосту будет добавлена в будущих версиях.');
 }
 
 function handleAiChatAction() {
@@ -890,13 +875,8 @@ async function handleChatSubmit() {
     const useOpenRouter = currentAiProvider === 'openrouter';
     
     // Отправляем сообщение в AI
-    const response = await window.electronAPI.sendMessage(message, currentAiModel, true, useOpenRouter);
+    await window.electronAPI.sendMessage(message, currentAiModel, useOpenRouter);
     
-    if (response && response.answer) {
-      addChatMessage(response.answer, 'ai');
-    } else {
-      addChatMessage('Ошибка получения ответа от AI', 'ai');
-    }
   } catch (error) {
     addChatMessage(`Ошибка: ${error.message}`, 'ai');
     setChatStatus('error', 'Ошибка');
@@ -916,10 +896,13 @@ function addChatMessage(content, sender) {
   if (sender === 'ai') {
     // Парсим Markdown для сообщений AI
     try {
-      const { marked } = require('marked');
-      messageDiv.innerHTML = marked.parse(content);
+      // Используем встроенный парсер Markdown или обычный текст
+      messageDiv.innerHTML = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                   .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                   .replace(/`(.*?)`/g, '<code>$1</code>')
+                                   .replace(/\n/g, '<br>');
     } catch (error) {
-      // Если marked недоступен, используем обычный текст
+      // Если парсинг не удался, используем обычный текст
       messageDiv.textContent = content;
     }
   } else {
@@ -1084,10 +1067,12 @@ window.electronAPI.onStreamUpdate((event, data) => {
     
     try {
       // Парсим Markdown для обновленного контента
-      const { marked } = require('marked');
-      lastMessage.innerHTML = marked.parse(data.fullMessage);
+      lastMessage.innerHTML = data.fullMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                             .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                             .replace(/`(.*?)`/g, '<code>$1</code>')
+                                             .replace(/\n/g, '<br>');
     } catch (error) {
-      // Если marked недоступен, используем обычный текст
+      // Если парсинг не удался, используем обычный текст
       lastMessage.textContent = data.fullMessage;
     }
     
