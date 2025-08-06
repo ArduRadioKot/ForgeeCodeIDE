@@ -483,6 +483,23 @@ body {
   margin-bottom: 60px;
 }
 
+.welcome-logo {
+  margin-bottom: 20px;
+}
+
+.logo-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.logo-image:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
 .welcome-title {
   font-size: 48px;
   font-weight: 300;
@@ -1652,6 +1669,14 @@ body.light-theme .chat-messages::-webkit-scrollbar-thumb:hover {
 body.light-theme .welcome-page {
   background: #ffffff;
   color: #1e1e1e;
+}
+
+body.light-theme .logo-image {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .logo-image:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 body.light-theme .welcome-title {
