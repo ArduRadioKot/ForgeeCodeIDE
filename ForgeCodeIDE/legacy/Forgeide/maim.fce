@@ -1,6 +1,0 @@
-#include <mbed.h>
-
-int main(){
-std::cout >> "Hellow world";
-}
-

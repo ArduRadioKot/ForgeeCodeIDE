@@ -1,0 +1,101 @@
+{
+  "name": "FrogeeCodeIDE",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:mac-x64": "electron-builder --mac --x64",
+    "build:mac-arm64": "electron-builder --mac --arm64",
+    "build:win": "electron-builder --win",
+    "build:win-x64": "electron-builder --win --x64",
+    "build:linux": "electron-builder --linux",
+    "build:linux-x64": "electron-builder --linux --x64",
+    "dist": "electron-builder --publish=never"
+  },
+  "keywords": ["code-editor", "ide", "electron", "programming"],
+  "author": {
+    "name": "ArduRadioKot",
+    "email": "frogeesoft.team@gmail.com"
+  },
+  "license": "GPL-2.0",
+  "description": "A lightweight code editor built with Electron, featuring multiple tabs, file management, and AI chat integration",
+  "homepage": "https://github.com/arduradiokot/FrogeeCodeIDE",
+  "dependencies": {
+    "axios": "^1.11.0"
+  },
+  "devDependencies": {
+    "electron": "^37.2.4",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.arduradiokot.frogeecodeide",
+    "productName": "FrogeeCodeIDE",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "style.css",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icon.icns",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Development",
+      "maintainer": "ArduRadioKot <frogeesoft.team@gmail.com>"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "dmg": {
+      "title": "FrogeeCodeIDE",
+      "icon": "build/icon.icns"
+    }
+  }
+}

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FrogeeCodeIDE</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="main-layout">
+    <!-- Боковая панель в стиле VS Code -->
+    <nav id="sidebar">
+      <button class="sidebar-btn active" title="Explorer" id="explorer-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" fill="#d4d4d4"/>
+        </svg>
+      </button>
+      <button class="sidebar-btn" title="Search" id="search-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="8" stroke="#d4d4d4" stroke-width="2"/>
+          <path d="m21 21-4.35-4.35" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="sidebar-btn" title="Source Control" id="git-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#d4d4d4"/>
+        </svg>
+      </button>
+      <button class="sidebar-btn" title="Run and Debug" id="debug-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M8 5v14l11-7z" fill="#d4d4d4"/>
+        </svg>
+      </button>
+      <button class="sidebar-btn" title="Extensions" id="extensions-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#d4d4d4"/>
+        </svg>
+      </button>
+      
+      <!-- Разделитель -->
+      <div class="sidebar-separator"></div>
+      
+      <!-- Кнопки для чата и настроек -->
+      <button class="sidebar-btn" title="AI Chat" id="chat-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4h16v12H5.17L4 17.17V4z" stroke="#d4d4d4" stroke-width="2"/>
+          <circle cx="8" cy="10" r="1.5" fill="#d4d4d4"/>
+          <circle cx="12" cy="10" r="1.5" fill="#d4d4d4"/>
+          <circle cx="16" cy="10" r="1.5" fill="#d4d4d4"/>
+        </svg>
+      </button>
+      <button class="sidebar-btn" title="Settings" id="open-settings-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" stroke="#d4d4d4" stroke-width="2"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 8.6 15a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 15.4 9a1.65 1.65 0 0 0 1.82.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 15z" stroke="#d4d4d4" stroke-width="2"/>
+        </svg>
+      </button>
+    </nav>
+
+    <!-- Панель активности (Activity Bar) -->
+    <div id="activity-panel" class="activity-panel">
+      <div class="activity-header">
+        <h3>EXPLORER</h3>
+        <button class="activity-btn" title="Новый файл" id="new-file-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 5v14m-7-7h14" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="file-explorer" class="file-explorer">
+        <div class="file-item" data-path="welcome.txt">
+          <span class="file-icon">📄</span>
+          <span class="file-name">welcome.txt</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Основная область редактора -->
+    <div id="editor-main">
+      <!-- Панель вкладок -->
+      <div class="file-tabs">
+        <div id="tabs-list" class="tabs-list"></div>
+        <button id="new-tab-btn" class="new-tab-btn" title="Новый файл">+</button>
+      </div>
+      
+      <!-- Область редактора -->
+      <div id="editor-container">
+        <textarea id="editor" placeholder="Начните писать код..."></textarea>
+      </div>
+    </div>
+
+    <!-- Панель чата (скрыта по умолчанию) -->
+    <div id="chat-panel" class="chat-panel" style="display:none;">
+      <div class="chat-header">
+        <h3>AI Chat</h3>
+        <button id="close-chat-btn" title="Закрыть чат">&times;</button>
+      </div>
+      <div class="chat-content">
+        <div id="chat-messages"></div>
+        <form id="chat-form">
+          <div class="chat-controls">
+            <select id="ai-provider-select" class="ai-provider-select">
+              <option value="ollama">Ollama</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
+            <select id="ai-model-select" class="ai-model-select">
+              <option value="llama3">llama3</option>
+            </select>
+          </div>
+          <div class="chat-input-container">
+            <input type="text" id="user-input" autocomplete="off" placeholder="Введите сообщение..." required />
+            <button type="submit">Отправить</button>
+            <button type="button" id="stop-btn" title="Остановить ответ" style="display:none;">Стоп</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальные окна -->
+  <div id="modal-settings" class="modal-overlay" style="display:none;">
+    <div class="modal-window">
+      <div class="modal-header">
+        <span>Настройки</span>
+        <button id="close-settings" title="Закрыть">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-group">
+          <div class="settings-group-title">Редактор</div>
+          <div class="settings-item">
+            <label class="settings-label" for="font-size-select">Размер шрифта:</label>
+            <div class="settings-control">
+              <select id="font-size-select" class="settings-select">
+                <option value="12">12px</option>
+                <option value="14">14px</option>
+                <option value="16" selected>16px</option>
+                <option value="18">18px</option>
+                <option value="20">20px</option>
+              </select>
+            </div>
+          </div>
+          <div class="settings-item">
+            <label class="settings-label" for="theme-select">Тема:</label>
+            <div class="settings-control">
+              <select id="theme-select" class="settings-select">
+                <option value="dark" selected>Темная</option>
+                <option value="light">Светлая</option>
+              </select>
+            </div>
+          </div>
+          <div class="settings-item">
+            <label class="settings-label" for="tab-size-select">Размер табуляции:</label>
+            <div class="settings-control">
+              <select id="tab-size-select" class="settings-select">
+                <option value="2">2 пробела</option>
+                <option value="4" selected>4 пробела</option>
+                <option value="8">8 пробелов</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-group">
+          <div class="settings-group-title">AI Настройки</div>
+          <div class="settings-item">
+            <label class="settings-label" for="openrouter-key">OpenRouter API Ключ:</label>
+            <div class="settings-control">
+              <input type="password" id="openrouter-key" class="settings-input" placeholder="sk-or-v1-..." />
+              <button id="save-openrouter-key" class="settings-btn">Сохранить</button>
+            </div>
+          </div>
+          <div class="settings-item">
+            <label class="settings-label">Статус OpenRouter:</label>
+            <div class="settings-control">
+              <span id="openrouter-status" class="status-indicator">Не настроен</span>
+            </div>
+          </div>
+          <div class="settings-item">
+            <label class="settings-label" for="default-ai-provider">Провайдер по умолчанию:</label>
+            <div class="settings-control">
+              <select id="default-ai-provider" class="settings-select">
+                <option value="ollama" selected>Ollama</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="close-settings-btn" class="modal-ok-btn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html> 
