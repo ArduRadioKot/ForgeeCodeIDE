@@ -12,29 +12,35 @@
     <!-- Боковая панель в стиле VS Code -->
     <nav id="sidebar">
       <button class="sidebar-btn active" title="Explorer" id="explorer-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" fill="#d4d4d4"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3h18v18H3V3z"/>
+          <path d="M9 9h6v6H9z"/>
+          <path d="M9 3v6"/>
+          <path d="M9 15v6"/>
+          <path d="M15 3v6"/>
+          <path d="M15 15v6"/>
         </svg>
       </button>
       <button class="sidebar-btn" title="Search" id="search-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <circle cx="11" cy="11" r="8" stroke="#d4d4d4" stroke-width="2"/>
-          <path d="m21 21-4.35-4.35" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
         </svg>
       </button>
       <button class="sidebar-btn" title="Source Control" id="git-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#d4d4d4"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+          <path d="m9 12 2 2 4-4"/>
         </svg>
       </button>
       <button class="sidebar-btn" title="Run and Debug" id="debug-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M8 5v14l11-7z" fill="#d4d4d4"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
         </svg>
       </button>
       <button class="sidebar-btn" title="Extensions" id="extensions-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#d4d4d4"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
       </button>
       
@@ -43,17 +49,16 @@
       
       <!-- Кнопки для чата и настроек -->
       <button class="sidebar-btn" title="AI Chat" id="chat-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M4 4h16v12H5.17L4 17.17V4z" stroke="#d4d4d4" stroke-width="2"/>
-          <circle cx="8" cy="10" r="1.5" fill="#d4d4d4"/>
-          <circle cx="12" cy="10" r="1.5" fill="#d4d4d4"/>
-          <circle cx="16" cy="10" r="1.5" fill="#d4d4d4"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          <path d="M8 9h8"/>
+          <path d="M8 13h6"/>
         </svg>
       </button>
       <button class="sidebar-btn" title="Settings" id="open-settings-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" stroke="#d4d4d4" stroke-width="2"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 8.6 15a1.65 1.65 0 0 0-1.82-.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 15.4 9a1.65 1.65 0 0 0 1.82.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 15z" stroke="#d4d4d4" stroke-width="2"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
         </svg>
       </button>
     </nav>
@@ -63,8 +68,11 @@
       <div class="activity-header">
         <h3>EXPLORER</h3>
         <button class="activity-btn" title="Новый файл" id="new-file-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M12 5v14m-7-7h14" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round"/>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
           </svg>
         </button>
       </div>
@@ -78,14 +86,81 @@
 
     <!-- Основная область редактора -->
     <div id="editor-main">
-      <!-- Панель вкладок -->
-      <div class="file-tabs">
-        <div id="tabs-list" class="tabs-list"></div>
-        <button id="new-tab-btn" class="new-tab-btn" title="Новый файл">+</button>
+      <!-- Стартовая страница (показывается по умолчанию) -->
+      <div id="welcome-page" class="welcome-page">
+        <div class="welcome-header">
+          <h1 class="welcome-title">FrogeeCodeIDE</h1>
+        </div>
+        
+        <div class="welcome-content">
+          <div class="welcome-section">
+            <h2 class="section-title">Start</h2>
+            <div class="action-list">
+              <div class="action-item" id="new-file-action">
+                <div class="action-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                  </svg>
+                </div>
+                <div class="action-text">
+                  <div class="action-title">New File...</div>
+                  <div class="action-description">Create a new file</div>
+                </div>
+              </div>
+              
+              <div class="action-item" id="open-file-action">
+                <div class="action-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+                  </svg>
+                </div>
+                <div class="action-text">
+                  <div class="action-title">Open...</div>
+                  <div class="action-description">Open a file or folder</div>
+                </div>
+              </div>
+              
+              <div class="action-item" id="ai-chat-action">
+                <div class="action-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M8 9h8"/>
+                    <path d="M8 13h6"/>
+                  </svg>
+                </div>
+                <div class="action-text">
+                  <div class="action-title">AI Chat Assistant</div>
+                  <div class="action-description">Chat with AI for coding help</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="welcome-footer">
+          <label class="welcome-checkbox">
+            <input type="checkbox" id="show-welcome-checkbox" checked>
+            <span class="checkmark"></span>
+            Show welcome page on startup
+          </label>
+        </div>
       </div>
       
-      <!-- Область редактора -->
-      <div id="editor-container">
+      <!-- Панель вкладок (скрыта по умолчанию) -->
+      <div id="editor-tabs" class="file-tabs" style="display:none;">
+        <div id="tabs-list" class="tabs-list"></div>
+        <button id="new-tab-btn" class="new-tab-btn" title="Новый файл">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Область редактора (скрыта по умолчанию) -->
+      <div id="editor-container" class="editor-container" style="display:none;">
+        <div id="line-numbers" class="line-numbers"></div>
         <textarea id="editor" placeholder="Начните писать код..."></textarea>
       </div>
     </div>
@@ -93,27 +168,72 @@
     <!-- Панель чата (скрыта по умолчанию) -->
     <div id="chat-panel" class="chat-panel" style="display:none;">
       <div class="chat-header">
-        <h3>AI Chat</h3>
-        <button id="close-chat-btn" title="Закрыть чат">&times;</button>
+        <div class="chat-header-left">
+          <h3>AI Assistant</h3>
+          <div class="chat-status" id="chat-status">Готов</div>
+        </div>
+        <div class="chat-header-right">
+          <button id="clear-chat-btn" title="Очистить чат" class="chat-header-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+          </button>
+          <button id="close-chat-btn" title="Закрыть чат" class="chat-header-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
       </div>
+      
       <div class="chat-content">
-        <div id="chat-messages"></div>
-        <form id="chat-form">
+        <div id="chat-messages" class="chat-messages"></div>
+        
+        <div class="chat-input-area">
           <div class="chat-controls">
-            <select id="ai-provider-select" class="ai-provider-select">
-              <option value="ollama">Ollama</option>
-              <option value="openrouter">OpenRouter</option>
-            </select>
-            <select id="ai-model-select" class="ai-model-select">
-              <option value="llama3">llama3</option>
-            </select>
+            <div class="ai-provider-selector">
+              <select id="ai-provider-select" class="ai-provider-select">
+                <option value="ollama">🤖 Ollama</option>
+                <option value="openrouter">🌐 OpenRouter</option>
+              </select>
+            </div>
+            <div class="ai-model-selector">
+              <select id="ai-model-select" class="ai-model-select">
+                <option value="llama3">llama3</option>
+              </select>
+            </div>
           </div>
+          
           <div class="chat-input-container">
-            <input type="text" id="user-input" autocomplete="off" placeholder="Введите сообщение..." required />
-            <button type="submit">Отправить</button>
-            <button type="button" id="stop-btn" title="Остановить ответ" style="display:none;">Стоп</button>
+            <div class="input-wrapper">
+              <textarea 
+                id="user-input" 
+                class="chat-textarea" 
+                placeholder="Введите сообщение... (Shift+Enter для новой строки)"
+                rows="1"
+              ></textarea>
+              <div class="input-actions">
+                <button type="button" id="send-btn" class="send-btn" title="Отправить (Enter)">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m22 2-7 20-4-9-9-4 20-7z"/>
+                    <path d="M22 2 11 13"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <button type="button" id="stop-btn" class="stop-btn" title="Остановить ответ" style="display:none;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="6" width="12" height="12"/>
+              </svg>
+              Остановить
+            </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   </div>
@@ -123,7 +243,12 @@
     <div class="modal-window">
       <div class="modal-header">
         <span>Настройки</span>
-        <button id="close-settings" title="Закрыть">&times;</button>
+        <button id="close-settings" title="Закрыть">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
       <div class="modal-body">
         <div class="settings-group">

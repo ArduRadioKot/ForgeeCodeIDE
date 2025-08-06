@@ -6,6 +6,7 @@ let currentActivity = 'explorer'; // explorer, search, git, debug, extensions
 let openRouterModels = [];
 let currentAiProvider = 'ollama'; // ollama, openrouter
 let currentAiModel = 'llama3';
+let isTyping = false;
 
 // Элементы DOM
 const editor = document.getElementById('editor');
@@ -14,10 +15,12 @@ const newTabBtn = document.getElementById('new-tab-btn');
 const newFileBtn = document.getElementById('new-file-btn');
 const chatBtn = document.getElementById('chat-btn');
 const closeChatBtn = document.getElementById('close-chat-btn');
+const clearChatBtn = document.getElementById('clear-chat-btn');
 const chatPanel = document.getElementById('chat-panel');
 const chatMessages = document.getElementById('chat-messages');
-const chatForm = document.getElementById('chat-form');
+const chatStatus = document.getElementById('chat-status');
 const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
 const stopBtn = document.getElementById('stop-btn');
 const settingsBtn = document.getElementById('open-settings-btn');
 const settingsModal = document.getElementById('modal-settings');
@@ -26,6 +29,20 @@ const closeSettingsBtn2 = document.getElementById('close-settings-btn');
 const fontSizeSelect = document.getElementById('font-size-select');
 const themeSelect = document.getElementById('theme-select');
 const tabSizeSelect = document.getElementById('tab-size-select');
+const lineNumbers = document.getElementById('line-numbers');
+
+// Элементы стартовой страницы
+const welcomePage = document.getElementById('welcome-page');
+const editorTabs = document.getElementById('editor-tabs');
+const editorContainer = document.getElementById('editor-container');
+const showWelcomeCheckbox = document.getElementById('show-welcome-checkbox');
+
+// Элементы действий стартовой страницы
+const newFileAction = document.getElementById('new-file-action');
+const openFileAction = document.getElementById('open-file-action');
+const cloneRepoAction = document.getElementById('clone-repo-action');
+const connectAction = document.getElementById('connect-action');
+const aiChatAction = document.getElementById('ai-chat-action');
 
 // Элементы чата
 const aiProviderSelect = document.getElementById('ai-provider-select');
@@ -71,6 +88,17 @@ function initializeApp() {
       console.error('Ошибка загрузки вкладок:', e);
     }
   }
+  
+  // Загружаем настройку стартовой страницы
+  const showWelcome = localStorage.getItem('showWelcomePage');
+  if (showWelcome === null || showWelcome === 'true') {
+    showWelcomePage();
+  } else {
+    hideWelcomePage();
+    if (currentTabs.length === 0) {
+      createWelcomeTab();
+    }
+  }
 }
 
 async function initializeOpenRouter() {
@@ -114,21 +142,21 @@ function updateOpenRouterModelSelect() {
     // Добавляем модели Ollama
     aiModelSelect.innerHTML = '<option value="llama3">llama3</option>';
   } else if (currentAiProvider === 'openrouter') {
-    // Добавляем популярные модели OpenRouter
-    const popularModels = [
-      'openai/gpt-3.5-turbo',
-      'openai/gpt-4',
-      'anthropic/claude-3-haiku',
-      'anthropic/claude-3-sonnet',
-      'google/gemini-pro',
-      'meta-llama/llama-3.1-8b-instruct',
-      'meta-llama/llama-3.1-70b-instruct'
+    // Добавляем бесплатные модели OpenRouter
+    const freeModels = [
+      'deepseek/deepseek-r1-0528:free',
+      'qwen/qwen3-235b-a22b:free',
+      'google/gemini-2.0-flash-exp:free',
+      'meta-llama/llama-3.1-405b-instruct:free',
+      'openrouter/horizon-beta'
     ];
     
-    popularModels.forEach(model => {
+    freeModels.forEach(model => {
       const option = document.createElement('option');
       option.value = model;
-      option.textContent = model.split('/')[1] || model;
+      // Красиво отображаем название модели
+      const displayName = model.split('/')[1]?.split(':')[0] || model.split('/')[0];
+      option.textContent = displayName;
       aiModelSelect.appendChild(option);
     });
   }
@@ -141,6 +169,16 @@ function setupEventListeners() {
   // Кнопки файлов
   newFileBtn.addEventListener('click', createNewFile);
   
+  // Действия стартовой страницы
+  newFileAction.addEventListener('click', handleNewFileAction);
+  openFileAction.addEventListener('click', handleOpenFileAction);
+  cloneRepoAction.addEventListener('click', handleCloneRepoAction);
+  connectAction.addEventListener('click', handleConnectAction);
+  aiChatAction.addEventListener('click', handleAiChatAction);
+  
+  // Чекбокс стартовой страницы
+  showWelcomeCheckbox.addEventListener('change', handleWelcomeCheckboxChange);
+  
   // Кнопки боковой панели
   explorerBtn.addEventListener('click', () => switchActivity('explorer'));
   searchBtn.addEventListener('click', () => switchActivity('search'));
@@ -151,10 +189,15 @@ function setupEventListeners() {
   // Кнопки чата
   chatBtn.addEventListener('click', toggleChat);
   closeChatBtn.addEventListener('click', toggleChat);
+  clearChatBtn.addEventListener('click', clearChatHistory);
   
   // Форма чата
-  chatForm.addEventListener('submit', handleChatSubmit);
+  sendBtn.addEventListener('click', handleChatSubmit);
   stopBtn.addEventListener('click', stopChatResponse);
+  
+  // Обработка ввода в чате
+  userInput.addEventListener('keydown', handleChatKeydown);
+  userInput.addEventListener('input', handleTextareaResize);
   
   // Селекторы AI
   aiProviderSelect.addEventListener('change', handleAiProviderChange);
@@ -184,6 +227,9 @@ function setupEventListeners() {
   // Редактор
   editor.addEventListener('input', handleEditorInput);
   editor.addEventListener('keydown', handleEditorKeydown);
+  editor.addEventListener('scroll', handleEditorScroll);
+  editor.addEventListener('click', updateCurrentLine);
+  editor.addEventListener('keyup', updateCurrentLine);
   
   // Горячие клавиши
   document.addEventListener('keydown', handleGlobalKeydown);
@@ -198,8 +244,8 @@ function handleAiProviderChange() {
     aiModelSelect.value = 'llama3';
     currentAiModel = 'llama3';
   } else if (currentAiProvider === 'openrouter') {
-    aiModelSelect.value = 'openai/gpt-3.5-turbo';
-    currentAiModel = 'openai/gpt-3.5-turbo';
+    aiModelSelect.value = 'deepseek/deepseek-r1-0528:free';
+    currentAiModel = 'deepseek/deepseek-r1-0528:free';
   }
   
   localStorage.setItem('currentAiProvider', currentAiProvider);
@@ -246,6 +292,50 @@ function updateDefaultAiProvider() {
   // Обновляем текущий провайдер в чате
   aiProviderSelect.value = defaultProvider;
   handleAiProviderChange();
+}
+
+// Функции для работы со стартовой страницей
+function showWelcomePage() {
+  welcomePage.style.display = 'flex';
+  editorTabs.style.display = 'none';
+  editorContainer.style.display = 'none';
+}
+
+function hideWelcomePage() {
+  welcomePage.style.display = 'none';
+  editorTabs.style.display = 'flex';
+  editorContainer.style.display = 'flex';
+}
+
+function handleNewFileAction() {
+  hideWelcomePage();
+  createNewFile();
+}
+
+function handleOpenFileAction() {
+  hideWelcomePage();
+  openFile();
+}
+
+function handleCloneRepoAction() {
+  // Пока просто показываем сообщение
+  alert('Функция клонирования Git репозитория будет добавлена в будущих версиях.');
+}
+
+function handleConnectAction() {
+  // Пока просто показываем сообщение
+  alert('Функция подключения к удаленному хосту будет добавлена в будущих версиях.');
+}
+
+function handleAiChatAction() {
+  // Открываем чат с AI
+  if (!chatVisible) {
+    toggleChat();
+  }
+}
+
+function handleWelcomeCheckboxChange() {
+  localStorage.setItem('showWelcomePage', showWelcomeCheckbox.checked);
 }
 
 // Функции для работы с активностью
@@ -433,7 +523,7 @@ function performSearch() {
   
   if (results.length === 0) {
     searchResults.innerHTML = '<div class="search-placeholder">Ничего не найдено</div>';
-  } else {
+    } else {
     searchResults.innerHTML = results.map(result => `
       <div class="search-result-item" onclick="switchToTab(${result.tabIndex})">
         <span class="result-file">${result.file}</span>
@@ -484,6 +574,7 @@ function switchToTab(index) {
     // Обновляем UI
     updateTabsList();
     updateTabTitle();
+    updateLineNumbers();
   }
 }
 
@@ -504,7 +595,7 @@ function closeTab(index) {
       createWelcomeTab();
     } else if (activeTabIndex >= currentTabs.length) {
       switchToTab(currentTabs.length - 1);
-    } else {
+  } else {
       switchToTab(activeTabIndex);
     }
     
@@ -543,6 +634,8 @@ function createWelcomeTab() {
 • Темной и светлой темы
 • Чат с AI (Ollama и OpenRouter)
 • Боковая панель в стиле VS Code
+• Нумерация строк
+• Стартовая страница в стиле VS Code
 
 Начните писать код или откройте файл!
 
@@ -567,6 +660,7 @@ def hello():
 </html>`;
 
   createTab('welcome.txt', welcomeContent);
+  updateLineNumbers();
 }
 
 // Функции для работы с файлами
@@ -601,8 +695,8 @@ async function saveFile() {
         updateTabsList();
         updateTabTitle();
         saveTabs();
-      }
-    } catch (error) {
+    }
+  } catch (error) {
       console.error('Ошибка сохранения файла:', error);
     }
   }
@@ -627,7 +721,7 @@ function handleEditorInput() {
 function handleEditorKeydown(e) {
   // Обработка табуляции
   if (e.key === 'Tab') {
-    e.preventDefault();
+  e.preventDefault();
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const tabSize = parseInt(tabSizeSelect.value);
@@ -636,6 +730,43 @@ function handleEditorKeydown(e) {
     editor.value = editor.value.substring(0, start) + spaces + editor.value.substring(end);
     editor.selectionStart = editor.selectionEnd = start + tabSize;
   }
+}
+
+function handleEditorScroll() {
+  // Обновляем нумерацию строк при прокрутке
+  updateLineNumbers();
+}
+
+function updateCurrentLine() {
+  // Обновляем нумерацию строк при клике или нажатии клавиши
+  updateLineNumbers();
+}
+
+function updateLineNumbers() {
+  const lines = editor.value.split('\n');
+  const scrollTop = editor.scrollTop;
+  const lineHeight = parseInt(getComputedStyle(editor).lineHeight);
+  const visibleLines = Math.ceil(editor.clientHeight / lineHeight);
+  const startLine = Math.floor(scrollTop / lineHeight);
+  const endLine = Math.min(startLine + visibleLines + 1, lines.length);
+  
+  // Получаем текущую позицию курсора
+  const cursorPosition = editor.selectionStart;
+  const textBeforeCursor = editor.value.substring(0, cursorPosition);
+  const currentLineNumber = textBeforeCursor.split('\n').length;
+  
+  let lineNumberHtml = '';
+  for (let i = 0; i < lines.length; i++) {
+    const lineNum = i + 1;
+    const isCurrentLine = lineNum === currentLineNumber;
+    const lineClass = isCurrentLine ? 'line-number current' : 'line-number';
+    lineNumberHtml += `<span class="${lineClass}">${lineNum}</span>`;
+  }
+  
+  lineNumbers.innerHTML = lineNumberHtml;
+  
+  // Синхронизируем прокрутку нумерации строк с редактором
+  lineNumbers.scrollTop = scrollTop;
 }
 
 function handleGlobalKeydown(e) {
@@ -716,24 +847,45 @@ function toggleChat() {
   if (chatVisible) {
     chatBtn.classList.add('active');
     loadChatHistory();
+    userInput.focus();
   } else {
     chatBtn.classList.remove('active');
   }
 }
 
-async function handleChatSubmit(e) {
-  e.preventDefault();
+function handleChatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleChatSubmit();
+  }
+}
+
+function handleTextareaResize() {
+  // Автоматическое изменение высоты textarea
+  userInput.style.height = 'auto';
+  userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+}
+
+async function handleChatSubmit() {
   const message = userInput.value.trim();
-  if (!message) return;
+  if (!message || isTyping) return;
   
   // Добавляем сообщение пользователя
   addChatMessage(message, 'user');
   userInput.value = '';
+  userInput.style.height = 'auto';
+  
+  // Показываем статус печатания
+  setChatStatus('typing', 'Печатает...');
+  showTypingIndicator();
   
   // Показываем кнопку остановки
-  stopBtn.style.display = 'inline-block';
+  stopBtn.style.display = 'flex';
+  sendBtn.disabled = true;
   
   try {
+    isTyping = true;
+    
     // Определяем, какой провайдер использовать
     const useOpenRouter = currentAiProvider === 'openrouter';
     
@@ -747,25 +899,87 @@ async function handleChatSubmit(e) {
     }
   } catch (error) {
     addChatMessage(`Ошибка: ${error.message}`, 'ai');
+    setChatStatus('error', 'Ошибка');
   } finally {
+    isTyping = false;
     stopBtn.style.display = 'none';
+    sendBtn.disabled = false;
+    hideTypingIndicator();
+    setChatStatus('ready', 'Готов');
   }
 }
 
 function addChatMessage(content, sender) {
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${sender}`;
-  messageDiv.textContent = content;
+  
+  if (sender === 'ai') {
+    // Парсим Markdown для сообщений AI
+    try {
+      const { marked } = require('marked');
+      messageDiv.innerHTML = marked.parse(content);
+    } catch (error) {
+      // Если marked недоступен, используем обычный текст
+      messageDiv.textContent = content;
+    }
+  } else {
+    messageDiv.textContent = content;
+  }
+  
   chatMessages.appendChild(messageDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  // Плавная прокрутка к новому сообщению
+  setTimeout(() => {
+    chatMessages.scrollTo({
+      top: chatMessages.scrollHeight,
+      behavior: 'smooth'
+    });
+  }, 10);
   
   // Сохраняем историю чата
   saveChatHistory();
 }
 
+function showTypingIndicator() {
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'typing-indicator';
+  typingDiv.innerHTML = `
+    <span>AI печатает</span>
+    <div class="typing-dots">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+  `;
+  chatMessages.appendChild(typingDiv);
+  
+  setTimeout(() => {
+    chatMessages.scrollTo({
+      top: chatMessages.scrollHeight,
+      behavior: 'smooth'
+    });
+  }, 10);
+}
+
+function hideTypingIndicator() {
+  const typingIndicator = chatMessages.querySelector('.typing-indicator');
+  if (typingIndicator) {
+    typingIndicator.remove();
+  }
+}
+
+function setChatStatus(type, text) {
+  chatStatus.textContent = text;
+  chatStatus.className = `chat-status ${type}`;
+}
+
 function stopChatResponse() {
   window.electronAPI.abortRequest();
   stopBtn.style.display = 'none';
+  sendBtn.disabled = false;
+  isTyping = false;
+  hideTypingIndicator();
+  setChatStatus('ready', 'Готов');
 }
 
 function loadChatHistory() {
@@ -784,11 +998,21 @@ function loadChatHistory() {
 }
 
 function saveChatHistory() {
-  const messages = Array.from(chatMessages.children).map(msg => ({
-    content: msg.textContent,
-    sender: msg.classList.contains('user') ? 'user' : 'ai'
-  }));
+  const messages = Array.from(chatMessages.children)
+    .filter(el => el.classList.contains('message'))
+    .map(msg => ({
+      content: msg.textContent || msg.innerText,
+      sender: msg.classList.contains('user') ? 'user' : 'ai'
+    }));
   localStorage.setItem('chatHistory', JSON.stringify(messages));
+}
+
+function clearChatHistory() {
+  if (confirm('Вы уверены, что хотите очистить историю чата?')) {
+    localStorage.removeItem('chatHistory');
+    chatMessages.innerHTML = '';
+    alert('История чата очищена.');
+  }
 }
 
 // Функции для работы с настройками
@@ -798,7 +1022,7 @@ function loadSettings() {
   const tabSize = localStorage.getItem('tabSize') || '4';
   const defaultProvider = localStorage.getItem('defaultAiProvider') || 'ollama';
   const savedProvider = localStorage.getItem('currentAiProvider') || defaultProvider;
-  const savedModel = localStorage.getItem('currentAiModel') || 'llama3';
+  const savedModel = localStorage.getItem('currentAiModel') || (defaultProvider === 'openrouter' ? 'deepseek/deepseek-r1-0528:free' : 'llama3');
   
   fontSizeSelect.value = fontSize;
   themeSelect.value = theme;
@@ -820,7 +1044,9 @@ function loadSettings() {
 function updateFontSize() {
   const size = fontSizeSelect.value;
   editor.style.fontSize = size + 'px';
+  lineNumbers.style.fontSize = size + 'px';
   localStorage.setItem('fontSize', size);
+  updateLineNumbers();
 }
 
 function updateTheme() {
@@ -855,7 +1081,22 @@ window.electronAPI.onStreamUpdate((event, data) => {
   const aiMessages = chatMessages.querySelectorAll('.message.ai');
   if (aiMessages.length > 0) {
     const lastMessage = aiMessages[aiMessages.length - 1];
-    lastMessage.textContent = data.fullMessage;
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    try {
+      // Парсим Markdown для обновленного контента
+      const { marked } = require('marked');
+      lastMessage.innerHTML = marked.parse(data.fullMessage);
+    } catch (error) {
+      // Если marked недоступен, используем обычный текст
+      lastMessage.textContent = data.fullMessage;
+    }
+    
+    // Плавная прокрутка к обновленному сообщению
+    setTimeout(() => {
+      chatMessages.scrollTo({
+        top: chatMessages.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 10);
   }
 }); 
