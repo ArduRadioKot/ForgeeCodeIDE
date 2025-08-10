@@ -179,7 +179,8 @@ function updateOpenRouterModelSelect() {
       'deepseek/deepseek-r1-0528:free',
       'qwen/qwen3-235b-a22b:free',
       'google/gemini-2.0-flash-exp:free',
-      'meta-llama/llama-3.1-405b-instruct:free'
+      'meta-llama/llama-3.1-405b-instruct:free',
+      'openrouter/horizon-beta'
     ];
     
     freeModels.forEach(model => {
@@ -337,7 +338,7 @@ async function saveOpenRouterKey() {
       }
       
       saveAllConfig();
-  } else {
+    } else {
       alert('Ошибка сохранения API ключа: ' + result.error);
     }
   } catch (error) {
