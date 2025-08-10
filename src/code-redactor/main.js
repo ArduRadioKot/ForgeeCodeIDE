@@ -1,15 +1,75 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const axios = require('axios');
 const { spawn } = require('child_process');
+const os = require('os');
+
+// Константы
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';
+let openRouterApiKey = '';
+
+// Путь к конфигурации в папке Documents/FrogeeCodeIDE/config
+const documentsPath = path.join(os.homedir(), 'Documents');
+const configDir = path.join(documentsPath, 'FrogeeCodeIDE', 'config');
+const configFile = path.join(configDir, 'settings.json');
+
+// Функции для работы с конфигурацией
+async function ensureConfigDir() {
+  try {
+    // Создаем папку Documents/FrogeeCodeIDE если её нет
+    const frogeeCodeIDEPath = path.join(documentsPath, 'FrogeeCodeIDE');
+    try {
+      await fs.access(frogeeCodeIDEPath);
+    } catch {
+      await fs.mkdir(frogeeCodeIDEPath, { recursive: true });
+    }
+    
+    // Создаем папку config если её нет
+    try {
+      await fs.access(configDir);
+    } catch {
+      await fs.mkdir(configDir, { recursive: true });
+    }
+  } catch (error) {
+    console.error('Ошибка создания папок конфигурации:', error);
+  }
+}
+
+async function loadConfig() {
+  try {
+    await ensureConfigDir();
+    const data = await fs.readFile(configFile, 'utf8');
+    return JSON.parse(data);
+  } catch {
+    // Возвращаем настройки по умолчанию
+    return {
+      fontSize: '16',
+      theme: 'dark',
+      tabSize: '4',
+      defaultAiProvider: 'ollama',
+      currentAiProvider: 'ollama',
+      currentAiModel: 'llama3',
+      showWelcomePage: true,
+      editorTabs: [],
+      chatHistory: []
+    };
+  }
+}
+
+async function saveConfig(config) {
+  try {
+    await ensureConfigDir();
+    await fs.writeFile(configFile, JSON.stringify(config, null, 2), 'utf8');
+    return { success: true };
+  } catch (error) {
+    console.error('Ошибка сохранения конфигурации:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 let ollamaProcess = null;
 let mainWindow = null;
-
-// Конфигурация OpenRouter
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';
-let openRouterApiKey = null;
 
 async function checkOllamaRunning() {
   try {
@@ -184,13 +244,22 @@ ipcMain.handle('new-file', async () => {
   return { success: true, content: '' };
 });
 
-// Функции для работы с OpenRouter
+// IPC обработчики для конфигурации
+ipcMain.handle('load-config', async () => {
+  return await loadConfig();
+});
+
+ipcMain.handle('save-config', async (event, config) => {
+  return await saveConfig(config);
+});
+
+// Обновляем существующие обработчики для работы с конфигурацией
 ipcMain.handle('set-openrouter-key', async (event, apiKey) => {
   try {
     openRouterApiKey = apiKey;
-    const configPath = path.join(app.getPath('userData'), 'config.json');
-    const config = { openRouterApiKey: apiKey };
-    await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+    const config = await loadConfig();
+    config.openRouterApiKey = apiKey;
+    await saveConfig(config);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -198,7 +267,12 @@ ipcMain.handle('set-openrouter-key', async (event, apiKey) => {
 });
 
 ipcMain.handle('get-openrouter-key', async () => {
-  return { success: true, apiKey: openRouterApiKey };
+  try {
+    const config = await loadConfig();
+    return config.openRouterApiKey || '';
+  } catch (error) {
+    return '';
+  }
 });
 
 ipcMain.handle('get-openrouter-models', async () => {
@@ -211,18 +285,16 @@ ipcMain.handle('get-openrouter-models', async () => {
 });
 
 // Обновленная функция отправки сообщений с поддержкой OpenRouter
-ipcMain.handle('send-message', async (event, { message, model, signal, useOpenRouter = false }) => {
+ipcMain.handle('send-message', async (event, message, model, useOpenRouter = false) => {
   try {
     if (useOpenRouter) {
-      return await sendMessageOpenRouter(message, model, signal, event);
+      return await sendMessageOpenRouter(message, model, null, event);
     } else {
-      return await sendMessageOllama(message, model, signal, event);
+      return await sendMessageOllama(message, model, null, event);
     }
   } catch (err) {
-    if (err.name === 'AbortError') {
-      return 'Request aborted';
-    }
-    return 'Ошибка: ' + (err.response?.data?.error || err.message);
+    console.error('AI Error:', err);
+    throw new Error(err.message || 'Неизвестная ошибка AI');
   }
 });
 
@@ -231,128 +303,108 @@ async function sendMessageOpenRouter(message, model, signal, event) {
     throw new Error('OpenRouter API ключ не настроен');
   }
 
-  const response = await axios.post(`${OPENROUTER_API_URL}/chat/completions`, {
-    model: model || 'openai/gpt-3.5-turbo',
-    messages: [
-      { role: 'user', content: message }
-    ],
-    stream: true
-  }, {
-    headers: {
-      'Authorization': `Bearer ${openRouterApiKey}`,
-      'Content-Type': 'application/json'
-    },
-    responseType: 'stream',
-    signal: signal ? new AbortController().signal : undefined
-  });
-  
-  let aiMsg = '';
-  
-  return new Promise((resolve, reject) => {
-    response.data.on('data', (chunk) => {
-      const lines = chunk.toString().split('\n');
-      for (const line of lines) {
-        if (line.trim() === '' || !line.startsWith('data: ')) continue;
-        
-        try {
-          const data = JSON.parse(line.slice(6));
-          if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
-            const content = data.choices[0].delta.content;
-            aiMsg += content;
-            
-            // Отправляем обновление в реальном времени
-            event.sender.send('stream-update', { 
-              content: content,
-              fullMessage: aiMsg 
-            });
+  try {
+    const response = await axios.post(`${OPENROUTER_API_URL}/chat/completions`, {
+      model: model || 'openai/gpt-3.5-turbo',
+      messages: [
+        { role: 'user', content: message }
+      ],
+      stream: true
+    }, {
+      headers: {
+        'Authorization': `Bearer ${openRouterApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      responseType: 'stream'
+    });
+    
+    let aiMsg = '';
+    
+    return new Promise((resolve, reject) => {
+      response.data.on('data', (chunk) => {
+        const lines = chunk.toString().split('\n');
+        for (const line of lines) {
+          if (line.trim() === '' || !line.startsWith('data: ')) continue;
+          
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+              const content = data.choices[0].delta.content;
+              aiMsg += content;
+              
+              // Отправляем обновление в реальном времени
+              event.sender.send('stream-update', { 
+                content: content,
+                fullMessage: aiMsg 
+              });
+            }
+          } catch (e) {
+            // Игнорируем невалидный JSON
           }
-        } catch (e) {
-          // Игнорируем невалидный JSON
         }
-      }
-    });
-    
-    response.data.on('end', () => {
-      resolve({ answer: aiMsg, think: '' });
-    });
-    
-    response.data.on('error', (err) => {
-      if (err.name === 'AbortError') {
-        reject(new Error('Request aborted'));
-      } else {
+      });
+      
+      response.data.on('end', () => {
+        resolve({ answer: aiMsg, think: '' });
+      });
+      
+      response.data.on('error', (err) => {
         reject(err);
-      }
+      });
     });
-  });
+  } catch (error) {
+    console.error('OpenRouter API error:', error);
+    throw new Error(`OpenRouter API ошибка: ${error.message}`);
+  }
 }
 
 async function sendMessageOllama(message, model, signal, event) {
-  // Создаём AbortController если signal передан
-  let abortController = null;
-  if (signal) {
-    abortController = new AbortController();
-    // Слушаем событие abort из renderer
-    event.sender.on('abort-request', () => {
-      abortController.abort();
+  try {
+    const response = await axios.post('http://localhost:11434/api/chat', {
+      model: model || 'llama3',
+      messages: [
+        { role: 'user', content: message }
+      ],
+      stream: true
+    }, {
+      responseType: 'stream'
     });
-  }
-  
-  const response = await axios.post('http://localhost:11434/api/chat', {
-    model: model || 'llama3',
-    messages: [
-      { role: 'user', content: message }
-    ],
-    stream: true
-  }, {
-    responseType: 'stream',
-    signal: abortController?.signal
-  });
-  
-  let aiMsg = '';
-  let think = '';
-  let answer = '';
-  
-  return new Promise((resolve, reject) => {
-    response.data.on('data', (chunk) => {
-      const lines = chunk.toString().split('\n');
-      for (const line of lines) {
-        if (line.trim() === '') continue;
-        try {
-          const data = JSON.parse(line);
-          if (data.message?.content) {
-            aiMsg += data.message.content;
-            // Отправляем обновление в реальном времени
-            event.sender.send('stream-update', { 
-              content: data.message.content,
-              fullMessage: aiMsg 
-            });
+    
+    let aiMsg = '';
+    
+    return new Promise((resolve, reject) => {
+      response.data.on('data', (chunk) => {
+        const lines = chunk.toString().split('\n');
+        for (const line of lines) {
+          if (line.trim() === '') continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.message?.content) {
+              aiMsg += data.message.content;
+              // Отправляем обновление в реальном времени
+              event.sender.send('stream-update', { 
+                content: data.message.content,
+                fullMessage: aiMsg 
+              });
+            }
+          } catch (e) {
+            // Игнорируем невалидный JSON
           }
-        } catch (e) {
-          // Игнорируем невалидный JSON
         }
-      }
-    });
-    
-    response.data.on('end', () => {
-      // Ищем мысли (<think>...</think>) и отделяем их
-      const thinkMatch = aiMsg.match(/<think>([\s\S]*?)<\/think>/i);
-      if (thinkMatch) {
-        think = thinkMatch[1].trim();
-        answer = aiMsg.replace(thinkMatch[0], '').trim();
-      } else {
-        answer = aiMsg;
-      }
-      resolve({ answer, think });
-    });
-    
-    response.data.on('error', (err) => {
-      if (err.name === 'AbortError') {
-        reject(new Error('Request aborted'));
-      } else {
+      });
+      
+      response.data.on('end', () => {
+        resolve({ answer: aiMsg, think: '' });
+      });
+      
+      response.data.on('error', (err) => {
         reject(err);
-      }
+      });
     });
-  });
+  } catch (error) {
+    console.error('Ollama API error:', error);
+    throw new Error(`Ollama API ошибка: ${error.message}`);
+  }
 }
 
 // Существующие функции чата

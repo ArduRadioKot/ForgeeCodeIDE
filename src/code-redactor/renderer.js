@@ -72,62 +72,93 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeOpenRouter();
 });
 
-function initializeApp() {
-  // Загружаем сохраненные вкладки из localStorage
-  const savedTabs = localStorage.getItem('editorTabs');
-  if (savedTabs) {
-    try {
-      currentTabs = JSON.parse(savedTabs);
-      currentTabs.forEach(tab => {
-        if (tab.content) {
-          createTab(tab.name, tab.content, tab.filePath);
-        }
-      });
-    } catch (e) {
-      console.error('Ошибка загрузки вкладок:', e);
+async function initializeApp() {
+  try {
+    // Загружаем конфигурацию
+    const config = await window.electronAPI.loadConfig();
+    
+    // Применяем настройки
+    fontSizeSelect.value = config.fontSize || '16';
+    themeSelect.value = config.theme || 'dark';
+    tabSizeSelect.value = config.tabSize || '4';
+    
+    // Применяем тему
+    updateTheme();
+    
+    // Загружаем сохраненные вкладки
+    if (config.editorTabs && config.editorTabs.length > 0) {
+      currentTabs = config.editorTabs;
+      activeTabIndex = 0;
+      
+      // Создаем вкладки
+      for (const tab of currentTabs) {
+        createTab(tab.name, tab.content, tab.filePath);
+      }
+      
+      // Переключаемся на первую вкладку
+      if (currentTabs.length > 0) {
+        switchToTab(0);
+      }
     }
-  }
-  
-  // Загружаем настройку стартовой страницы
-  const showWelcome = localStorage.getItem('showWelcomePage');
-  if (showWelcome === null || showWelcome === 'true') {
+    
+    // Настройки AI
+    defaultAiProvider = config.defaultAiProvider || 'ollama';
+    currentAiProvider = config.currentAiProvider || defaultAiProvider;
+    currentAiModel = config.currentAiModel || (defaultAiProvider === 'openrouter' ? 'deepseek/deepseek-r1-0528:free' : 'llama3');
+    
+    // Применяем настройки AI
+    updateDefaultAiProvider();
+    updateOpenRouterModelSelect();
+    
+    // Настройки стартовой страницы
+    const showWelcome = config.showWelcomePage !== false;
+    
+    // Показываем стартовую страницу если нет вкладок
+    if (currentTabs.length === 0) {
+      showWelcomePage();
+    }
+    
+    // Инициализируем OpenRouter
+    await initializeOpenRouter();
+    
+    // Загружаем историю чата
+    if (config.chatHistory && config.chatHistory.length > 0) {
+      chatHistory = config.chatHistory;
+      loadChatHistory();
+    }
+    
+  } catch (error) {
+    console.error('Ошибка загрузки конфигурации:', error);
+    // Показываем стартовую страницу по умолчанию
     showWelcomePage();
-  } else {
-    hideWelcomePage();
   }
 }
 
 async function initializeOpenRouter() {
   try {
-    // Загружаем API ключ
-    const keyResult = await window.electronAPI.getOpenRouterKey();
-    if (keyResult.success && keyResult.apiKey) {
-      openRouterKeyInput.value = keyResult.apiKey;
+    const apiKey = await window.electronAPI.getOpenRouterKey();
+    if (apiKey) {
+      openRouterApiKey = apiKey;
+      openRouterKeyInput.value = apiKey;
       updateOpenRouterStatus('connected');
       
       // Загружаем модели OpenRouter
-      const modelsResult = await window.electronAPI.getOpenRouterModels();
-      if (modelsResult.success) {
-        openRouterModels = modelsResult.models;
-        updateOpenRouterModelSelect();
+      try {
+        const modelsResult = await window.electronAPI.getOpenRouterModels();
+        if (modelsResult.success) {
+          openRouterModels = modelsResult.models;
+          updateOpenRouterModelSelect();
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки моделей OpenRouter:', error);
       }
     } else {
-      updateOpenRouterStatus('not-configured');
+      updateOpenRouterStatus('disconnected');
     }
   } catch (error) {
     console.error('Ошибка инициализации OpenRouter:', error);
-    updateOpenRouterStatus('disconnected');
+    updateOpenRouterStatus('error');
   }
-}
-
-function updateOpenRouterStatus(status) {
-  openRouterStatus.textContent = {
-    'connected': 'Подключен',
-    'disconnected': 'Ошибка подключения',
-    'not-configured': 'Не настроен'
-  }[status];
-  
-  openRouterStatus.className = `status-indicator ${status}`;
 }
 
 function updateOpenRouterModelSelect() {
@@ -136,7 +167,12 @@ function updateOpenRouterModelSelect() {
   
   if (currentAiProvider === 'ollama') {
     // Добавляем модели Ollama
-    aiModelSelect.innerHTML = '<option value="llama3">llama3</option>';
+    aiModelSelect.innerHTML = `
+      <option value="llama3">Llama 3</option>
+      <option value="llama3.2">Llama 3.2</option>
+      <option value="mistral">Mistral</option>
+      <option value="codellama">Code Llama</option>
+    `;
   } else if (currentAiProvider === 'openrouter') {
     // Добавляем бесплатные модели OpenRouter
     const freeModels = [
@@ -156,6 +192,16 @@ function updateOpenRouterModelSelect() {
       aiModelSelect.appendChild(option);
     });
   }
+}
+
+function updateOpenRouterStatus(status) {
+  openRouterStatus.textContent = {
+    'connected': 'Подключен',
+    'disconnected': 'Ошибка подключения',
+    'not-configured': 'Не настроен'
+  }[status];
+  
+  openRouterStatus.className = `status-indicator ${status}`;
 }
 
 function setupEventListeners() {
@@ -237,7 +283,17 @@ function setupEventListeners() {
 
 function handleAiProviderChange() {
   currentAiProvider = aiProviderSelect.value;
-  updateOpenRouterModelSelect();
+  
+  // Обновляем UI
+  if (currentAiProvider === 'openrouter') {
+    openRouterSection.style.display = 'block';
+    ollamaSection.style.display = 'none';
+    updateOpenRouterModelSelect();
+  } else {
+    openRouterSection.style.display = 'none';
+    ollamaSection.style.display = 'block';
+    updateOpenRouterModelSelect();
+  }
   
   // Устанавливаем модель по умолчанию для выбранного провайдера
   if (currentAiProvider === 'ollama') {
@@ -248,13 +304,12 @@ function handleAiProviderChange() {
     currentAiModel = 'deepseek/deepseek-r1-0528:free';
   }
   
-  localStorage.setItem('currentAiProvider', currentAiProvider);
-  localStorage.setItem('currentAiModel', currentAiModel);
+  saveAllConfig();
 }
 
 function handleAiModelChange() {
   currentAiModel = aiModelSelect.value;
-  localStorage.setItem('currentAiModel', currentAiModel);
+  saveAllConfig();
 }
 
 async function saveOpenRouterKey() {
@@ -268,30 +323,62 @@ async function saveOpenRouterKey() {
     const result = await window.electronAPI.setOpenRouterKey(apiKey);
     if (result.success) {
       updateOpenRouterStatus('connected');
+      openRouterKeyInput.value = '';
+      alert('API ключ OpenRouter сохранен!');
       
       // Загружаем модели OpenRouter
-      const modelsResult = await window.electronAPI.getOpenRouterModels();
-      if (modelsResult.success) {
-        openRouterModels = modelsResult.models;
-        updateOpenRouterModelSelect();
+      try {
+        const modelsResult = await window.electronAPI.getOpenRouterModels();
+        if (modelsResult.success) {
+          openRouterModels = modelsResult.models;
+          updateOpenRouterModelSelect();
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки моделей OpenRouter:', error);
       }
       
-      alert('API ключ OpenRouter успешно сохранен!');
-      } else {
+      saveAllConfig();
+    } else {
       alert('Ошибка сохранения API ключа: ' + result.error);
     }
   } catch (error) {
-    alert('Ошибка сохранения API ключа: ' + error.message);
+    alert('Ошибка: ' + error.message);
   }
 }
 
 function updateDefaultAiProvider() {
-  const defaultProvider = defaultAiProviderSelect.value;
-  localStorage.setItem('defaultAiProvider', defaultProvider);
+  defaultAiProvider = defaultProviderSelect.value;
   
-  // Обновляем текущий провайдер в чате
-  aiProviderSelect.value = defaultProvider;
-  handleAiProviderChange();
+  // Обновляем модели по умолчанию
+  updateOpenRouterModelSelect();
+  
+  // Устанавливаем текущую модель
+  if (currentAiProvider === defaultAiProvider) {
+    currentAiModel = aiModelSelect.value;
+  }
+  
+  saveAllConfig();
+}
+
+// Функция для сохранения всей конфигурации
+async function saveAllConfig() {
+  try {
+    const config = {
+      fontSize: fontSizeSelect.value,
+      theme: themeSelect.value,
+      tabSize: tabSizeSelect.value,
+      defaultAiProvider,
+      currentAiProvider,
+      currentAiModel,
+      showWelcomePage: welcomeCheckbox ? welcomeCheckbox.checked : true,
+      editorTabs: currentTabs,
+      chatHistory: chatHistory
+    };
+    
+    await window.electronAPI.saveConfig(config);
+  } catch (error) {
+    console.error('Ошибка сохранения конфигурации:', error);
+  }
 }
 
 // Функции для работы со стартовой страницей
@@ -325,7 +412,7 @@ function handleAiChatAction() {
 }
 
 function handleWelcomeCheckboxChange() {
-  localStorage.setItem('showWelcomePage', showWelcomeCheckbox.checked);
+  saveAllConfig();
 }
 
 // Функции для работы с активностью
@@ -432,10 +519,8 @@ function showGitPanel() {
       <div class="git-status">
         <div class="git-branch">main</div>
         <div class="git-changes">
-          <div class="git-change-item">
-            <span class="change-icon">📝</span>
-            <span class="change-name">welcome.txt</span>
-            <span class="change-status">modified</span>
+          <div class="git-placeholder">
+            <p>No changes detected</p>
           </div>
         </div>
       </div>
@@ -603,7 +688,7 @@ function closeTab(index) {
       showWelcomePage();
     } else if (activeTabIndex >= currentTabs.length) {
       switchToTab(currentTabs.length - 1);
-    } else {
+  } else {
       switchToTab(activeTabIndex);
     }
     
@@ -690,8 +775,8 @@ async function saveFile() {
         updateTabsList();
         updateTabTitle();
         saveTabs();
-    }
-  } catch (error) {
+      }
+    } catch (error) {
       console.error('Ошибка сохранения файла:', error);
     }
   }
@@ -708,7 +793,7 @@ function handleEditorInput() {
       tab.content = currentContent;
       updateTabsList();
       updateTabTitle();
-      saveTabs();
+      saveAllConfig();
     }
   }
 }
@@ -765,40 +850,40 @@ function updateLineNumbers() {
 }
 
 function handleGlobalKeydown(e) {
-  // Ctrl+N - новый файл
-  if (e.ctrlKey && e.key === 'n') {
+  // Ctrl+N / Cmd+N - новый файл
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
     e.preventDefault();
     createNewFile();
   }
   
-  // Ctrl+O - открыть файл
-  if (e.ctrlKey && e.key === 'o') {
+  // Ctrl+O / Cmd+O - открыть файл или папку
+  if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
     e.preventDefault();
-    openFile();
+    openFileOrFolder();
   }
   
-  // Ctrl+S - сохранить файл
-  if (e.ctrlKey && e.key === 's') {
+  // Ctrl+S / Cmd+S - сохранить файл
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
     saveFile();
   }
   
-  // Ctrl+Shift+S - сохранить как
-  if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+  // Ctrl+Shift+S / Cmd+Shift+S - сохранить как
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
     e.preventDefault();
     saveFileAs();
   }
   
-  // Ctrl+W - закрыть вкладку
-  if (e.ctrlKey && e.key === 'w') {
+  // Ctrl+W / Cmd+W - закрыть вкладку
+  if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
     e.preventDefault();
     if (activeTabIndex >= 0) {
       closeTab(activeTabIndex);
     }
   }
   
-  // Ctrl+Tab - следующая вкладка
-  if (e.ctrlKey && e.key === 'Tab') {
+  // Ctrl+Tab / Cmd+Tab - следующая вкладка
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
     e.preventDefault();
     if (currentTabs.length > 1) {
       const nextIndex = (activeTabIndex + 1) % currentTabs.length;
@@ -806,8 +891,8 @@ function handleGlobalKeydown(e) {
     }
   }
   
-  // Ctrl+Shift+F - поиск
-  if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+  // Ctrl+Shift+F / Cmd+Shift+F - поиск
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
     e.preventDefault();
     switchActivity('search');
   }
@@ -843,7 +928,7 @@ function toggleChat() {
     chatBtn.classList.add('active');
     loadChatHistory();
     userInput.focus();
-  } else {
+      } else {
     chatBtn.classList.remove('active');
   }
 }
@@ -885,9 +970,14 @@ async function handleChatSubmit() {
     const useOpenRouter = currentAiProvider === 'openrouter';
     
     // Отправляем сообщение в AI
-    await window.electronAPI.sendMessage(message, currentAiModel, useOpenRouter);
+    const response = await window.electronAPI.sendMessage(message, currentAiModel, useOpenRouter);
+    
+    if (response && response.answer) {
+      addChatMessage(response.answer, 'ai');
+    }
     
   } catch (error) {
+    console.error('Ошибка AI:', error);
     addChatMessage(`Ошибка: ${error.message}`, 'ai');
     setChatStatus('error', 'Ошибка');
   } finally {
@@ -976,87 +1066,53 @@ function stopChatResponse() {
 }
 
 function loadChatHistory() {
-  const history = localStorage.getItem('chatHistory');
-  if (history) {
-    try {
-      const messages = JSON.parse(history);
-      chatMessages.innerHTML = '';
-      messages.forEach(msg => {
-        addChatMessage(msg.content, msg.sender);
-      });
-    } catch (e) {
-      console.error('Ошибка загрузки истории чата:', e);
-    }
+  chatMessages.innerHTML = '';
+  if (chatHistory && chatHistory.length > 0) {
+    chatHistory.forEach(msg => {
+      addChatMessage(msg.content, msg.sender);
+    });
   }
 }
 
 function saveChatHistory() {
-  const messages = Array.from(chatMessages.children)
-    .filter(el => el.classList.contains('message'))
-    .map(msg => ({
-      content: msg.textContent || msg.innerText,
-      sender: msg.classList.contains('user') ? 'user' : 'ai'
-    }));
-  localStorage.setItem('chatHistory', JSON.stringify(messages));
+  const messages = Array.from(chatMessages.querySelectorAll('.message')).map(msg => ({
+    content: msg.textContent || msg.innerHTML,
+    sender: msg.classList.contains('user') ? 'user' : 'ai'
+  }));
+  
+  chatHistory = messages;
+  saveAllConfig();
 }
 
 function clearChatHistory() {
-  if (confirm('Вы уверены, что хотите очистить историю чата?')) {
-    localStorage.removeItem('chatHistory');
-    chatMessages.innerHTML = '';
-    alert('История чата очищена.');
-  }
+  chatMessages.innerHTML = '';
+  chatHistory = [];
+  saveAllConfig();
 }
 
 // Функции для работы с настройками
-function loadSettings() {
-  const fontSize = localStorage.getItem('fontSize') || '16';
-  const theme = localStorage.getItem('theme') || 'dark';
-  const tabSize = localStorage.getItem('tabSize') || '4';
-  const defaultProvider = localStorage.getItem('defaultAiProvider') || 'ollama';
-  const savedProvider = localStorage.getItem('currentAiProvider') || defaultProvider;
-  const savedModel = localStorage.getItem('currentAiModel') || (defaultProvider === 'openrouter' ? 'deepseek/deepseek-r1-0528:free' : 'llama3');
-  
-  fontSizeSelect.value = fontSize;
-  themeSelect.value = theme;
-  tabSizeSelect.value = tabSize;
-  defaultAiProviderSelect.value = defaultProvider;
-  
-  // Устанавливаем текущие значения AI
-  currentAiProvider = savedProvider;
-  currentAiModel = savedModel;
-  aiProviderSelect.value = currentAiProvider;
-  aiModelSelect.value = currentAiModel;
-  
-  updateFontSize();
-  updateTheme();
-  updateTabSize();
-  updateOpenRouterModelSelect();
-}
-
 function updateFontSize() {
   const size = fontSizeSelect.value;
   editor.style.fontSize = size + 'px';
   lineNumbers.style.fontSize = size + 'px';
-  localStorage.setItem('fontSize', size);
   updateLineNumbers();
+  saveAllConfig();
 }
 
 function updateTheme() {
   const theme = themeSelect.value;
   document.body.className = theme === 'light' ? 'light-theme' : '';
-  localStorage.setItem('theme', theme);
+  saveAllConfig();
 }
 
 function updateTabSize() {
   const size = tabSizeSelect.value;
   editor.style.tabSize = size;
-  localStorage.setItem('tabSize', size);
+  saveAllConfig();
 }
 
-// Функции для сохранения состояния
 function saveTabs() {
-  localStorage.setItem('editorTabs', JSON.stringify(currentTabs));
+  saveAllConfig();
 }
 
 // Утилиты
