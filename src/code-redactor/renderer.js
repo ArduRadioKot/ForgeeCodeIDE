@@ -6,12 +6,34 @@ let currentActivity = 'explorer'; // explorer, search, git, debug, extensions
 let openRouterModels = [];
 let currentAiProvider = 'ollama'; // ollama, openrouter
 let currentAiModel = 'llama3';
+let defaultAiProvider = 'ollama';
 let isTyping = false;
 let currentFolder = null; // Текущая открытая папка
 let fileExplorerItems = []; // Элементы в file explorer
+let copiedFilePath = null; // Путь к скопированному файлу/папке
+
+// Утилиты для работы с путями
+const pathUtils = {
+  basename: (filePath) => {
+    return filePath.split(/[\\/]/).pop();
+  },
+  dirname: (filePath) => {
+    const parts = filePath.split(/[\\/]/);
+    parts.pop();
+    return parts.join('/') || '/';
+  },
+  extname: (filePath) => {
+    const basename = pathUtils.basename(filePath);
+    const dotIndex = basename.lastIndexOf('.');
+    return dotIndex > 0 ? basename.substring(dotIndex) : '';
+  },
+  join: (...parts) => {
+    return parts.filter(p => p).join('/').replace(/\/+/g, '/');
+  }
+};
 
 // Элементы DOM
-const editor = document.getElementById('editor');
+const editor = document.getElementById('editor')
 const tabsList = document.getElementById('tabs-list');
 const newTabBtn = document.getElementById('new-tab-btn');
 const newFileBtn = document.getElementById('new-file-btn');
@@ -53,6 +75,8 @@ const openRouterKeyInput = document.getElementById('openrouter-key');
 const saveOpenRouterKeyBtn = document.getElementById('save-openrouter-key');
 const openRouterStatus = document.getElementById('openrouter-status');
 const defaultAiProviderSelect = document.getElementById('default-ai-provider');
+const openRouterSection = document.getElementById('openrouter-section');
+const ollamaSection = document.getElementById('ollama-section');
 
 // Кнопки боковой панели
 const explorerBtn = document.getElementById('explorer-btn');
@@ -104,11 +128,13 @@ async function initializeApp() {
     // Настройки AI
     defaultAiProvider = config.defaultAiProvider || 'ollama';
     currentAiProvider = config.currentAiProvider || defaultAiProvider;
-    currentAiModel = config.currentAiModel || (defaultAiProvider === 'openrouter' ? 'deepseek/deepseek-r1-0528:free' : 'llama3');
-    
-    // Применяем настройки AI
-    updateDefaultAiProvider();
+    currentAiModel = config.currentAiModel || (currentAiProvider === 'openrouter' ? 'deepseek/deepseek-r1-0528:free' : 'llama3');
+
+    // Устанавливаем значения селектов
+    if (defaultAiProviderSelect) defaultAiProviderSelect.value = defaultAiProvider;
+    if (aiProviderSelect) aiProviderSelect.value = currentAiProvider;
     updateOpenRouterModelSelect();
+    if (aiModelSelect) aiModelSelect.value = currentAiModel;
     
     // Настройки стартовой страницы
     const showWelcome = config.showWelcomePage !== false;
@@ -136,10 +162,9 @@ async function initializeApp() {
 
 async function initializeOpenRouter() {
   try {
-    const apiKey = await window.electronAPI.getOpenRouterKey();
-    if (apiKey) {
-      openRouterApiKey = apiKey;
-      openRouterKeyInput.value = apiKey;
+    const apiKeyResult = await window.electronAPI.getOpenRouterKey();
+    if (apiKeyResult) {
+      openRouterKeyInput.value = apiKeyResult;
       updateOpenRouterStatus('connected');
       
       // Загружаем модели OpenRouter
@@ -323,6 +348,7 @@ async function saveOpenRouterKey() {
     const result = await window.electronAPI.setOpenRouterKey(apiKey);
     if (result.success) {
       updateOpenRouterStatus('connected');
+      // Clear the input field but keep the key in memory
       openRouterKeyInput.value = '';
       alert('API ключ OpenRouter сохранен!');
       
@@ -347,7 +373,7 @@ async function saveOpenRouterKey() {
 }
 
 function updateDefaultAiProvider() {
-  defaultAiProvider = defaultProviderSelect.value;
+  defaultAiProvider = defaultAiProviderSelect.value;
   
   // Обновляем модели по умолчанию
   updateOpenRouterModelSelect();
@@ -370,7 +396,7 @@ async function saveAllConfig() {
       defaultAiProvider,
       currentAiProvider,
       currentAiModel,
-      showWelcomePage: welcomeCheckbox ? welcomeCheckbox.checked : true,
+      showWelcomePage: showWelcomeCheckbox ? showWelcomeCheckbox.checked : true,
       editorTabs: currentTabs,
       chatHistory: chatHistory
     };
@@ -459,12 +485,19 @@ function showExplorerPanel() {
             <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
           </svg>
         </button>
-        <button class="activity-btn" title="Новый файл" id="new-file-btn">
+        <button class="activity-btn" title="Новый файл" id="new-file-in-folder-btn" ${!currentFolder ? 'disabled' : ''}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
             <polyline points="14,2 14,8 20,8"/>
             <line x1="12" y1="18" x2="12" y2="12"/>
             <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </button>
+        <button class="activity-btn" title="Новая папка" id="new-folder-btn" ${!currentFolder ? 'disabled' : ''}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+            <line x1="12" y1="11" x2="12" y2="17"/>
+            <line x1="9" y1="14" x2="15" y2="14"/>
           </svg>
         </button>
       </div>
@@ -476,7 +509,8 @@ function showExplorerPanel() {
   
   // Переподключаем обработчики для новых кнопок
   document.getElementById('open-folder-btn').addEventListener('click', openFolder);
-  document.getElementById('new-file-btn').addEventListener('click', createNewFile);
+  document.getElementById('new-file-in-folder-btn').addEventListener('click', createNewFileInFolder);
+  document.getElementById('new-folder-btn').addEventListener('click', createNewFolderInFolder);
   
   // Обновляем explorer если папка уже открыта
   if (currentFolder) {
@@ -491,11 +525,25 @@ function showSearchPanel() {
     </div>
     <div class="search-panel">
       <div class="search-input-container">
-        <input type="text" id="search-input" placeholder="Поиск в файлах..." />
+        <input type="text" id="search-input" class="search-input" placeholder="Поиск в файлах..." />
+        <div class="search-options">
+          <button class="search-option-btn" id="search-case-sensitive" title="Учитывать регистр">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Aa
+          </button>
+          <button class="search-option-btn" id="search-regex" title="Регулярные выражения">
+            .*
+          </button>
+        </div>
         <button id="search-btn" class="search-btn">Найти</button>
       </div>
+      <div class="search-filters">
+        <input type="text" id="search-file-filter" class="search-filter-input" placeholder="Фильтр файлов (например: js,ts,py)" />
+      </div>
       <div id="search-results" class="search-results">
-        <div class="search-placeholder">Введите текст для поиска</div>
+        <div class="search-placeholder">Откройте папку для поиска по файлам</div>
       </div>
     </div>
   `;
@@ -503,11 +551,46 @@ function showSearchPanel() {
   // Добавляем обработчики поиска
   const searchInput = document.getElementById('search-input');
   const searchBtn = document.getElementById('search-btn');
+  const caseSensitiveBtn = document.getElementById('search-case-sensitive');
+  const regexBtn = document.getElementById('search-regex');
+  const fileFilterInput = document.getElementById('search-file-filter');
+  
+  let searchOptions = {
+    caseSensitive: false,
+    useRegex: false,
+    fileFilter: ''
+  };
+  
+  caseSensitiveBtn.addEventListener('click', () => {
+    searchOptions.caseSensitive = !searchOptions.caseSensitive;
+    caseSensitiveBtn.classList.toggle('active', searchOptions.caseSensitive);
+    if (searchInput.value.trim()) {
+      performSearch();
+    }
+  });
+  
+  regexBtn.addEventListener('click', () => {
+    searchOptions.useRegex = !searchOptions.useRegex;
+    regexBtn.classList.toggle('active', searchOptions.useRegex);
+    if (searchInput.value.trim()) {
+      performSearch();
+    }
+  });
+  
+  fileFilterInput.addEventListener('input', () => {
+    searchOptions.fileFilter = fileFilterInput.value.trim();
+    if (searchInput.value.trim()) {
+      performSearch();
+    }
+  });
   
   searchBtn.addEventListener('click', performSearch);
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') performSearch();
   });
+  
+  // Сохраняем опции поиска для использования в performSearch
+  window.currentSearchOptions = searchOptions;
 }
 
 function showGitPanel() {
@@ -587,7 +670,7 @@ function showExtensionsPanel() {
   `;
 }
 
-function performSearch() {
+async function performSearch() {
   const searchInput = document.getElementById('search-input');
   const searchResults = document.getElementById('search-results');
   const query = searchInput.value.trim();
@@ -597,29 +680,131 @@ function performSearch() {
     return;
   }
   
-  // Простой поиск в текущих вкладках
-  const results = [];
-  currentTabs.forEach((tab, index) => {
-    if (tab.content && tab.content.toLowerCase().includes(query.toLowerCase())) {
-      results.push({
-        file: tab.name,
-        tabIndex: index,
-        matches: tab.content.toLowerCase().split(query.toLowerCase()).length - 1
-      });
-    }
-  });
+  if (!currentFolder) {
+    searchResults.innerHTML = '<div class="search-placeholder">Откройте папку для поиска по файлам</div>';
+    return;
+  }
   
-  if (results.length === 0) {
-    searchResults.innerHTML = '<div class="search-placeholder">Ничего не найдено</div>';
-    } else {
-    searchResults.innerHTML = results.map(result => `
-      <div class="search-result-item" onclick="switchToTab(${result.tabIndex})">
-        <span class="result-file">${result.file}</span>
-        <span class="result-matches">${result.matches} совпадений</span>
-      </div>
-    `).join('');
+  // Показываем индикатор загрузки
+  searchResults.innerHTML = '<div class="search-placeholder">Поиск...</div>';
+  
+  try {
+    const options = window.currentSearchOptions || {
+      caseSensitive: false,
+      useRegex: false,
+      fileFilter: ''
+    };
+    
+    const result = await window.electronAPI.searchInFiles(currentFolder, query, options);
+    
+    if (!result.success) {
+      searchResults.innerHTML = `<div class="search-placeholder error">Ошибка: ${result.error}</div>`;
+      return;
+    }
+    
+    if (result.results.length === 0) {
+      searchResults.innerHTML = '<div class="search-placeholder">Ничего не найдено</div>';
+      return;
+    }
+    
+    // Формируем HTML с результатами
+    let html = `<div class="search-summary">Найдено ${result.totalMatches} совпадений в ${result.results.length} файлах</div>`;
+    
+    result.results.forEach(fileResult => {
+      // Экранируем путь для использования в onclick
+      const escapedPath = fileResult.fullPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      
+      html += `
+        <div class="search-file-group">
+          <div class="search-file-header" onclick="openSearchFile('${escapedPath}')">
+            <span class="search-file-name">${escapeHtml(fileResult.file)}</span>
+            <span class="search-file-matches">${fileResult.matchCount} совпадений</span>
+          </div>
+          <div class="search-file-matches-list">
+            ${fileResult.matches.map(match => {
+              // Обрезаем длинные строки (показываем максимум 150 символов вокруг совпадения)
+              const maxContext = 75;
+              let beforeMatch = match.text.substring(0, match.matchIndex);
+              const matchText = match.matchText;
+              let afterMatch = match.text.substring(match.matchIndex + matchText.length);
+              
+              // Обрезаем контекст, если строка слишком длинная
+              if (beforeMatch.length > maxContext) {
+                beforeMatch = '...' + beforeMatch.substring(beforeMatch.length - maxContext);
+              }
+              if (afterMatch.length > maxContext) {
+                afterMatch = afterMatch.substring(0, maxContext) + '...';
+              }
+              
+              // Экранируем путь для использования в onclick
+              const escapedPath = fileResult.fullPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+              
+              return `
+                <div class="search-match-line" onclick="openSearchFileAtLine('${escapedPath}', ${match.line})">
+                  <span class="search-line-number">${match.line}</span>
+                  <span class="search-line-text">
+                    ${escapeHtml(beforeMatch)}<mark class="search-match">${escapeHtml(matchText)}</mark>${escapeHtml(afterMatch)}
+                  </span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    });
+    
+    searchResults.innerHTML = html;
+  } catch (error) {
+    console.error('Ошибка поиска:', error);
+    searchResults.innerHTML = `<div class="search-placeholder error">Ошибка поиска: ${error.message}</div>`;
   }
 }
+
+// Вспомогательные функции для поиска
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function openSearchFile(filePath) {
+  // Открываем файл в редакторе
+  window.electronAPI.getFileContent(filePath).then(result => {
+    if (result.success) {
+      hideWelcomePage();
+      const fileName = pathUtils.basename(filePath);
+      createTab(fileName, result.content, filePath);
+    }
+  });
+}
+
+function openSearchFileAtLine(filePath, lineNumber) {
+  // Открываем файл и переходим к строке
+  window.electronAPI.getFileContent(filePath).then(result => {
+    if (result.success) {
+      hideWelcomePage();
+      const fileName = pathUtils.basename(filePath);
+      createTab(fileName, result.content, filePath);
+      // Прокручиваем к нужной строке после небольшой задержки
+      setTimeout(() => {
+        const editor = document.getElementById('editor');
+        const lines = editor.value.split('\n');
+        const lineHeight = parseInt(getComputedStyle(editor).lineHeight);
+        const targetLine = Math.max(0, lineNumber - 1);
+        editor.focus();
+        editor.setSelectionRange(
+          lines.slice(0, targetLine).join('\n').length + (targetLine > 0 ? 1 : 0),
+          lines.slice(0, targetLine).join('\n').length + (targetLine > 0 ? 1 : 0)
+        );
+        editor.scrollTop = targetLine * lineHeight;
+      }, 100);
+    }
+  });
+}
+
+// Делаем функции глобальными для использования в onclick
+window.openSearchFile = openSearchFile;
+window.openSearchFileAtLine = openSearchFileAtLine;
 
 // Функции для работы с вкладками
 function createTab(name, content = '', filePath = null) {
@@ -722,11 +907,11 @@ function updateTabTitle() {
 async function openFile() {
   try {
     const result = await window.electronAPI.openFile();
-    if (result.success) {
-      // Закрываем стартовую страницу при открытии файла
-      hideWelcomePage();
-      createTab(path.basename(result.filePath), result.content, result.filePath);
-    }
+      if (result.success) {
+        // Закрываем стартовую страницу при открытии файла
+        hideWelcomePage();
+        createTab(pathUtils.basename(result.filePath), result.content, result.filePath);
+      }
   } catch (error) {
     console.error('Ошибка открытия файла:', error);
   }
@@ -747,7 +932,7 @@ async function openFileOrFolder() {
       } else {
         // Открываем файл в редакторе
         hideWelcomePage();
-        createTab(path.basename(result.filePath), result.content, result.filePath);
+        createTab(pathUtils.basename(result.filePath), result.content, result.filePath);
       }
     }
   } catch (error) {
@@ -770,7 +955,7 @@ async function saveFile() {
       
       if (result.success) {
         tab.filePath = result.filePath;
-        tab.name = path.basename(result.filePath);
+        tab.name = pathUtils.basename(result.filePath);
         tab.modified = false;
         updateTabsList();
         updateTabTitle();
@@ -907,7 +1092,7 @@ async function saveFileAs() {
       if (result.success) {
         const tab = currentTabs[activeTabIndex];
         tab.filePath = result.filePath;
-        tab.name = path.basename(result.filePath);
+        tab.name = pathUtils.basename(result.filePath);
         tab.modified = false;
         updateTabsList();
         updateTabTitle();
@@ -978,7 +1163,11 @@ async function handleChatSubmit() {
     
   } catch (error) {
     console.error('Ошибка AI:', error);
-    addChatMessage(`Ошибка: ${error.message}`, 'ai');
+    let errorMsg = `Ошибка: ${error.message}`;
+    if (error.message.includes('OpenRouter API')) {
+      errorMsg += '\n\nПроверьте:\n1. Правильность API ключа OpenRouter\n2. Доступность https://openrouter.ai\n3. Баланс на счету OpenRouter';
+    }
+    addChatMessage(errorMsg, 'ai');
     setChatStatus('error', 'Ошибка');
   } finally {
     isTyping = false;
@@ -1115,13 +1304,9 @@ function saveTabs() {
   saveAllConfig();
 }
 
-// Утилиты
+// Для обратной совместимости
 function path() {
-  return {
-    basename: (filePath) => {
-      return filePath.split(/[\\/]/).pop();
-    }
-  };
+  return pathUtils;
 }
 
 // Обработчик потоковых обновлений от AI
@@ -1159,6 +1344,11 @@ async function openFolder() {
     if (result.success) {
       currentFolder = result.folderPath;
       await loadFolderContents(currentFolder);
+      // Обновляем состояние кнопок
+      const newFileBtn = document.getElementById('new-file-in-folder-btn');
+      const newFolderBtn = document.getElementById('new-folder-btn');
+      if (newFileBtn) newFileBtn.disabled = false;
+      if (newFolderBtn) newFolderBtn.disabled = false;
     }
   } catch (error) {
     console.error('Ошибка открытия папки:', error);
@@ -1185,8 +1375,19 @@ function updateFileExplorer() {
   
   if (!currentFolder) {
     fileExplorer.innerHTML = '<div class="file-explorer-placeholder">Откройте папку для просмотра файлов</div>';
+    // Обновляем состояние кнопок
+    const newFileBtn = document.getElementById('new-file-in-folder-btn');
+    const newFolderBtn = document.getElementById('new-folder-btn');
+    if (newFileBtn) newFileBtn.disabled = true;
+    if (newFolderBtn) newFolderBtn.disabled = true;
     return;
   }
+  
+  // Обновляем состояние кнопок
+  const newFileBtn = document.getElementById('new-file-in-folder-btn');
+  const newFolderBtn = document.getElementById('new-folder-btn');
+  if (newFileBtn) newFileBtn.disabled = false;
+  if (newFolderBtn) newFolderBtn.disabled = false;
   
   // Сортируем: сначала папки, потом файлы
   const sortedItems = fileExplorerItems.sort((a, b) => {
@@ -1209,8 +1410,30 @@ function updateFileExplorer() {
       <span class="file-name">${name}</span>
     `;
     
-    fileItem.addEventListener('click', () => handleFileItemClick(item));
+    // Обработчик клика для открытия файла/папки
+    fileItem.addEventListener('click', (e) => {
+      // Не открываем если меню открыто
+      if (contextMenu && contextMenu.contains(e.target)) return;
+      handleFileItemClick(item);
+    });
+    
+    // Обработчик правого клика для контекстного меню
+    fileItem.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showContextMenu(e, item);
+    });
+    
     fileExplorer.appendChild(fileItem);
+  });
+  
+  // Добавляем обработчик правого клика на пустое место для вставки
+  fileExplorer.addEventListener('contextmenu', (e) => {
+    // Если кликнули не по файлу
+    if (!e.target.closest('.file-item') && currentFolder && copiedFilePath) {
+      e.preventDefault();
+      // Показываем меню только с опцией "Вставить"
+      showContextMenuForFolder(e, currentFolder);
+    }
   });
 }
 
@@ -1274,6 +1497,265 @@ function getFileIcon(fileName) {
   };
   
   return iconMap[ext] || '📄';
+}
+
+// Функции для создания файлов и папок в текущей папке
+async function createNewFileInFolder() {
+  if (!currentFolder) return;
+  
+  const fileName = prompt('Введите имя файла:');
+  if (!fileName || !fileName.trim()) return;
+  
+  try {
+    const result = await window.electronAPI.createFileInFolder(currentFolder, fileName.trim());
+    if (result.success) {
+      await loadFolderContents(currentFolder);
+      // Открываем новый файл в редакторе
+      const content = await window.electronAPI.getFileContent(result.filePath);
+      if (content.success) {
+        hideWelcomePage();
+        createTab(fileName.trim(), content.content, result.filePath);
+      }
+    } else {
+      alert('Ошибка: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Ошибка создания файла:', error);
+    alert('Ошибка создания файла: ' + error.message);
+  }
+}
+
+async function createNewFolderInFolder() {
+  if (!currentFolder) return;
+  
+  const folderName = prompt('Введите имя папки:');
+  if (!folderName || !folderName.trim()) return;
+  
+  try {
+    const result = await window.electronAPI.createFolderInFolder(currentFolder, folderName.trim());
+    if (result.success) {
+      await loadFolderContents(currentFolder);
+    } else {
+      alert('Ошибка: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Ошибка создания папки:', error);
+    alert('Ошибка создания папки: ' + error.message);
+  }
+}
+
+// Контекстное меню для файлов и папок
+let contextMenu = null;
+
+function showContextMenu(event, item) {
+  // Удаляем предыдущее меню, если есть
+  if (contextMenu) {
+    contextMenu.remove();
+  }
+  
+  // Создаем контекстное меню
+  contextMenu = document.createElement('div');
+  contextMenu.className = 'context-menu';
+  contextMenu.style.position = 'fixed';
+  contextMenu.style.left = event.pageX + 'px';
+  contextMenu.style.top = event.pageY + 'px';
+  contextMenu.style.zIndex = '10000';
+  
+  const menuItems = [
+    { label: 'Переименовать', action: () => renameFileItem(item) },
+    { label: 'Копировать', action: () => copyFileItem(item) },
+  ];
+  
+  // Добавляем "Вставить" только если есть скопированный файл
+  if (copiedFilePath) {
+    menuItems.push({ label: 'Вставить', action: () => pasteFileItem(item) });
+  }
+  
+  menuItems.push({ label: 'Удалить', action: () => deleteFileItem(item), isDanger: true });
+  
+  menuItems.forEach(menuItem => {
+    const menuItemEl = document.createElement('div');
+    menuItemEl.className = 'context-menu-item' + (menuItem.isDanger ? ' danger' : '');
+    menuItemEl.textContent = menuItem.label;
+    menuItemEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menuItem.action();
+      contextMenu.remove();
+      contextMenu = null;
+    });
+    contextMenu.appendChild(menuItemEl);
+  });
+  
+  document.body.appendChild(contextMenu);
+  
+  // Закрываем меню при клике вне его
+  const closeMenu = (e) => {
+    if (!contextMenu || !contextMenu.contains(e.target)) {
+      if (contextMenu) {
+        contextMenu.remove();
+        contextMenu = null;
+      }
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeMenu), 0);
+}
+
+function showContextMenuForFolder(event, folderPath) {
+  // Удаляем предыдущее меню, если есть
+  if (contextMenu) {
+    contextMenu.remove();
+  }
+  
+  // Создаем контекстное меню только с опцией "Вставить"
+  contextMenu = document.createElement('div');
+  contextMenu.className = 'context-menu';
+  contextMenu.style.position = 'fixed';
+  contextMenu.style.left = event.pageX + 'px';
+  contextMenu.style.top = event.pageY + 'px';
+  contextMenu.style.zIndex = '10000';
+  
+  const menuItemEl = document.createElement('div');
+  menuItemEl.className = 'context-menu-item';
+  menuItemEl.textContent = 'Вставить';
+  menuItemEl.addEventListener('click', async () => {
+    if (copiedFilePath) {
+      const item = { path: folderPath, isDirectory: true };
+      await pasteFileItem(item);
+    }
+    contextMenu.remove();
+    contextMenu = null;
+  });
+  contextMenu.appendChild(menuItemEl);
+  
+  document.body.appendChild(contextMenu);
+  
+  // Закрываем меню при клике вне его
+  const closeMenu = (e) => {
+    if (!contextMenu || !contextMenu.contains(e.target)) {
+      if (contextMenu) {
+        contextMenu.remove();
+        contextMenu = null;
+      }
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeMenu), 0);
+}
+
+async function renameFileItem(item) {
+  const newName = prompt('Введите новое имя:', item.name);
+  if (!newName || !newName.trim()) {
+    return; // Пользователь отменил или оставил пустым
+  }
+  
+  const trimmedName = newName.trim();
+  
+  // Проверяем, что имя изменилось
+  if (trimmedName === item.name) {
+    return; // Имя не изменилось
+  }
+  
+  try {
+    console.log('Переименование:', item.path, '->', trimmedName);
+    const result = await window.electronAPI.renameFile(item.path, trimmedName);
+    
+    if (result.success) {
+      console.log('Переименование успешно:', result.newPath);
+      await loadFolderContents(currentFolder);
+      
+      // Обновляем вкладку если файл был открыт
+      const tab = currentTabs.find(t => t.filePath === item.path);
+      if (tab) {
+        tab.filePath = result.newPath;
+        tab.name = trimmedName;
+        updateTabsList();
+        updateTabTitle();
+      }
+    } else {
+      console.error('Ошибка переименования:', result.error);
+      alert('Ошибка переименования: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Ошибка переименования:', error);
+    alert('Ошибка переименования: ' + (error.message || 'Неизвестная ошибка'));
+  }
+}
+
+function copyFileItem(item) {
+  copiedFilePath = item.path;
+  // Можно добавить визуальную индикацию
+  console.log('Файл скопирован:', item.name);
+}
+
+async function pasteFileItem(item) {
+  if (!copiedFilePath) return;
+  
+  // Определяем целевую папку: если кликнули по папке - вставляем в неё, иначе в текущую открытую папку
+  const targetPath = item.isDirectory ? item.path : (currentFolder || pathUtils.dirname(item.path));
+  const sourceName = pathUtils.basename(copiedFilePath);
+  
+  // Определяем имя для вставки
+  let destinationName = sourceName;
+  let counter = 1;
+  while (true) {
+    const destinationPath = pathUtils.join(targetPath, destinationName);
+    try {
+      // Проверяем, существует ли файл с таким именем
+      const exists = await window.electronAPI.getFileContent(destinationPath).catch(() => null);
+      if (!exists) break;
+      // Если существует, добавляем номер
+      const ext = pathUtils.extname(sourceName);
+      const base = sourceName.substring(0, sourceName.length - ext.length);
+      destinationName = `${base} (${counter})${ext}`;
+      counter++;
+    } catch {
+      break;
+    }
+  }
+  
+  const destinationPath = pathUtils.join(targetPath, destinationName);
+  
+  try {
+    const result = await window.electronAPI.copyFile(copiedFilePath, destinationPath);
+    if (result.success) {
+      // Обновляем explorer - если мы в текущей папке, обновляем её, иначе обновляем папку куда вставили
+      if (targetPath === currentFolder) {
+        await loadFolderContents(currentFolder);
+      } else {
+        // Если вставили в другую папку, обновляем текущую для отображения изменений
+        await loadFolderContents(currentFolder);
+      }
+      copiedFilePath = null; // Очищаем после вставки
+    } else {
+      alert('Ошибка: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Ошибка вставки:', error);
+    alert('Ошибка вставки: ' + error.message);
+  }
+}
+
+async function deleteFileItem(item) {
+  const confirmMessage = `Вы уверены, что хотите удалить "${item.name}"?`;
+  if (!confirm(confirmMessage)) return;
+  
+  try {
+    const result = await window.electronAPI.deleteFile(item.path);
+    if (result.success) {
+      // Закрываем вкладку если файл был открыт
+      const tabIndex = currentTabs.findIndex(t => t.filePath === item.path);
+      if (tabIndex >= 0) {
+        closeTab(tabIndex);
+      }
+      await loadFolderContents(currentFolder);
+    } else {
+      alert('Ошибка: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Ошибка удаления:', error);
+    alert('Ошибка удаления: ' + error.message);
+  }
 }
 
 async function handleFileItemClick(item) {

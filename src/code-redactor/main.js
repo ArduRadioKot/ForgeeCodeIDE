@@ -13,6 +13,7 @@ let openRouterApiKey = '';
 const documentsPath = path.join(os.homedir(), 'Documents');
 const configDir = path.join(documentsPath, 'FrogeeCodeIDE', 'config');
 const configFile = path.join(configDir, 'settings.json');
+const alternativeConfigFile = path.join(configDir, 'config.json');
 
 // Функции для работы с конфигурацией
 async function ensureConfigDir() {
@@ -39,8 +40,26 @@ async function ensureConfigDir() {
 async function loadConfig() {
   try {
     await ensureConfigDir();
-    const data = await fs.readFile(configFile, 'utf8');
-    return JSON.parse(data);
+    // Пробуем прочитать основной файл настроек
+    try {
+      const data = await fs.readFile(configFile, 'utf8');
+      return JSON.parse(data);
+    } catch {
+      // Если его нет, пробуем альтернативный файл config.json
+      try {
+        const altData = await fs.readFile(alternativeConfigFile, 'utf8');
+        const parsed = JSON.parse(altData);
+        // Сохраняем как основной для единообразия
+        try {
+          await fs.writeFile(configFile, JSON.stringify(parsed, null, 2), 'utf8');
+        } catch (copyErr) {
+          console.error('Не удалось скопировать config.json в settings.json:', copyErr);
+        }
+        return parsed;
+      } catch {
+        // Пойдём на дефолты
+      }
+    }
   } catch {
     // Возвращаем настройки по умолчанию
     return {
@@ -60,7 +79,19 @@ async function loadConfig() {
 async function saveConfig(config) {
   try {
     await ensureConfigDir();
-    await fs.writeFile(configFile, JSON.stringify(config, null, 2), 'utf8');
+    // Мержим с текущей конфигурацией, чтобы не терять поля вроде openRouterApiKey
+    let current = {};
+    try {
+      current = await loadConfig();
+    } catch {}
+    const merged = { ...current, ...config };
+    await fs.writeFile(configFile, JSON.stringify(merged, null, 2), 'utf8');
+    // Также поддерживаем дубликат под новым именем для совместимости
+    try {
+      await fs.writeFile(alternativeConfigFile, JSON.stringify(merged, null, 2), 'utf8');
+    } catch (mirrorErr) {
+      console.warn('Не удалось записать альтернативный конфиг config.json:', mirrorErr?.message || mirrorErr);
+    }
     return { success: true };
   } catch (error) {
     console.error('Ошибка сохранения конфигурации:', error);
@@ -102,15 +133,9 @@ app.whenReady().then(async () => {
     console.log('Ollama не запущен. Пользователь должен запустить его вручную.');
   }
   
-  // Загружаем API ключ OpenRouter из localStorage (через main process)
-  try {
-    const configPath = path.join(app.getPath('userData'), 'config.json');
-    const configData = await fs.readFile(configPath, 'utf8');
-    const config = JSON.parse(configData);
-    openRouterApiKey = config.openRouterApiKey;
-  } catch (error) {
-    console.log('OpenRouter API ключ не найден');
-  }
+  // Загружаем конфигурацию при запуске
+  const config = await loadConfig();
+  openRouterApiKey = config.openRouterApiKey || '';
   
   createWindow();
 
@@ -211,6 +236,253 @@ ipcMain.handle('get-file-content', async (event, filePath) => {
   }
 });
 
+// Обработчики для операций с файлами в explorer
+ipcMain.handle('create-file-in-folder', async (event, folderPath, fileName) => {
+  try {
+    const filePath = path.join(folderPath, fileName);
+    // Проверяем, существует ли файл
+    try {
+      await fs.access(filePath);
+      return { success: false, error: 'Файл уже существует' };
+    } catch {
+      // Файл не существует, создаём его
+      await fs.writeFile(filePath, '', 'utf8');
+      return { success: true, filePath };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('create-folder-in-folder', async (event, parentPath, folderName) => {
+  try {
+    const folderPath = path.join(parentPath, folderName);
+    // Проверяем, существует ли папка
+    try {
+      await fs.access(folderPath);
+      return { success: false, error: 'Папка уже существует' };
+    } catch {
+      // Папка не существует, создаём её
+      await fs.mkdir(folderPath, { recursive: true });
+      return { success: true, folderPath };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('rename-file', async (event, oldPath, newName) => {
+  try {
+    // Нормализуем пути
+    const normalizedOldPath = path.normalize(oldPath);
+    
+    // Проверяем, что исходный файл существует
+    try {
+      await fs.access(normalizedOldPath);
+    } catch (err) {
+      console.error('Исходный файл не найден:', normalizedOldPath, err);
+      return { success: false, error: 'Исходный файл не найден' };
+    }
+    
+    // Проверяем недопустимые символы в имени файла (зависит от ОС)
+    const invalidChars = process.platform === 'win32' 
+      ? /[<>:"|?*]/ 
+      : /[\/]/;
+    if (invalidChars.test(newName)) {
+      return { success: false, error: 'Имя файла содержит недопустимые символы' };
+    }
+    
+    // Проверяем, что имя не пустое
+    if (!newName || !newName.trim()) {
+      return { success: false, error: 'Имя файла не может быть пустым' };
+    }
+    
+    const dir = path.dirname(normalizedOldPath);
+    const newPath = path.join(dir, newName.trim());
+    const normalizedNewPath = path.normalize(newPath);
+    
+    // Проверяем, что новое имя не совпадает со старым
+    if (normalizedOldPath === normalizedNewPath) {
+      return { success: false, error: 'Новое имя совпадает со старым' };
+    }
+    
+    // Проверяем, существует ли файл с новым именем
+    try {
+      await fs.access(normalizedNewPath);
+      return { success: false, error: 'Файл с таким именем уже существует' };
+    } catch {
+      // Файл с новым именем не существует, можно переименовывать
+    }
+    
+    console.log('Переименование файла:', normalizedOldPath, '->', normalizedNewPath);
+    
+    // Переименовываем
+    await fs.rename(normalizedOldPath, normalizedNewPath);
+    
+    console.log('Файл успешно переименован:', normalizedNewPath);
+    return { success: true, newPath: normalizedNewPath };
+  } catch (error) {
+    console.error('Ошибка переименования файла:', error);
+    return { success: false, error: error.message || 'Неизвестная ошибка при переименовании' };
+  }
+});
+
+ipcMain.handle('delete-file', async (event, filePath) => {
+  try {
+    const stats = await fs.stat(filePath);
+    if (stats.isDirectory()) {
+      await fs.rmdir(filePath, { recursive: true });
+    } else {
+      await fs.unlink(filePath);
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Рекурсивная функция для поиска всех файлов в папке
+async function getAllFiles(dirPath, arrayOfFiles = []) {
+  const files = await fs.readdir(dirPath, { withFileTypes: true });
+  
+  for (const file of files) {
+    const filePath = path.join(dirPath, file.name);
+    
+    // Пропускаем скрытые папки и node_modules
+    if (file.isDirectory() && !file.name.startsWith('.') && file.name !== 'node_modules') {
+      arrayOfFiles = await getAllFiles(filePath, arrayOfFiles);
+    } else if (file.isFile()) {
+      arrayOfFiles.push(filePath);
+    }
+  }
+  
+  return arrayOfFiles;
+}
+
+// Рекурсивная функция для копирования папки
+async function copyDirectory(src, dest) {
+  await fs.mkdir(dest, { recursive: true });
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      await copyDirectory(srcPath, destPath);
+    } else {
+      const { copyFile } = require('fs').promises;
+      await copyFile(srcPath, destPath);
+    }
+  }
+}
+
+// Поиск в файлах проекта
+ipcMain.handle('search-in-files', async (event, folderPath, query, options = {}) => {
+  try {
+    if (!folderPath) {
+      return { success: false, error: 'Папка не открыта' };
+    }
+    
+    const {
+      caseSensitive = false,
+      useRegex = false,
+      fileFilter = ''
+    } = options;
+    
+    // Получаем все файлы в папке
+    const allFiles = await getAllFiles(folderPath);
+    
+    // Фильтруем файлы по типу
+    let filteredFiles = allFiles;
+    if (fileFilter) {
+      const filters = fileFilter.split(',').map(f => f.trim());
+      filteredFiles = allFiles.filter(file => {
+        const ext = path.extname(file).toLowerCase().slice(1);
+        return filters.some(filter => {
+          if (filter.startsWith('.')) {
+            return file.toLowerCase().endsWith(filter.toLowerCase());
+          }
+          return ext === filter.toLowerCase();
+        });
+      });
+    }
+    
+    const results = [];
+    let regex;
+    
+    // Создаем регулярное выражение
+    if (useRegex) {
+      try {
+        regex = new RegExp(query, caseSensitive ? 'g' : 'gi');
+      } catch (err) {
+        return { success: false, error: 'Неверное регулярное выражение: ' + err.message };
+      }
+    } else {
+      const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      regex = new RegExp(escapedQuery, caseSensitive ? 'g' : 'gi');
+    }
+    
+    // Ищем в каждом файле
+    for (const filePath of filteredFiles) {
+      try {
+        const content = await fs.readFile(filePath, 'utf8');
+        const lines = content.split('\n');
+        const fileMatches = [];
+        
+        lines.forEach((line, lineNumber) => {
+          const matches = [...line.matchAll(regex)];
+          if (matches.length > 0) {
+            matches.forEach(match => {
+              fileMatches.push({
+                line: lineNumber + 1,
+                text: line.trim(),
+                matchIndex: match.index,
+                matchText: match[0]
+              });
+            });
+          }
+        });
+        
+        if (fileMatches.length > 0) {
+          const relativePath = path.relative(folderPath, filePath);
+          results.push({
+            file: relativePath,
+            fullPath: filePath,
+            matches: fileMatches,
+            matchCount: fileMatches.length
+          });
+        }
+      } catch (err) {
+        // Пропускаем файлы, которые не удалось прочитать (бинарные и т.д.)
+        continue;
+      }
+    }
+    
+    return { success: true, results, totalMatches: results.reduce((sum, r) => sum + r.matchCount, 0) };
+  } catch (error) {
+    console.error('Ошибка поиска:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('copy-file', async (event, sourcePath, destinationPath) => {
+  try {
+    const stats = await fs.stat(sourcePath);
+    if (stats.isDirectory()) {
+      // Для папок нужна рекурсивная копия
+      await copyDirectory(sourcePath, destinationPath);
+    } else {
+      // Для файлов используем copyFile
+      const { copyFile } = require('fs').promises;
+      await copyFile(sourcePath, destinationPath);
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('save-file', async (event, content) => {
   // Если файл уже открыт, сохраняем его
   // В реальном приложении нужно отслеживать текущий файл
@@ -256,10 +528,10 @@ ipcMain.handle('save-config', async (event, config) => {
 // Обновляем существующие обработчики для работы с конфигурацией
 ipcMain.handle('set-openrouter-key', async (event, apiKey) => {
   try {
-    openRouterApiKey = apiKey;
     const config = await loadConfig();
     config.openRouterApiKey = apiKey;
     await saveConfig(config);
+    openRouterApiKey = apiKey;
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -354,7 +626,11 @@ async function sendMessageOpenRouter(message, model, signal, event) {
     });
   } catch (error) {
     console.error('OpenRouter API error:', error);
-    throw new Error(`OpenRouter API ошибка: ${error.message}`);
+    let errorMessage = error.message;
+    if (error.response) {
+      errorMessage = `HTTP status ${error.response.status}: ${error.response.data?.error?.message || error.response.data}`;
+    }
+    throw new Error(`OpenRouter API ошибка: ${errorMessage}`);
   }
 }
 

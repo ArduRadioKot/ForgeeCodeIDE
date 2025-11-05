@@ -9,6 +9,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: () => ipcRenderer.invoke('open-file'),
   openFileOrFolder: () => ipcRenderer.invoke('open-file-or-folder'),
   listFiles: (folderPath) => ipcRenderer.invoke('list-files', folderPath),
+  getFileContent: (filePath) => ipcRenderer.invoke('get-file-content', filePath),
+  
+  // Функции для операций с файлами в explorer
+  createFileInFolder: (folderPath, fileName) => ipcRenderer.invoke('create-file-in-folder', folderPath, fileName),
+  createFolderInFolder: (parentPath, folderName) => ipcRenderer.invoke('create-folder-in-folder', parentPath, folderName),
+  renameFile: (oldPath, newName) => ipcRenderer.invoke('rename-file', oldPath, newName),
+  deleteFile: (filePath) => ipcRenderer.invoke('delete-file', filePath),
+  copyFile: (sourcePath, destinationPath) => ipcRenderer.invoke('copy-file', sourcePath, destinationPath),
+  
+  // Поиск в файлах
+  searchInFiles: (folderPath, query, options) => ipcRenderer.invoke('search-in-files', folderPath, query, options),
   
   // Функции конфигурации
   loadConfig: () => ipcRenderer.invoke('load-config'),
