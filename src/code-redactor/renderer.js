@@ -55,6 +55,13 @@ const themeSelect = document.getElementById('theme-select');
 const tabSizeSelect = document.getElementById('tab-size-select');
 const lineNumbers = document.getElementById('line-numbers');
 
+// Элементы настроек прозрачности
+const glassOpacityRange = document.getElementById('glass-opacity-range');
+const glassOpacityValue = document.getElementById('glass-opacity-value');
+const glassBlurRange = document.getElementById('glass-blur-range');
+const glassBlurValue = document.getElementById('glass-blur-value');
+const glassBlurCheckbox = document.getElementById('glass-blur-checkbox');
+
 // Элементы стартовой страницы
 const welcomePage = document.getElementById('welcome-page');
 const editorTabs = document.getElementById('editor-tabs');
@@ -90,14 +97,33 @@ const activityPanel = document.getElementById('activity-panel');
 
 // Инициализация приложения
 document.addEventListener('DOMContentLoaded', () => {
-  initializeApp();
-  setupEventListeners();
-  loadSettings();
-  initializeOpenRouter();
+  try {
+    initializeApp();
+    setupEventListeners();
+    initializeOpenRouter();
+  } catch (error) {
+    console.error('Ошибка инициализации приложения:', error);
+  }
 });
 
 async function initializeApp() {
   try {
+    // Убеждаемся, что модальное окно скрыто
+    if (settingsModal) {
+      settingsModal.style.display = 'none';
+      settingsModal.style.pointerEvents = 'none';
+      settingsModal.style.visibility = 'hidden';
+      settingsModal.style.opacity = '0';
+    }
+    
+    // Убеждаемся, что панель чата скрыта
+    if (chatPanel) {
+      chatPanel.style.display = 'none';
+      chatPanel.style.pointerEvents = 'none';
+      chatPanel.style.visibility = 'hidden';
+      chatPanel.style.opacity = '0';
+    }
+    
     // Загружаем конфигурацию
     const config = await window.electronAPI.loadConfig();
     
@@ -105,6 +131,25 @@ async function initializeApp() {
     fontSizeSelect.value = config.fontSize || '16';
     themeSelect.value = config.theme || 'dark';
     tabSizeSelect.value = config.tabSize || '4';
+    
+    // Применяем настройки прозрачности
+    const glassOpacity = config.glassOpacity !== undefined ? config.glassOpacity : 0.85;
+    const glassBlur = config.glassBlur !== undefined ? config.glassBlur : 10;
+    const glassBlurEnabled = config.glassBlurEnabled !== undefined ? config.glassBlurEnabled : true;
+    
+    if (glassOpacityRange) {
+      glassOpacityRange.value = glassOpacity;
+      updateGlassOpacityValue(glassOpacity);
+    }
+    if (glassBlurRange) {
+      glassBlurRange.value = glassBlur;
+      updateGlassBlurValue(glassBlur);
+    }
+    if (glassBlurCheckbox) {
+      glassBlurCheckbox.checked = glassBlurEnabled;
+    }
+    
+    applyGlassmorphismSettings(glassOpacity, glassBlur, glassBlurEnabled);
     
     // Применяем тему
     updateTheme();
@@ -231,10 +276,14 @@ function updateOpenRouterStatus(status) {
 
 function setupEventListeners() {
   // Кнопки вкладок
-  newTabBtn.addEventListener('click', createNewTab);
+  if (newTabBtn) {
+    newTabBtn.addEventListener('click', createNewTab);
+  }
   
   // Кнопки файлов
-  newFileBtn.addEventListener('click', createNewFile);
+  if (newFileBtn) {
+    newFileBtn.addEventListener('click', createNewFile);
+  }
   
   // Кнопки explorer
   const openFolderBtn = document.getElementById('open-folder-btn');
@@ -243,64 +292,147 @@ function setupEventListeners() {
   }
   
   // Действия стартовой страницы
-  newFileAction.addEventListener('click', handleNewFileAction);
-  openFileAction.addEventListener('click', handleOpenFileAction);
-  aiChatAction.addEventListener('click', handleAiChatAction);
+  if (newFileAction) {
+    newFileAction.addEventListener('click', handleNewFileAction);
+  }
+  if (openFileAction) {
+    openFileAction.addEventListener('click', handleOpenFileAction);
+  }
+  if (aiChatAction) {
+    aiChatAction.addEventListener('click', handleAiChatAction);
+  }
   
   // Чекбокс стартовой страницы
-  showWelcomeCheckbox.addEventListener('change', handleWelcomeCheckboxChange);
+  if (showWelcomeCheckbox) {
+    showWelcomeCheckbox.addEventListener('change', handleWelcomeCheckboxChange);
+  }
   
   // Кнопки боковой панели
-  explorerBtn.addEventListener('click', () => switchActivity('explorer'));
-  searchBtn.addEventListener('click', () => switchActivity('search'));
-  gitBtn.addEventListener('click', () => switchActivity('git'));
-  debugBtn.addEventListener('click', () => switchActivity('debug'));
-  extensionsBtn.addEventListener('click', () => switchActivity('extensions'));
+  if (explorerBtn) {
+    explorerBtn.addEventListener('click', () => switchActivity('explorer'));
+  }
+  if (searchBtn) {
+    searchBtn.addEventListener('click', () => switchActivity('search'));
+  }
+  if (gitBtn) {
+    gitBtn.addEventListener('click', () => switchActivity('git'));
+  }
+  if (debugBtn) {
+    debugBtn.addEventListener('click', () => switchActivity('debug'));
+  }
+  if (extensionsBtn) {
+    extensionsBtn.addEventListener('click', () => switchActivity('extensions'));
+  }
   
   // Кнопки чата
-  chatBtn.addEventListener('click', toggleChat);
-  closeChatBtn.addEventListener('click', toggleChat);
-  clearChatBtn.addEventListener('click', clearChatHistory);
+  if (chatBtn) {
+    chatBtn.addEventListener('click', toggleChat);
+  }
+  if (closeChatBtn) {
+    closeChatBtn.addEventListener('click', toggleChat);
+  }
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', clearChatHistory);
+  }
   
   // Форма чата
-  sendBtn.addEventListener('click', handleChatSubmit);
-  stopBtn.addEventListener('click', stopChatResponse);
+  if (sendBtn) {
+    sendBtn.addEventListener('click', handleChatSubmit);
+  }
+  if (stopBtn) {
+    stopBtn.addEventListener('click', stopChatResponse);
+  }
   
   // Обработка ввода в чате
-  userInput.addEventListener('keydown', handleChatKeydown);
-  userInput.addEventListener('input', handleTextareaResize);
+  if (userInput) {
+    userInput.addEventListener('keydown', handleChatKeydown);
+    userInput.addEventListener('input', handleTextareaResize);
+  }
   
   // Селекторы AI
-  aiProviderSelect.addEventListener('change', handleAiProviderChange);
-  aiModelSelect.addEventListener('change', handleAiModelChange);
+  if (aiProviderSelect) {
+    aiProviderSelect.addEventListener('change', handleAiProviderChange);
+  }
+  if (aiModelSelect) {
+    aiModelSelect.addEventListener('change', handleAiModelChange);
+  }
   
   // Настройки
-  settingsBtn.addEventListener('click', () => settingsModal.style.display = 'flex');
-  closeSettingsBtn.addEventListener('click', () => settingsModal.style.display = 'none');
-  closeSettingsBtn2.addEventListener('click', () => settingsModal.style.display = 'none');
+  if (settingsBtn && settingsModal) {
+    settingsBtn.addEventListener('click', () => {
+      settingsModal.style.display = 'flex';
+      settingsModal.style.pointerEvents = 'auto';
+      settingsModal.style.visibility = 'visible';
+      settingsModal.style.opacity = '1';
+    });
+  }
+  if (closeSettingsBtn && settingsModal) {
+    closeSettingsBtn.addEventListener('click', () => {
+      settingsModal.style.display = 'none';
+      settingsModal.style.pointerEvents = 'none';
+      settingsModal.style.visibility = 'hidden';
+      settingsModal.style.opacity = '0';
+    });
+  }
+  if (closeSettingsBtn2 && settingsModal) {
+    closeSettingsBtn2.addEventListener('click', () => {
+      settingsModal.style.display = 'none';
+      settingsModal.style.pointerEvents = 'none';
+      settingsModal.style.visibility = 'hidden';
+      settingsModal.style.opacity = '0';
+    });
+  }
   
   // OpenRouter настройки
-  saveOpenRouterKeyBtn.addEventListener('click', saveOpenRouterKey);
+  if (saveOpenRouterKeyBtn) {
+    saveOpenRouterKeyBtn.addEventListener('click', saveOpenRouterKey);
+  }
   
   // Закрытие модального окна по клику вне его
-  settingsModal.addEventListener('click', (e) => {
-    if (e.target === settingsModal) {
-      settingsModal.style.display = 'none';
-    }
-  });
+  if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.style.display = 'none';
+        settingsModal.style.pointerEvents = 'none';
+        settingsModal.style.visibility = 'hidden';
+        settingsModal.style.opacity = '0';
+      }
+    });
+  }
   
   // Настройки редактора
-  fontSizeSelect.addEventListener('change', updateFontSize);
-  themeSelect.addEventListener('change', updateTheme);
-  tabSizeSelect.addEventListener('change', updateTabSize);
-  defaultAiProviderSelect.addEventListener('change', updateDefaultAiProvider);
+  if (fontSizeSelect) {
+    fontSizeSelect.addEventListener('change', updateFontSize);
+  }
+  if (themeSelect) {
+    themeSelect.addEventListener('change', updateTheme);
+  }
+  if (tabSizeSelect) {
+    tabSizeSelect.addEventListener('change', updateTabSize);
+  }
+  if (defaultAiProviderSelect) {
+    defaultAiProviderSelect.addEventListener('change', updateDefaultAiProvider);
+  }
+  
+  // Настройки прозрачности
+  if (glassOpacityRange && glassOpacityValue) {
+    glassOpacityRange.addEventListener('input', handleGlassOpacityChange);
+  }
+  if (glassBlurRange && glassBlurValue) {
+    glassBlurRange.addEventListener('input', handleGlassBlurChange);
+  }
+  if (glassBlurCheckbox) {
+    glassBlurCheckbox.addEventListener('change', handleGlassBlurCheckboxChange);
+  }
   
   // Редактор
-  editor.addEventListener('input', handleEditorInput);
-  editor.addEventListener('keydown', handleEditorKeydown);
-  editor.addEventListener('scroll', handleEditorScroll);
-  editor.addEventListener('click', updateCurrentLine);
-  editor.addEventListener('keyup', updateCurrentLine);
+  if (editor) {
+    editor.addEventListener('input', handleEditorInput);
+    editor.addEventListener('keydown', handleEditorKeydown);
+    editor.addEventListener('scroll', handleEditorScroll);
+    editor.addEventListener('click', updateCurrentLine);
+    editor.addEventListener('keyup', updateCurrentLine);
+  }
   
   // Горячие клавиши
   document.addEventListener('keydown', handleGlobalKeydown);
@@ -390,15 +522,18 @@ function updateDefaultAiProvider() {
 async function saveAllConfig() {
   try {
     const config = {
-      fontSize: fontSizeSelect.value,
-      theme: themeSelect.value,
-      tabSize: tabSizeSelect.value,
+      fontSize: fontSizeSelect ? fontSizeSelect.value : '16',
+      theme: themeSelect ? themeSelect.value : 'dark',
+      tabSize: tabSizeSelect ? tabSizeSelect.value : '4',
       defaultAiProvider,
       currentAiProvider,
       currentAiModel,
       showWelcomePage: showWelcomeCheckbox ? showWelcomeCheckbox.checked : true,
       editorTabs: currentTabs,
-      chatHistory: chatHistory
+      chatHistory: chatHistory,
+      glassOpacity: glassOpacityRange ? parseFloat(glassOpacityRange.value) : 0.85,
+      glassBlur: glassBlurRange ? parseInt(glassBlurRange.value) : 10,
+      glassBlurEnabled: glassBlurCheckbox ? glassBlurCheckbox.checked : true
     };
     
     await window.electronAPI.saveConfig(config);
@@ -1107,13 +1242,19 @@ async function saveFileAs() {
 // Функции для работы с чатом
 function toggleChat() {
   chatVisible = !chatVisible;
-  chatPanel.style.display = chatVisible ? 'flex' : 'none';
-  
   if (chatVisible) {
+    chatPanel.style.display = 'flex';
+    chatPanel.style.pointerEvents = 'auto';
+    chatPanel.style.visibility = 'visible';
+    chatPanel.style.opacity = '1';
     chatBtn.classList.add('active');
     loadChatHistory();
     userInput.focus();
-      } else {
+  } else {
+    chatPanel.style.display = 'none';
+    chatPanel.style.pointerEvents = 'none';
+    chatPanel.style.visibility = 'hidden';
+    chatPanel.style.opacity = '0';
     chatBtn.classList.remove('active');
   }
 }
@@ -1298,6 +1439,53 @@ function updateTabSize() {
   const size = tabSizeSelect.value;
   editor.style.tabSize = size;
   saveAllConfig();
+}
+
+// Функции для работы с настройками прозрачности
+function handleGlassOpacityChange() {
+  if (!glassOpacityRange || !glassBlurRange) return;
+  const opacity = parseFloat(glassOpacityRange.value);
+  updateGlassOpacityValue(opacity);
+  const blurEnabled = glassBlurCheckbox ? glassBlurCheckbox.checked : true;
+  applyGlassmorphismSettings(opacity, parseInt(glassBlurRange.value), blurEnabled);
+  saveAllConfig();
+}
+
+function handleGlassBlurChange() {
+  if (!glassOpacityRange || !glassBlurRange) return;
+  const blur = parseInt(glassBlurRange.value);
+  updateGlassBlurValue(blur);
+  const blurEnabled = glassBlurCheckbox ? glassBlurCheckbox.checked : true;
+  applyGlassmorphismSettings(parseFloat(glassOpacityRange.value), blur, blurEnabled);
+  saveAllConfig();
+}
+
+function handleGlassBlurCheckboxChange() {
+  if (!glassOpacityRange || !glassBlurRange || !glassBlurCheckbox) return;
+  const blurEnabled = glassBlurCheckbox.checked;
+  applyGlassmorphismSettings(parseFloat(glassOpacityRange.value), parseInt(glassBlurRange.value), blurEnabled);
+  saveAllConfig();
+}
+
+function updateGlassOpacityValue(opacity) {
+  if (glassOpacityValue) {
+    glassOpacityValue.textContent = Math.round(opacity * 100) + '%';
+  }
+}
+
+function updateGlassBlurValue(blur) {
+  if (glassBlurValue) {
+    glassBlurValue.textContent = blur + 'px';
+  }
+}
+
+function applyGlassmorphismSettings(opacity, blur, blurEnabled = true) {
+  const root = document.documentElement;
+  root.style.setProperty('--glass-opacity', opacity);
+  root.style.setProperty('--glass-blur', blur + 'px');
+  root.style.setProperty('--glass-blur-enabled', blurEnabled ? '1' : '0');
+  root.style.setProperty('--glass-border-opacity', Math.min(opacity * 0.5, 0.5));
+  root.style.setProperty('--glass-shadow-opacity', Math.min(opacity * 0.3, 0.3));
 }
 
 function saveTabs() {

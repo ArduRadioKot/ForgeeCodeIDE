@@ -1,8 +1,45 @@
+/* CSS переменные для прозрачности и glassmorphism */
+:root {
+  --glass-opacity: 0.85;
+  --glass-blur: 10px;
+  --glass-blur-enabled: 1;
+  --glass-border-opacity: 0.3;
+  --glass-shadow-opacity: 0.2;
+}
+
+/* Критическое правило: убеждаемся, что скрытые элементы не блокируют клики */
+[style*="display: none"],
+[style*="display:none"] {
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Убеждаемся, что модальное окно и панель чата не блокируют, когда скрыты */
+.modal-overlay:not([style*="display: flex"]):not([style*="display:flex"]) {
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  display: none !important;
+}
+
+.chat-panel:not([style*="display: flex"]):not([style*="display:flex"]) {
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  display: none !important;
+}
+
 /* Основные стили */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  pointer-events: auto !important;
+  overflow: hidden;
 }
 
 body {
@@ -11,6 +48,10 @@ body {
   color: #d4d4d4;
   overflow: hidden;
   height: 100vh;
+  pointer-events: auto !important;
+  position: relative;
+  user-select: auto;
+  -webkit-user-select: auto;
 }
 
 /* Основная компоновка */
@@ -19,19 +60,27 @@ body {
   height: 100vh;
   width: 100vw;
   background: #1e1e1e;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
 }
 
 /* Боковая панель в стиле VS Code */
 #sidebar {
   width: 56px;
   min-width: 48px;
-  background: #21252b;
+  background: rgba(33, 37, 43, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 12px 0;
-  box-shadow: 1.5px 0 0 #181a1f;
+  box-shadow: 1.5px 0 0 rgba(24, 26, 31, var(--glass-border-opacity));
+  border-right: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
   z-index: 2;
+  position: relative;
 }
 
 .sidebar-btn {
@@ -47,6 +96,9 @@ body {
   cursor: pointer;
   border-radius: 8px;
   transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .sidebar-btn svg {
@@ -55,8 +107,10 @@ body {
   transition: color 0.15s;
 }
 
-.sidebar-btn.active, .sidebar-btn:hover {
+.sidebar-btn.active, 
+.sidebar-btn:hover {
   background: #2c313a;
+  pointer-events: auto !important;
 }
 
 .sidebar-btn.active svg,
@@ -74,11 +128,14 @@ body {
 /* Панель активности (Activity Bar) */
 .activity-panel {
   width: 250px;
-  background: #252526;
-  border-right: 1px solid #3c3c3c;
+  background: rgba(37, 37, 38, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  border-right: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  position: relative;
 }
 
 .activity-header {
@@ -86,13 +143,16 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #2a2d2e;
-  border-bottom: 1px solid #3c3c3c;
+  background: rgba(42, 45, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  border-bottom: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
   font-size: 12px;
   font-weight: 600;
   color: #cccccc;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: relative;
 }
 
 .activity-buttons {
@@ -111,6 +171,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .activity-btn:hover {
@@ -149,6 +212,9 @@ body {
   cursor: pointer;
   transition: background 0.2s ease;
   user-select: none;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 .file-item:hover {
@@ -182,13 +248,17 @@ body {
 
 /* Контекстное меню */
 .context-menu {
-  background: #252526;
-  border: 1px solid #3e3e42;
+  background: rgba(37, 37, 38, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  border: 1px solid rgba(62, 62, 66, var(--glass-border-opacity));
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 1.5));
   min-width: 180px;
   padding: 4px 0;
   font-size: 13px;
+  position: relative;
+  z-index: 10000;
 }
 
 .context-menu-item {
@@ -314,6 +384,9 @@ body {
   cursor: pointer;
   font-size: 13px;
   transition: background 0.2s;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .search-btn:hover {
@@ -514,6 +587,9 @@ body {
   cursor: pointer;
   font-size: 13px;
   transition: background 0.2s;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .git-btn:hover {
@@ -563,6 +639,9 @@ body {
   cursor: pointer;
   font-size: 13px;
   transition: background 0.2s;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .debug-btn:hover {
@@ -668,8 +747,11 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #23272e;
-  box-shadow: 0 4px 24px #000a, 0 1.5px 4px #0004;
+  background: rgba(35, 39, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 0.5)), 0 1.5px 4px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 0.2));
+  position: relative;
 }
 
 /* Стартовая страница */
@@ -864,10 +946,13 @@ body {
 .file-tabs {
   display: flex;
   align-items: center;
-  background: #21252b;
-  border-bottom: 1px solid #23293a;
+  background: rgba(33, 37, 43, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  border-bottom: 1px solid rgba(35, 41, 58, var(--glass-border-opacity));
   padding: 0 8px;
   min-height: 40px;
+  position: relative;
 }
 
 .tabs-list {
@@ -883,26 +968,34 @@ body {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #23272e;
+  background: rgba(35, 39, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   color: #d4d4d4;
   border: none;
   border-radius: 6px 6px 0 0;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.15s;
+  transition: all 0.15s;
   min-width: 120px;
   max-width: 200px;
   position: relative;
+  border: 1px solid transparent;
+  border-bottom: none;
+  z-index: 1;
 }
 
 .tab-item:hover {
-  background: #2c313a;
+  background: rgba(44, 49, 58, var(--glass-opacity));
+  border-color: rgba(60, 60, 60, var(--glass-border-opacity));
 }
 
 .tab-item.active {
-  background: #23272e;
+  background: rgba(35, 39, 46, var(--glass-opacity));
   color: #21AABE;
   border-bottom: 2px solid #21AABE;
+  border-color: rgba(33, 170, 190, var(--glass-border-opacity));
+  box-shadow: 0 -2px 8px rgba(33, 170, 190, calc(var(--glass-shadow-opacity) * 0.3));
 }
 
 .tab-item .tab-name {
@@ -930,20 +1023,26 @@ body {
 }
 
 .new-tab-btn {
-  background: #23272e;
+  background: rgba(35, 39, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   color: #4FC3F7;
-  border: none;
+  border: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
   border-radius: 6px;
   padding: 8px 12px;
   cursor: pointer;
   font-size: 16px;
   font-weight: bold;
-  transition: background 0.15s;
+  transition: all 0.15s;
   margin-left: 8px;
+  position: relative;
+  z-index: 1;
 }
 
 .new-tab-btn:hover {
-  background: #2c313a;
+  background: rgba(44, 49, 58, var(--glass-opacity));
+  border-color: rgba(79, 195, 247, var(--glass-border-opacity));
+  box-shadow: 0 2px 8px rgba(79, 195, 247, calc(var(--glass-shadow-opacity) * 0.3));
 }
 
 .new-tab-btn svg {
@@ -1018,12 +1117,25 @@ body {
   right: 0;
   width: 400px;
   height: 100vh;
-  background: #1e1e1e;
-  border-left: 1px solid #3c3c3c;
-  display: flex;
+  background: rgba(30, 30, 30, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  border-left: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
+  display: none;
   flex-direction: column;
   z-index: 1000;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 1.5));
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.chat-panel[style*="display: flex"],
+.chat-panel[style*="display:flex"] {
+  display: flex !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .chat-header {
@@ -1031,9 +1143,13 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background: #2a2d2e;
-  border-bottom: 1px solid #3c3c3c;
+  background: rgba(42, 45, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  border-bottom: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .chat-header-left {
@@ -1136,11 +1252,15 @@ body {
 }
 
 .message.ai {
-  background: #2a2d2e;
+  background: rgba(42, 45, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   color: #d4d4d4;
   margin-right: auto;
   border-bottom-left-radius: 4px;
-  border: 1px solid #3c3c3c;
+  border: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 0.5));
+  position: relative;
 }
 
 /* Markdown стили для сообщений AI */
@@ -1253,10 +1373,14 @@ body {
 
 /* Область ввода чата */
 .chat-input-area {
-  background: #2a2d2e;
-  border-top: 1px solid #3c3c3c;
+  background: rgba(42, 45, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  border-top: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
   padding: 16px 20px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .chat-controls {
@@ -1298,14 +1422,19 @@ body {
   position: relative;
   display: flex;
   align-items: flex-end;
-  background: #1e1e1e;
-  border: 1px solid #3c3c3c;
+  background: rgba(30, 30, 30, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  border: 1px solid rgba(60, 60, 60, var(--glass-border-opacity));
   border-radius: 8px;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 0.3));
+  z-index: 1;
 }
 
 .input-wrapper:focus-within {
-  border-color: #21AABE;
+  border-color: rgba(33, 170, 190, calc(var(--glass-border-opacity) * 2));
+  box-shadow: 0 4px 12px rgba(33, 170, 190, calc(var(--glass-shadow-opacity) * 0.4));
 }
 
 .chat-textarea {
@@ -1346,6 +1475,9 @@ body {
   transition: background 0.2s;
   min-width: 36px;
   height: 36px;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .send-btn:hover {
@@ -1374,6 +1506,9 @@ body {
   font-size: 13px;
   transition: background 0.2s;
   align-self: flex-end;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .stop-btn:hover {
@@ -1422,16 +1557,64 @@ body {
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(30,34,40,0.75);
   z-index: 1000;
-  display: flex;
+  display: none !important;
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.modal-overlay[style*="display: flex"],
+.modal-overlay[style*="display:flex"] {
+  display: flex !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Убеждаемся, что все интерактивные элементы работают правильно */
+button:not(:disabled),
+a,
+input:not(:disabled),
+select:not(:disabled),
+textarea:not(:disabled),
+.file-item,
+.tab-item,
+.action-item,
+.sidebar-btn,
+.activity-btn {
+  pointer-events: auto !important;
+}
+
+button:not(:disabled),
+a,
+.file-item,
+.tab-item,
+.action-item,
+.sidebar-btn,
+.activity-btn {
+  cursor: pointer;
+}
+
+/* Убеждаемся, что hover работает на всех кнопках */
+button:hover:not(:disabled),
+.sidebar-btn:hover,
+.activity-btn:hover,
+.file-item:hover,
+.tab-item:hover,
+.action-item:hover {
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 .modal-window {
-  background: #23272e;
+  background: rgba(35, 39, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   border-radius: 8px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 2)), 0 4px 16px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 1));
   min-width: 320px;
   max-width: 95vw;
   min-height: 120px;
@@ -1439,7 +1622,9 @@ body {
   display: flex;
   flex-direction: column;
   animation: modal-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid #2c313a;
+  border: 1px solid rgba(44, 49, 58, var(--glass-border-opacity));
+  position: relative;
+  z-index: 1001;
 }
 
 @keyframes modal-in {
@@ -1452,12 +1637,16 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px 16px 24px;
-  border-bottom: 1px solid #2c313a;
+  border-bottom: 1px solid rgba(44, 49, 58, var(--glass-border-opacity));
   font-size: 18px;
   color: #d4d4d4;
   font-weight: 600;
-  background: linear-gradient(135deg, #23272e 0%, #1e1e1e 100%);
+  background: linear-gradient(135deg, rgba(35, 39, 46, var(--glass-opacity)) 0%, rgba(30, 30, 30, var(--glass-opacity)) 100%);
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   border-radius: 8px 8px 0 0;
+  position: relative;
+  z-index: 1;
 }
 
 .modal-body {
@@ -1518,6 +1707,9 @@ body {
   font-weight: 600;
   transition: all 0.2s ease;
   min-width: 120px;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .modal-ok-btn:hover {
@@ -1533,14 +1725,19 @@ body {
 .settings-group {
   margin-bottom: 24px;
   padding: 20px;
-  background: #1e1e1e;
+  background: rgba(30, 30, 30, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   border-radius: 12px;
-  border: 1px solid #2c313a;
+  border: 1px solid rgba(44, 49, 58, var(--glass-border-opacity));
   transition: border-color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 0.5));
+  position: relative;
 }
 
 .settings-group:hover {
-  border-color: #21AABE;
+  border-color: rgba(33, 170, 190, calc(var(--glass-border-opacity) * 1.5));
+  box-shadow: 0 4px 12px rgba(33, 170, 190, calc(var(--glass-shadow-opacity) * 0.3));
 }
 
 .settings-group:last-child {
@@ -1573,15 +1770,20 @@ body {
 }
 
 .settings-select {
-  background: #23272e;
+  background: rgba(35, 39, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   color: #d4d4d4;
-  border: 2px solid #2c313a;
+  border: 2px solid rgba(44, 49, 58, var(--glass-border-opacity));
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 14px;
   outline: none;
   transition: all 0.2s ease;
   min-width: 120px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 0.3));
+  position: relative;
+  z-index: 1;
 }
 
 .settings-select:focus {
@@ -1596,20 +1798,139 @@ body {
 }
 
 .settings-input {
-  background: #23272e;
+  background: rgba(35, 39, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
   color: #d4d4d4;
-  border: 2px solid #2c313a;
+  border: 2px solid rgba(44, 49, 58, var(--glass-border-opacity));
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 14px;
   outline: none;
   transition: all 0.2s ease;
   min-width: 200px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, calc(var(--glass-shadow-opacity) * 0.3));
+  position: relative;
+  z-index: 1;
 }
 
 .settings-input:focus {
   border-color: #21AABE;
   box-shadow: 0 0 0 3px rgba(33, 170, 190, 0.1);
+}
+
+.settings-range {
+  flex: 1;
+  min-width: 150px;
+  height: 6px;
+  background: #2c313a;
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 0.2s ease;
+}
+
+.settings-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #21AABE;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.settings-range::-webkit-slider-thumb:hover {
+  background: #24b3c9;
+  transform: scale(1.1);
+  box-shadow: 0 3px 6px rgba(33, 170, 190, 0.4);
+}
+
+.settings-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #21AABE;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.settings-range::-moz-range-thumb:hover {
+  background: #24b3c9;
+  transform: scale(1.1);
+  box-shadow: 0 3px 6px rgba(33, 170, 190, 0.4);
+}
+
+.settings-range:focus {
+  outline: none;
+}
+
+.settings-range:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(33, 170, 190, 0.3);
+}
+
+.settings-range:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(33, 170, 190, 0.3);
+}
+
+.settings-value {
+  min-width: 50px;
+  text-align: right;
+  color: #21AABE;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.settings-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-checkbox {
+  display: none;
+}
+
+.settings-checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(44, 49, 58, var(--glass-border-opacity));
+  border-radius: 4px;
+  margin-right: 8px;
+  position: relative;
+  background: rgba(35, 39, 46, var(--glass-opacity));
+  backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * var(--glass-blur-enabled)));
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.settings-checkbox:checked + .settings-checkmark {
+  background: #21AABE;
+  border-color: #21AABE;
+}
+
+.settings-checkbox:checked + .settings-checkmark::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.settings-checkbox-label:hover .settings-checkmark {
+  border-color: rgba(33, 170, 190, calc(var(--glass-border-opacity) * 2));
+  box-shadow: 0 0 0 3px rgba(33, 170, 190, calc(var(--glass-shadow-opacity) * 0.2));
 }
 
 .settings-btn {
@@ -1621,6 +1942,9 @@ body {
   cursor: pointer;
   font-size: 13px;
   transition: background 0.2s;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .settings-btn:hover {
