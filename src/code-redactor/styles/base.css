@@ -1,0 +1,78 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { overflow: hidden; }
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  background: var(--window-bg);
+  color: var(--text-color);
+  font: var(--font-size) / 1.5 var(--ui-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The shell carries the window padding; Liquid Glass attaches its substrate to it. */
+#app-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--gap);
+  overflow: hidden;
+}
+
+[hidden] { display: none !important; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { border: 0; background: none; }
+button:not(:disabled), a, .file-item, .tab-item, .action-item, .sidebar-btn, .settings-nav-btn { cursor: pointer; }
+button:disabled { opacity: .4; cursor: default; }
+
+:focus-visible { outline: 2px solid var(--accent-color); outline-offset: -2px; }
+::selection { background: var(--selection); }
+
+/* Thin rounded scrollbars that appear on hover */
+* { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+*:hover { scrollbar-color: var(--active-bg) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { border-radius: 8px; background: transparent; }
+:hover::-webkit-scrollbar-thumb { background: var(--active-bg); }
+
+/* Shared controls: one hover fill, one radius, one focus ring */
+.icon-btn, .tool-btn {
+  width: var(--ctl-h-sm); height: var(--ctl-h-sm); flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md); color: var(--text-muted);
+}
+.icon-btn:hover, .tool-btn:hover { background: var(--hover-color); color: var(--text-color); }
+
+.btn-primary, .btn-secondary {
+  min-height: var(--ctl-h); padding: 4px var(--pad);
+  border-radius: var(--radius-md); font-weight: 500; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary { background: var(--accent-color); color: var(--accent-text); }
+.btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent-color) 86%, #fff); }
+.btn-secondary { border: 1px solid var(--border-color); }
+.btn-secondary:hover:not(:disabled) { background: var(--hover-color); }
+
+input[type="text"], input[type="search"], input[type="password"], input[type="url"], input:not([type]), select, textarea {
+  background: var(--code-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-color);
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent-color); }
+input::placeholder, textarea::placeholder { color: var(--text-faint); }
+
+kbd {
+  font: 11px var(--ui-font);
+  padding: 2px 6px; border-radius: var(--radius-sm);
+  background: var(--code-bg); border: 1px solid var(--border-color); color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Motion policy: only the left toolbar and the top tabs animate (see flow.css). */
+  .sidebar-btn, .tab-item, .tab-close { transition: background-color .15s, color .15s; }
+}

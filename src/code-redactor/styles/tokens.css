@@ -1,0 +1,125 @@
+/* FrogeeCodeIDE — JetBrains Islands design system.
+   Rounded islands float on a darker window. Radii: islands 12, controls 8, chips 6.
+   Hover = soft fill, selected = stronger fill. Accent is reserved for primary action, focus and links. */
+:root {
+  color-scheme: dark;
+
+  --window-bg: #17181a;
+  --card-bg: #27282c;
+  --header-bg: #27282c;
+  --code-bg: #1f2023;
+  --editor-bg: #27282c;
+  --text-color: #dfe1e5;
+  --text-muted: #8c9097;
+  --text-faint: #6f737a;
+  --border-color: #393b41;
+  --hover-color: #313339;
+  --active-bg: #3c3f46;
+  --accent-color: #21aabe;
+  --accent-text: #fff;
+  --accent-soft: color-mix(in srgb, var(--accent-color) 22%, transparent);
+  --link-color: color-mix(in srgb, var(--accent-color) 68%, #fff);
+  --selection: color-mix(in srgb, var(--accent-color) 42%, transparent);
+  --success-color: #5fb865;
+  --warning-color: #e0bb73;
+  --danger-color: #f0524f;
+  --shadow-color: #0009;
+  --scrim: #0000008c;
+
+  --syn-keyword: #cf8e6d;
+  --syn-string: #6aab73;
+  --syn-number: #2aacb8;
+  --syn-comment: #7a7e85;
+  --syn-function: #56a8f5;
+  --syn-type: #e0bb73;
+  --syn-field: #c77dbb;
+  --syn-tag: #d5b778;
+  --syn-attr: #bcbec4;
+  --syn-heading: #56a8f5;
+  --syn-annotation: #b3ae60;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --gap: 4px;
+
+  --ui-font: Inter, 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Text', sans-serif;
+  --mono-font: 'JetBrains Mono', 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Density. Compact UI only swaps these values (see body.compact-ui below). */
+  --font-size: 13px;
+  --row-h: 24px;
+  --bar-h: 40px;
+  --tab-h: 30px;
+  --stripe-w: 40px;
+  --stripe-btn: 36px;
+  --stripe-icon: 20px;
+  --logo: 28px;
+  --head-h: 34px;
+  --status-h: 24px;
+  --ctl-h: 30px;
+  --ctl-h-sm: 28px;
+  --pad: 12px;
+  --pad-sm: 8px;
+  --item-h: 44px;
+  --palette-h: 44px;
+
+  --ui-scale: 1;
+  --editor-zoom: 1;
+  --terminal-height: 240px;
+}
+
+body.light-theme {
+  color-scheme: light;
+  --window-bg: #e8ebf1;
+  --card-bg: #ffffff;
+  --header-bg: #ffffff;
+  --code-bg: #f4f6fa;
+  --editor-bg: #ffffff;
+  --text-color: #27282e;
+  --text-muted: #6c707e;
+  --text-faint: #9a9ea8;
+  --border-color: #e1e4ec;
+  --hover-color: #f0f2f7;
+  --active-bg: #e2e7f2;
+  --link-color: color-mix(in srgb, var(--accent-color) 78%, #000);
+  --selection: color-mix(in srgb, var(--accent-color) 26%, transparent);
+  --success-color: #3a9a4a;
+  --warning-color: #9e6a03;
+  --danger-color: #d12f2c;
+  --shadow-color: #1d233a33;
+  --scrim: #1d233a59;
+
+  --syn-keyword: #0033b3;
+  --syn-string: #067d17;
+  --syn-number: #1750eb;
+  --syn-comment: #8c8c8c;
+  --syn-function: #00627a;
+  --syn-type: #7a5a00;
+  --syn-field: #871094;
+  --syn-tag: #0033b3;
+  --syn-attr: #174ad4;
+  --syn-heading: #0033b3;
+  --syn-annotation: #9e880d;
+}
+
+body.compact-ui {
+  --font-size: 12px;
+  --row-h: 20px;
+  --bar-h: 30px;
+  --tab-h: 24px;
+  --stripe-w: 32px;
+  --stripe-btn: 28px;
+  --stripe-icon: 16px;
+  --logo: 22px;
+  --head-h: 26px;
+  --status-h: 20px;
+  --ctl-h: 24px;
+  --ctl-h-sm: 22px;
+  --pad: 8px;
+  --pad-sm: 6px;
+  --item-h: 32px;
+  --palette-h: 36px;
+}

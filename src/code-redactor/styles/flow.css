@@ -1,0 +1,27 @@
+/* Motion policy: the ONLY animated surfaces are the left toolbar and the top tab strip (a springy highlight that glides
+   between items). Loading indicators (spinners, pulses) are state feedback, not decoration. */
+.flow-on { position: relative; }
+.flow-pill {
+  position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none;
+  background: var(--active-bg);
+  transition: transform .46s cubic-bezier(.34, 1.4, .56, 1), width .46s cubic-bezier(.34, 1.4, .56, 1), height .46s cubic-bezier(.34, 1.4, .56, 1), opacity .2s, border-radius .3s;
+}
+.flow-pill.no-anim { transition: none; }
+.flow-pill.hidden { opacity: 0; }
+.flow-on > :not(.flow-pill) { position: relative; z-index: 1; }
+#sidebar.flow-on { position: relative; }
+
+/* The pill replaces the item's own "active" fill. */
+#sidebar.flow-on :is(#explorer-btn, #search-btn, #git-btn, #debug-btn).active,
+#editor-tabs.flow-on .tab-item.active { background: transparent !important; box-shadow: none !important; }
+#editor-tabs.flow-on .tab-item.split-active { box-shadow: inset 0 0 0 1px var(--accent-color) !important; }
+#editor-tabs.flow-on .tabs-list, #editor-tabs.flow-on .tabs-actions { position: relative; z-index: 1; }
+
+[data-liquid-glass]:not([data-liquid-glass="off"]) .flow-pill {
+  background: var(--lg-selected-fill);
+  box-shadow: inset 0 .5px 0 rgb(var(--lg-rim-rgb, 255 255 255) / .24), inset 0 -.5px 0 rgb(var(--lg-shadow-rgb, 0 0 0) / .16), inset 0 0 0 .5px rgb(var(--lg-rim-rgb, 255 255 255) / .09), 0 1px 4px rgb(var(--lg-shadow-rgb, 0 0 0) / .16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-pill { transition: none; }
+}

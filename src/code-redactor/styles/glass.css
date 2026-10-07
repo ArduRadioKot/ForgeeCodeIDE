@@ -1,0 +1,68 @@
+/* Liquid Glass mode (see liquid-glass/). The native window is translucent (vibrancy / acrylic);
+   one glass substrate (#app-shell) carries the whole app, islands on top are denser fills so text stays readable.
+   Everything is keyed off [data-liquid-glass] on <html>, set by renderer/glass.js. */
+:root[data-liquid-glass]:not([data-liquid-glass="off"]),
+:root[data-liquid-glass]:not([data-liquid-glass="off"]) body { background: transparent; }
+
+:root[data-liquid-glass]:not([data-liquid-glass="off"]) {
+  --lg-hover-fill: rgb(255 255 255 / .09);
+  --lg-press-fill: rgb(255 255 255 / .04);
+  --lg-selected-fill: rgb(255 255 255 / .075);
+}
+:root[data-theme="light"][data-liquid-glass]:not([data-liquid-glass="off"]) {
+  --lg-hover-fill: rgb(28 36 64 / .07);
+  --lg-press-fill: rgb(28 36 64 / .12);
+  --lg-selected-fill: rgb(28 36 64 / .07);
+}
+
+/* Substrate: no lens, no rim, no motion, it just tints the translucent window. */
+[data-liquid-glass]:not([data-liquid-glass="off"]) #app-shell.lg::before,
+[data-liquid-glass]:not([data-liquid-glass="off"]) #app-shell.lg::after { display: none; }
+[data-liquid-glass]:not([data-liquid-glass="off"]) #app-shell.lg {
+  border-radius: 0; transform: none; transition: none; box-shadow: none;
+  background: color-mix(in srgb, var(--lg-tint) calc(var(--lg-substrate) * 100%), transparent);
+}
+/* .lg gives direct children position:relative; keep the ones that must stay absolute/fixed. */
+.lg > .split-drop-zone, .lg > .terminal-resize, .lg > .find-bar { position: absolute; }
+
+/* Islands */
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.activity-panel, .chat-panel, .terminal-panel, .file-tabs, .editors-row, .welcome-page) {
+  background: color-mix(in srgb, var(--card-bg) calc(var(--lg-island, .68) * 100%), transparent);
+  box-shadow: inset 0 .5px 0 rgb(var(--lg-rim-rgb, 255 255 255) / .07), inset 0 0 0 .5px rgb(var(--lg-rim-rgb, 255 255 255) / .04);
+}
+[data-liquid-glass]:not([data-liquid-glass="off"]) .terminal-panel { background: color-mix(in srgb, var(--code-bg) calc(var(--lg-island, .68) * 100%), transparent); }
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.chat-panel, .terminal-panel, .activity-panel) { backdrop-filter: none; }
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.browser-stage) { background: color-mix(in srgb, var(--code-bg) 70%, transparent); }
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.nb-cell-main, .nb-output, .palette-input, .search-results, .debug-output) { background: color-mix(in srgb, var(--code-bg) 70%, transparent); }
+[data-liquid-glass]:not([data-liquid-glass="off"]) .split-resizer { background: transparent; }
+
+/* Controls: hover is a soft glass fill with a thin rim, press compresses it. */
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.sidebar-btn, .icon-btn, .tool-btn, .tab-close, .new-tab-btn, .activity-btn, .chat-header-btn, .browser-btn, .nb-btn:not(.nb-btn-primary), .nb-icon-btn):hover:not(:disabled):not(:active) {
+  background: var(--lg-hover-fill);
+  box-shadow: inset 0 .5px 0 rgb(var(--lg-rim-rgb, 255 255 255) / .4), inset 0 -.5px 0 rgb(var(--lg-shadow-rgb, 0 0 0) / .2), inset 0 0 0 .5px rgb(var(--lg-rim-rgb, 255 255 255) / .12), 0 1px 3px rgb(var(--lg-shadow-rgb, 0 0 0) / .18);
+}
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.sidebar-btn, .icon-btn, .tool-btn, .tab-close, .new-tab-btn, .activity-btn, .chat-header-btn, .browser-btn, .nb-btn, .nb-icon-btn):active:not(:disabled) {
+  background: var(--lg-press-fill);
+  box-shadow: inset 0 1.5px 4px rgb(var(--lg-shadow-rgb, 0 0 0) / .32), inset 0 0 0 .5px rgb(var(--lg-rim-rgb, 255 255 255) / .06);
+}
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.sidebar-btn.active, .tab-item.active, .file-item.selected, .settings-nav-btn.active, .search-mode-btn.active) {
+  background: var(--lg-selected-fill);
+  box-shadow: inset 0 .5px 0 rgb(var(--lg-rim-rgb, 255 255 255) / .24), inset 0 -.5px 0 rgb(var(--lg-shadow-rgb, 0 0 0) / .16), inset 0 0 0 .5px rgb(var(--lg-rim-rgb, 255 255 255) / .09), 0 1px 4px rgb(var(--lg-shadow-rgb, 0 0 0) / .16);
+}
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.tab-item, .file-item, .context-menu-item, .settings-nav-btn):hover:not(.active):not(.selected) { background: var(--lg-hover-fill); }
+
+/* Dialogs and floating surfaces: a dense frosted pane, so text behind never competes with text on top. */
+[data-liquid-glass]:not([data-liquid-glass="off"]) .modal-window.lg {
+  background: color-mix(in srgb, var(--card-bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35); backdrop-filter: blur(28px) saturate(1.35);
+}
+[data-liquid-glass]:not([data-liquid-glass="off"]) .modal-window.lg :is(.settings-nav, .settings-body) { background: transparent; }
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.palette, .context-menu, .nb-menu) {
+  background: color-mix(in srgb, var(--card-bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35); backdrop-filter: blur(28px) saturate(1.35);
+}
+[data-liquid-glass]:not([data-liquid-glass="off"]) .palette.lg { background: color-mix(in srgb, var(--card-bg) 88%, transparent); -webkit-backdrop-filter: blur(28px) saturate(1.35); backdrop-filter: blur(28px) saturate(1.35); }
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-liquid-glass]:not([data-liquid-glass="off"]) #app-shell.lg { background: var(--window-bg); }
+}

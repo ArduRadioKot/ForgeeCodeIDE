@@ -1,10 +1,12 @@
 {
   "name": "FrogeeCodeIDE",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A modern code editor with AI chat integration, built with Electron",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "rebuild": "electron-rebuild -f -w node-pty",
+    "postinstall": "electron-rebuild -f -w node-pty || true",
     "build": "electron-builder",
     "dist": "electron-builder --publish=never"
   },
@@ -19,12 +21,16 @@
   "author": "arduradiokot",
   "license": "MIT",
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "electron": "^28.0.0",
     "electron-builder": "^24.6.4"
   },
   "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "axios": "^1.6.0",
-    "marked": "^9.1.6"
+    "marked": "^9.1.6",
+    "node-pty": "^1.1.0"
   },
   "build": {
     "appId": "com.arduradiokot.frogeecodeide",

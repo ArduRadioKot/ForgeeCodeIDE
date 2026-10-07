@@ -1,0 +1,73 @@
+/* Modal: floating island pair on the window colour, same controls as the main UI */
+.modal-overlay { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 28px; background: var(--scrim); }
+
+.modal-window {
+  position: relative; z-index: 1001; width: min(860px, 100%); max-height: min(680px, 100%);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--card-bg); border-radius: var(--radius-xl); box-shadow: 0 24px 64px var(--shadow-color);
+}
+.settings-window { height: min(680px, 100%); min-height: 0; }
+
+.modal-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px 24px; }
+.modal-title-wrap { display: flex; align-items: baseline; gap: 10px; }
+.modal-title { font-size: 18px; font-weight: 600; }
+.modal-subtitle { font-size: 12px; color: var(--text-muted); }
+#close-settings { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); color: var(--text-muted); }
+#close-settings:hover { background: var(--hover-color); color: var(--text-color); }
+
+.settings-layout { flex: 1; min-height: 0; display: flex; }
+.settings-nav { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; }
+.settings-nav-btn { width: 100%; min-height: var(--ctl-h); padding: 0 var(--pad); border-radius: var(--radius-md); text-align: left; color: var(--text-muted); font-size: var(--font-size); }
+.settings-nav-btn:hover { background: var(--hover-color); color: var(--text-color); }
+.settings-nav-btn.active { background: var(--active-bg); color: var(--text-color); }
+
+.modal-body, .settings-body { flex: 1; min-width: 0; overflow-y: auto; padding: 4px 24px 24px !important; color: inherit; font-size: 13px; line-height: inherit; }
+.settings-panel { display: none; }
+.settings-panel.active { display: block; }
+.settings-panel-title, .settings-group-title { margin: 12px 0 4px; font-size: 13px; font-weight: 600; color: var(--text-color); text-transform: none; letter-spacing: 0; }
+.settings-panel-title:first-child { margin-top: 4px; }
+
+.settings-group { margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+.settings-item { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: var(--item-h); margin: 0; padding: var(--pad-sm) 0; border-bottom: 1px solid var(--border-color); }
+.settings-item:last-child { border-bottom: 0; }
+.settings-label { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--text-color); }
+.settings-control { flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.settings-control-row { gap: 10px; }
+
+.settings-select, .settings-input { height: var(--ctl-h); min-width: 160px; padding: 0 10px; font-size: 13px; }
+.settings-select { appearance: none; -webkit-appearance: none; padding-right: 28px;
+  background: var(--code-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238c9097' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E") no-repeat right 8px center / 14px; }
+.settings-select:hover { background-color: var(--hover-color); }
+.settings-input { flex: 1; min-width: 0; }
+.settings-input[type="color"] { width: 44px; min-width: 44px; padding: 2px; cursor: pointer; }
+
+.settings-range { width: 150px; height: 4px; appearance: none; -webkit-appearance: none; border: 0; border-radius: 2px; background: var(--active-bg); }
+.settings-range::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent-color); border: 2px solid var(--card-bg); box-shadow: 0 0 0 1px var(--accent-color); cursor: pointer; }
+.settings-value { min-width: 44px; text-align: right; color: var(--text-muted); font-size: 12px; }
+
+.settings-btn { height: var(--ctl-h-sm); padding: 0 12px; border-radius: var(--radius-md); background: var(--accent-color); color: var(--accent-text); font-size: 12px; font-weight: 500; }
+.settings-btn:hover { background: color-mix(in srgb, var(--accent-color) 86%, #fff); }
+.settings-btn.ghost { min-width: 28px; background: transparent; border: 1px solid var(--border-color); color: var(--text-color); font-weight: 400; }
+.settings-btn.ghost:hover { background: var(--hover-color); }
+.settings-hint { margin-top: 14px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+.settings-hint code { padding: 1px 5px; border-radius: var(--radius-xs); background: var(--code-bg); font: 11px var(--mono-font); }
+
+.status-indicator { padding: 1px 8px; border-radius: 999px; background: var(--code-bg); color: var(--text-muted); font-size: 12px; }
+.status-indicator.connected { background: color-mix(in srgb, var(--success-color) 18%, transparent); color: var(--success-color); }
+.status-indicator.disconnected { background: color-mix(in srgb, var(--danger-color) 18%, transparent); color: var(--danger-color); }
+.status-indicator.not-configured { background: color-mix(in srgb, var(--warning-color) 18%, transparent); color: var(--warning-color); }
+
+.shortcut-list { display: flex; flex-direction: column; }
+.shortcut-row { display: flex; align-items: center; justify-content: space-between; min-height: 36px; border-bottom: 1px solid var(--border-color); }
+.shortcut-row:last-child { border-bottom: 0; }
+
+.modal-footer { flex-shrink: 0; display: flex; justify-content: flex-end; padding: 10px 24px 16px; border: 0; margin: 0; background: none; }
+.modal-ok-btn { min-width: 96px; height: var(--ctl-h); padding: 0 20px; border-radius: var(--radius-md); background: var(--accent-color); color: var(--accent-text); font-size: 13px; font-weight: 500; }
+.modal-ok-btn:hover { background: color-mix(in srgb, var(--accent-color) 86%, #fff); }
+
+@media (max-width: 720px) {
+  .settings-layout { flex-direction: column; }
+  .settings-nav { width: 100%; flex-direction: row; overflow-x: auto; padding: 4px 12px; }
+  .settings-nav-btn { width: auto; white-space: nowrap; }
+  .settings-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+}

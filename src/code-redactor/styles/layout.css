@@ -1,0 +1,45 @@
+/* Shell: window background, left stripe, islands, status bar on the window */
+#main-layout {
+  flex: 1; min-height: 0; width: 100%;
+  display: flex; gap: var(--gap);
+  overflow: hidden; zoom: var(--ui-scale);
+}
+
+.workspace { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--gap); overflow: hidden; }
+.workspace-main { flex: 1; min-height: 0; display: flex; gap: var(--gap); overflow: hidden; }
+
+.panel-bubble {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Status bar sits on the window background, outside the islands */
+.status-bar {
+  height: var(--status-h); flex-shrink: 0; padding: 0 8px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: transparent !important;
+  color: var(--text-muted); font-size: 12px;
+}
+.status-left, .status-right { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.status-left > span, .status-right > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+.status-right > span + span::before, .status-right .status-chip + span::before {
+  content: ''; display: inline-block; width: 1px; height: 12px; margin-right: 12px;
+  background: var(--border-color); vertical-align: -2px;
+}
+.status-chip { display: inline-flex; align-items: center; line-height: 1; height: calc(var(--status-h) - 6px); padding: 0 8px; border-radius: var(--radius-sm); color: var(--text-muted); font-size: 12px; }
+.status-chip:hover, .status-chip.active { background: var(--hover-color); color: var(--text-color); }
+
+body.compact-ui .status-bar { font-size: 11px; }
+body.compact-ui .chat-panel { width: 300px; }
+
+#editor.word-wrap, #editor-right.word-wrap, .syntax-highlight.word-wrap {
+  white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;
+}
+.line-numbers.hidden { display: none !important; }
+
+@media (max-width: 768px) {
+  .activity-panel { width: 200px; }
+  .chat-panel { width: 260px; }
+}

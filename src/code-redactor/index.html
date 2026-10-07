@@ -1,72 +1,54 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark" data-liquid-glass="off">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FrogeeCodeIDE</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="liquid-glass/liquid-glass.css">
+  <link rel="stylesheet" href="styles/glass.css">
+  <link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css">
 </head>
 <body>
+  <div id="app-shell" data-glass="substrate">
   <div id="main-layout">
     <!-- Боковая панель в стиле VS Code -->
-    <nav id="sidebar">
-      <button class="sidebar-btn active" title="Explorer" id="explorer-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 3h18v18H3V3z"/>
-          <path d="M9 9h6v6H9z"/>
-          <path d="M9 3v6"/>
-          <path d="M9 15v6"/>
-          <path d="M15 3v6"/>
-          <path d="M15 15v6"/>
-        </svg>
+    <nav id="sidebar" class="panel-bubble">
+      <img class="sidebar-logo" src="images/icon.png" alt="FrogeeCodeIDE">
+      <button class="sidebar-btn active" title="Проект" id="explorer-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       </button>
-      <button class="sidebar-btn" title="Search" id="search-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"/>
-          <path d="m21 21-4.35-4.35"/>
-        </svg>
+      <button class="sidebar-btn" title="Поиск" id="search-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
       </button>
-      <button class="sidebar-btn" title="Source Control" id="git-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-          <path d="m9 12 2 2 4-4"/>
-        </svg>
+      <button class="sidebar-btn" title="Git" id="git-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M6 8.2v7.6M18 11.2c0 3-3 3.8-9.8 4.4"/></svg>
       </button>
-      <button class="sidebar-btn" title="Run and Debug" id="debug-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="5 3 19 12 5 21 5 3"/>
-        </svg>
+      <button class="sidebar-btn" title="Запуск" id="debug-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15l12-7.5z"/></svg>
       </button>
-      <button class="sidebar-btn" title="Extensions" id="extensions-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
+      <div class="sidebar-spacer"></div>
+      <button class="sidebar-btn" title="Браузер" id="browser-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 3.9 5.4 3.9 9s-1.3 6.6-3.9 9c-2.6-2.4-3.9-5.4-3.9-9S9.4 5.4 12 3z"/></svg>
       </button>
-      
-      <!-- Разделитель -->
-      <div class="sidebar-separator"></div>
-      
-      <!-- Кнопки для чата и настроек -->
-      <button class="sidebar-btn" title="AI Chat" id="chat-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          <path d="M8 9h8"/>
-          <path d="M8 13h6"/>
-        </svg>
+      <button class="sidebar-btn" title="AI-чат" id="chat-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8.5 9h7M8.5 12.5h4.5"/></svg>
       </button>
-      <button class="sidebar-btn" title="Settings" id="open-settings-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
+      <button class="sidebar-btn" title="Терминал" id="terminal-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="m7.5 10 3 2.5-3 2.5M13 15h3.5"/></svg>
+      </button>
+      <button class="sidebar-btn" title="Настройки" id="open-settings-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </nav>
 
+    <div id="workspace" class="workspace">
+    <div id="workspace-main" class="workspace-main">
     <!-- Панель активности (Activity Bar) -->
-    <div id="activity-panel" class="activity-panel">
+    <div id="activity-panel" class="activity-panel panel-bubble">
       <div class="activity-header">
-        <h3>EXPLORER</h3>
+        <h3>Проводник</h3>
         <div class="activity-buttons">
           <button class="activity-btn" title="Открыть папку" id="open-folder-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -85,14 +67,16 @@
       </div>
       <div id="file-explorer" class="file-explorer">
         <div class="file-explorer-placeholder">
-          <p>No folder opened</p>
-          <p>Click "Open..." to get started</p>
+          <p>Папка не открыта</p>
+          <p>Нажмите «Открыть» на стартовой странице</p>
         </div>
       </div>
     </div>
 
+    <div id="activity-resizer" class="panel-resizer" title="Потяните, чтобы изменить ширину"></div>
+
     <!-- Основная область редактора -->
-    <div id="editor-main">
+    <div id="editor-main" class="panel-bubble">
       <!-- Стартовая страница (показывается по умолчанию) -->
       <div id="welcome-page" class="welcome-page">
         <div class="welcome-header">
@@ -132,6 +116,21 @@
                 </div>
               </div>
               
+              <div class="action-item" id="new-notebook-action">
+                <div class="action-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    <line x1="12" y1="8" x2="12" y2="14"/>
+                    <line x1="9" y1="11" x2="15" y2="11"/>
+                  </svg>
+                </div>
+                <div class="action-text">
+                  <div class="action-title">New Notebook...</div>
+                  <div class="action-description">Create a Jupyter Notebook (.ipynb)</div>
+                </div>
+              </div>
+
               <div class="action-item" id="ai-chat-action">
                 <div class="action-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -161,23 +160,71 @@
       <!-- Панель вкладок (скрыта по умолчанию) -->
       <div id="editor-tabs" class="file-tabs" style="display:none;">
         <div id="tabs-list" class="tabs-list"></div>
-        <button id="new-tab-btn" class="new-tab-btn" title="Новый файл">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </button>
+        <div class="tabs-actions">
+          <button type="button" id="split-right-btn" class="new-tab-btn" title="Открыть справа (split)">⧉</button>
+          <button type="button" id="close-split-btn" class="new-tab-btn" title="Закрыть split" style="display:none;">⊟</button>
+          <button type="button" id="run-file-btn" class="new-tab-btn run-file-btn" title="Запустить файл (F5)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.2v9.6L12.6 8z"/></svg>
+          </button>
+          <button id="new-tab-btn" class="new-tab-btn" title="Новый файл">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </div>
       </div>
       
       <!-- Область редактора (скрыта по умолчанию) -->
-      <div id="editor-container" class="editor-container" style="display:none;">
-        <div id="line-numbers" class="line-numbers"></div>
-        <textarea id="editor" placeholder="Начните писать код..."></textarea>
+      <div id="editors-row" class="editors-row" style="display:none;">
+      <div id="editor-container" class="editor-container editor-pane" data-pane="left">
+        <div class="pane-header" id="left-pane-header">
+          <span id="left-pane-title" class="pane-title"></span>
+        </div>
+        <div id="find-bar" class="find-bar" style="display:none;">
+          <input type="text" id="find-input" class="find-input" placeholder="Найти в файле..." />
+          <span id="find-count" class="find-count">0/0</span>
+          <button type="button" id="find-prev-btn" class="find-nav-btn" title="Предыдущее (Shift+Enter)">↑</button>
+          <button type="button" id="find-next-btn" class="find-nav-btn" title="Следующее (Enter)">↓</button>
+          <button type="button" id="find-case-btn" class="find-option-btn" title="Учитывать регистр">Aa</button>
+          <input type="text" id="replace-input" class="find-input replace-input" placeholder="Заменить на…" />
+          <button type="button" id="replace-btn" class="find-text-btn" title="Заменить (Enter в поле замены)">Заменить</button>
+          <button type="button" id="replace-all-btn" class="find-text-btn" title="Заменить все">Все</button>
+          <button type="button" id="find-close-btn" class="find-close-btn" title="Закрыть (Esc)">×</button>
+        </div>
+        <div class="editor-body glass-editor-surface">
+          <div id="line-numbers" class="line-numbers"></div>
+          <div class="code-editor-wrap">
+            <pre id="syntax-highlight" class="syntax-highlight" aria-hidden="true"></pre>
+            <textarea id="editor" placeholder="Начните писать код..." spellcheck="false"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div id="split-resizer" class="split-resizer" style="display:none;" title="Изменить ширину"></div>
+
+      <div id="editor-container-right" class="editor-container editor-pane" data-pane="right" style="display:none;">
+        <div class="pane-header" id="right-pane-header">
+          <span id="right-pane-title" class="pane-title">Split</span>
+          <button type="button" id="close-right-pane-btn" class="pane-close-btn" title="Закрыть панель">×</button>
+        </div>
+        <div class="editor-body glass-editor-surface">
+          <div id="line-numbers-right" class="line-numbers"></div>
+          <div class="code-editor-wrap">
+            <pre id="syntax-highlight-right" class="syntax-highlight" aria-hidden="true"></pre>
+            <textarea id="editor-right" placeholder="Перетащите вкладку сюда..." spellcheck="false"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div id="terminal-editor-host" class="terminal-editor-host" style="display:none;"></div>
+      <div id="notebook-host" class="notebook-host" style="display:none;"></div>
+      <div id="browser-host" class="browser-host" style="display:none;"></div>
       </div>
     </div>
 
     <!-- Панель чата (скрыта по умолчанию) -->
-    <div id="chat-panel" class="chat-panel" style="display:none;">
+    <div id="chat-panel" class="chat-panel panel-bubble" style="display:none;">
       <div class="chat-header">
         <div class="chat-header-left">
           <h3>AI Assistant</h3>
@@ -210,8 +257,11 @@
         <div class="chat-controls">
           <div class="ai-provider-selector">
             <select id="ai-provider-select" class="ai-provider-select">
-              <option value="ollama">🤖 Ollama</option>
-              <option value="openrouter">🌐 OpenRouter</option>
+              <option value="ollama">Ollama</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="opencode">OpenCode</option>
+              <option value="claude-code">Claude Code</option>
+              <option value="codex">Codex</option>
             </select>
           </div>
           <div class="ai-model-selector">
@@ -226,7 +276,7 @@
             <textarea 
               id="user-input" 
               class="chat-textarea" 
-              placeholder="Введите сообщение... (Shift+Enter для новой строки)"
+              placeholder="Сообщение… Shift+Enter — новая строка"
               rows="1"
             ></textarea>
             <div class="input-actions">
@@ -247,115 +297,534 @@
         </div>
       </div>
     </div>
+    </div><!-- /workspace-main -->
+
+    <div id="terminal-dock" class="terminal-dock">
+      <div id="terminal-panel" class="terminal-panel panel-bubble" style="display:none;">
+        <div class="terminal-header" id="terminal-header" title="Перетащите «⠿ Терминал» на панель вкладок">
+          <div class="terminal-tabs">
+            <span class="terminal-tab active" id="terminal-drag-handle" draggable="true">⠿ Терминал</span>
+            <span class="terminal-meta" id="terminal-meta">система · сеть</span>
+          </div>
+          <div class="terminal-actions">
+            <button type="button" id="terminal-to-tab-btn" class="terminal-action-btn" title="Открыть как вкладку">⧉</button>
+            <button type="button" id="terminal-clear-btn" class="terminal-action-btn" title="Очистить">Очистить</button>
+            <button type="button" id="terminal-restart-btn" class="terminal-action-btn" title="Перезапустить">↻</button>
+            <button type="button" id="terminal-close-btn" class="terminal-action-btn" title="Закрыть">×</button>
+          </div>
+        </div>
+        <div id="terminal-xterm" class="terminal-xterm"></div>
+        <div class="terminal-resize" id="terminal-resize" title="Изменить высоту"></div>
+      </div>
+    </div>
+    </div><!-- /workspace -->
+  </div>
+  <div id="status-bar" class="status-bar panel-bubble">
+    <div class="status-left">
+      <span id="status-file">Welcome</span>
+      <span id="status-cursor">Ln 1, Col 1</span>
+    </div>
+    <div class="status-right">
+      <button type="button" id="status-live-btn" class="status-chip" title="Live Server">Go Live</button>
+      <button type="button" id="status-terminal-btn" class="status-chip" title="Терминал">Терминал</button>
+      <span id="status-zoom">100%</span>
+      <span id="status-encoding">UTF-8</span>
+      <span id="status-lang">Plain Text</span>
+    </div>
   </div>
 
-  <!-- Модальные окна -->
+  </div>
+
   <div id="modal-settings" class="modal-overlay" style="display:none;">
-    <div class="modal-window">
+    <div class="modal-window settings-window" data-glass="dialog">
       <div class="modal-header">
-        <span>Настройки</span>
-        <button id="close-settings" title="Закрыть">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div class="modal-title-wrap">
+          <span class="modal-title">Настройки</span>
+          <span class="modal-subtitle">FrogeeCodeIDE</span>
+        </div>
+        <button id="close-settings" class="icon-btn" title="Закрыть">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
       </div>
-      <div class="modal-body">
-        <div class="settings-group">
-          <div class="settings-group-title">Редактор</div>
-          <div class="settings-item">
-            <label class="settings-label" for="font-size-select">Размер шрифта:</label>
-            <div class="settings-control">
-              <select id="font-size-select" class="settings-select">
-                <option value="12">12px</option>
-                <option value="14">14px</option>
-                <option value="16" selected>16px</option>
-                <option value="18">18px</option>
-                <option value="20">20px</option>
-              </select>
+      <div class="settings-layout">
+        <nav class="settings-nav" id="settings-nav">
+          <button type="button" class="settings-nav-btn active" data-settings-tab="editor">Редактор</button>
+          <button type="button" class="settings-nav-btn" data-settings-tab="appearance">Внешний вид</button>
+          <button type="button" class="settings-nav-btn" data-settings-tab="background" hidden>Фон</button>
+          <button type="button" class="settings-nav-btn" data-settings-tab="ai">AI</button>
+          <button type="button" class="settings-nav-btn" data-settings-tab="shortcuts">Горячие клавиши</button>
+        </nav>
+        <div class="modal-body settings-body">
+          <section class="settings-panel active" id="settings-panel-editor">
+            <h3 class="settings-panel-title">Редактор</h3>
+            <div class="settings-item">
+              <label class="settings-label" for="font-size-select">Размер шрифта</label>
+              <div class="settings-control">
+                <select id="font-size-select" class="settings-select">
+                  <option value="12">12px</option>
+                  <option value="13">13px</option>
+                  <option value="14" selected>14px</option>
+                  <option value="15">15px</option>
+                  <option value="16">16px</option>
+                  <option value="18">18px</option>
+                  <option value="20">20px</option>
+                  <option value="22">22px</option>
+                  <option value="24">24px</option>
+                </select>
+              </div>
             </div>
-          </div>
-          <div class="settings-item">
-            <label class="settings-label" for="theme-select">Тема:</label>
-            <div class="settings-control">
-              <select id="theme-select" class="settings-select">
-                <option value="dark" selected>Темная</option>
-                <option value="light">Светлая</option>
-              </select>
+            <div class="settings-item">
+              <label class="settings-label" for="tab-size-select">Табуляция</label>
+              <div class="settings-control">
+                <select id="tab-size-select" class="settings-select">
+                  <option value="2">2 пробела</option>
+                  <option value="4" selected>4 пробела</option>
+                  <option value="8">8 пробелов</option>
+                </select>
+              </div>
             </div>
-          </div>
-          <div class="settings-item">
-            <label class="settings-label" for="tab-size-select">Размер табуляции:</label>
-            <div class="settings-control">
-              <select id="tab-size-select" class="settings-select">
-                <option value="2">2 пробела</option>
-                <option value="4" selected>4 пробела</option>
-                <option value="8">8 пробелов</option>
-              </select>
+            <div class="settings-item">
+              <label class="settings-label" for="editor-font-select">Шрифт редактора</label>
+              <div class="settings-control settings-control-row">
+                <input type="text" id="editor-font-custom" class="settings-input" placeholder="Название шрифта" spellcheck="false" hidden>
+                <select id="editor-font-select" class="settings-select"></select>
+              </div>
             </div>
-          </div>
-        </div>
-        
-        <div class="settings-group">
-          <div class="settings-group-title">Визуальные эффекты</div>
-          <div class="settings-item">
-            <label class="settings-label" for="glass-opacity-range">Прозрачность (Glassmorphism):</label>
-            <div class="settings-control">
-              <input type="range" id="glass-opacity-range" class="settings-range" min="0.1" max="1" step="0.05" value="0.85">
-              <span id="glass-opacity-value" class="settings-value">85%</span>
+            <div class="settings-item">
+              <label class="settings-label" for="font-ligatures">Лигатуры в коде</label>
+              <div class="settings-control">
+                <label class="settings-checkbox-label">
+                  <input type="checkbox" id="font-ligatures" class="settings-checkbox">
+                  <span class="settings-checkmark"></span>
+                </label>
+              </div>
             </div>
-          </div>
-          <div class="settings-item">
-            <label class="settings-label" for="glass-blur-range">Размытие (Blur):</label>
-            <div class="settings-control">
-              <input type="range" id="glass-blur-range" class="settings-range" min="0" max="30" step="1" value="10">
-              <span id="glass-blur-value" class="settings-value">10px</span>
+            <div class="settings-item">
+              <label class="settings-label" for="autosave-checkbox">Автосохранение</label>
+              <div class="settings-control">
+                <label class="settings-checkbox-label">
+                  <input type="checkbox" id="autosave-checkbox" class="settings-checkbox">
+                  <span class="settings-checkmark"></span>
+                </label>
+              </div>
             </div>
-          </div>
-          <div class="settings-item">
-            <label class="settings-label" for="glass-blur-checkbox">Включить эффект размытия:</label>
-            <div class="settings-control">
-              <label class="settings-checkbox-label">
-                <input type="checkbox" id="glass-blur-checkbox" class="settings-checkbox" checked>
-                <span class="settings-checkmark"></span>
-              </label>
+            <div class="settings-item">
+              <label class="settings-label" for="word-wrap-checkbox">Перенос строк</label>
+              <div class="settings-control">
+                <label class="settings-checkbox-label">
+                  <input type="checkbox" id="word-wrap-checkbox" class="settings-checkbox">
+                  <span class="settings-checkmark"></span>
+                </label>
+              </div>
             </div>
-          </div>
-        </div>
-        
-        <div class="settings-group">
-          <div class="settings-group-title">AI Настройки</div>
-          <div class="settings-item">
-            <label class="settings-label" for="openrouter-key">OpenRouter API Ключ:</label>
-            <div class="settings-control">
-              <input type="password" id="openrouter-key" class="settings-input" placeholder="sk-or-v1-..." />
-              <button id="save-openrouter-key" class="settings-btn">Сохранить</button>
+            <div class="settings-item">
+              <label class="settings-label" for="line-numbers-checkbox">Номера строк</label>
+              <div class="settings-control">
+                <label class="settings-checkbox-label">
+                  <input type="checkbox" id="line-numbers-checkbox" class="settings-checkbox" checked>
+                  <span class="settings-checkmark"></span>
+                </label>
+              </div>
             </div>
-          </div>
-          <div class="settings-item">
-            <label class="settings-label">Статус OpenRouter:</label>
-            <div class="settings-control">
-              <span id="openrouter-status" class="status-indicator">Не настроен</span>
+            <div class="settings-item">
+              <label class="settings-label" for="minimap-hint">Масштаб редактора</label>
+              <div class="settings-control settings-control-row">
+                <button type="button" id="zoom-out-btn" class="settings-btn ghost">−</button>
+                <span id="zoom-value" class="settings-value">100%</span>
+                <button type="button" id="zoom-in-btn" class="settings-btn ghost">+</button>
+                <button type="button" id="zoom-reset-btn" class="settings-btn">Сброс</button>
+              </div>
             </div>
-          </div>
-          <div class="settings-item">
-            <label class="settings-label" for="default-ai-provider">Провайдер по умолчанию:</label>
-            <div class="settings-control">
-              <select id="default-ai-provider" class="settings-select">
-                <option value="ollama" selected>Ollama</option>
-                <option value="openrouter">OpenRouter</option>
-              </select>
+          </section>
+
+          <section class="settings-panel" id="settings-panel-appearance">
+            <h3 class="settings-panel-title">Внешний вид</h3>
+            <div class="settings-item">
+              <label class="settings-label" for="theme-select">Тема</label>
+              <div class="settings-control">
+                <select id="theme-select" class="settings-select">
+                  <option value="dark" selected>Тёмная</option>
+                  <option value="light">Светлая</option>
+                </select>
+              </div>
             </div>
-          </div>
+            <div class="settings-item">
+              <span class="settings-label">Свои темы</span>
+              <div class="settings-control settings-control-row">
+                <button type="button" class="settings-btn ghost" id="themes-open-btn" title="Папка с JSON-файлами тем">Открыть папку</button>
+                <button type="button" class="settings-btn ghost" id="themes-import-btn">Импортировать…</button>
+                <button type="button" class="settings-btn ghost" id="themes-refresh-btn" title="Перечитать папку">↻</button>
+              </div>
+            </div>
+            <p class="settings-hint" id="themes-status" style="margin-top:0" hidden></p>
+            <div class="settings-item">
+              <label class="settings-label" for="ui-font-select">Шрифт интерфейса</label>
+              <div class="settings-control settings-control-row">
+                <input type="text" id="ui-font-custom" class="settings-input" placeholder="Название шрифта" spellcheck="false" hidden>
+                <select id="ui-font-select" class="settings-select"></select>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="accent-color-select">Акцент</label>
+              <div class="settings-control">
+                <select id="accent-color-select" class="settings-select">
+                  <option value="#21aabe" selected>Бирюзовый</option>
+                  <option value="#3574f0">Синий</option>
+                  <option value="#7c5cff">Фиолетовый</option>
+                  <option value="#4caf6a">Зелёный</option>
+                  <option value="#e08a3c">Оранжевый</option>
+                  <option value="#e5586f">Красный</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="ui-radius-range">Скругление блоков</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="ui-radius-range" class="settings-range" min="6" max="20" step="1" value="12">
+                <span id="ui-radius-value" class="settings-value">12px</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="ui-gap-range">Отступы между блоками</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="ui-gap-range" class="settings-range" min="2" max="12" step="1" value="4">
+                <span id="ui-gap-value" class="settings-value">4px</span>
+              </div>
+            </div>
+
+            <h3 class="settings-panel-title" style="margin-top:6px;">Liquid Glass</h3>
+            <div class="settings-item">
+              <label class="settings-label" for="lg-preset">Стекло</label>
+              <div class="settings-control">
+                <select id="lg-preset" class="settings-select">
+                  <option value="off">Выключено</option>
+                  <option value="subtle">Тонкое</option>
+                  <option value="regular">Обычное</option>
+                  <option value="clear">Прозрачное</option>
+                  <option value="frosted">Матовое</option>
+                  <option value="vivid">Яркое</option>
+                  <option value="ultraClear">Ультрапрозрачное</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="lg-density">Плотность тонировки</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="lg-density" class="settings-range" min="0" max="0.5" step="0.01" value="0.16">
+                <span id="lg-density-value" class="settings-value">16%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="lg-blur">Размытие</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="lg-blur" class="settings-range" min="0" max="40" step="1" value="8">
+                <span id="lg-blur-value" class="settings-value">8px</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="lg-quality">Качество</label>
+              <div class="settings-control">
+                <select id="lg-quality" class="settings-select">
+                  <option value="auto">Авто</option>
+                  <option value="high">Высокое</option>
+                  <option value="medium">Среднее</option>
+                  <option value="low">Простое</option>
+                </select>
+              </div>
+            </div>
+            <p class="settings-hint" style="margin-top:0">Прозрачное окно с размытием работает в macOS и Windows 11. В Linux стекло выключено по умолчанию.</p>
+
+            <div hidden>
+            <h3 class="settings-panel-title" style="margin-top:18px;">Стекло и прозрачность</h3>
+            <div class="settings-item">
+              <label class="settings-label" for="glass-enabled-checkbox">Включить стекло (blur)</label>
+              <div class="settings-control">
+                <label class="settings-checkbox-label">
+                  <input type="checkbox" id="glass-enabled-checkbox" class="settings-checkbox" checked>
+                  <span class="settings-checkmark"></span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="glass-opacity-range">Прозрачность панелей</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="glass-opacity-range" class="settings-range" min="0.2" max="1" step="0.01" value="0.78">
+                <span id="glass-opacity-value" class="settings-value">78%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="editor-dim-range">Прозрачность редактора</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="editor-dim-range" class="settings-range" min="0.2" max="1" step="0.01" value="0.88">
+                <span id="editor-dim-value" class="settings-value">88%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="glass-blur-range">Размытие</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="glass-blur-range" class="settings-range" min="0" max="40" step="1" value="16">
+                <span id="glass-blur-value" class="settings-value">16px</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="glass-rim-range">Границы панелей</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="glass-rim-range" class="settings-range" min="0" max="30" step="1" value="10">
+                <span id="glass-rim-value" class="settings-value">10%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="glass-shadow-range">Тень панелей</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="glass-shadow-range" class="settings-range" min="0" max="40" step="1" value="12">
+                <span id="glass-shadow-value" class="settings-value">12%</span>
+              </div>
+            </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="compact-ui-checkbox">Компактный UI</label>
+              <div class="settings-control">
+                <label class="settings-checkbox-label">
+                  <input type="checkbox" id="compact-ui-checkbox" class="settings-checkbox">
+                  <span class="settings-checkmark"></span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="auto-scale-checkbox">Автомасштаб интерфейса</label>
+              <div class="settings-control">
+                <label class="settings-checkbox-label">
+                  <input type="checkbox" id="auto-scale-checkbox" class="settings-checkbox" checked>
+                  <span class="settings-checkmark"></span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="terminal-height-range">Высота терминала</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="terminal-height-range" class="settings-range" min="140" max="420" step="10" value="220">
+                <span id="terminal-height-value" class="settings-value">220px</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-panel" id="settings-panel-background">
+            <h3 class="settings-panel-title">Фон и прозрачность</h3>
+            <div class="settings-item">
+              <label class="settings-label" for="app-bg-color">Фон приложения</label>
+              <div class="settings-control">
+                <input type="color" id="app-bg-color" class="settings-input" value="#16181d" title="Фон приложения">
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="sidebar-bg-color">Фон боковой панели</label>
+              <div class="settings-control">
+                <input type="color" id="sidebar-bg-color" class="settings-input" value="#1c1f26" title="Фон боковой панели">
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="editor-bg-color">Фон редактора</label>
+              <div class="settings-control">
+                <input type="color" id="editor-bg-color" class="settings-input" value="#1a1d23" title="Фон редактора">
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="panel-bg-color">Фон панелей</label>
+              <div class="settings-control">
+                <input type="color" id="panel-bg-color" class="settings-input" value="#1e2229" title="Фон панелей">
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="app-opacity-range">Прозрачность всего UI</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="app-opacity-range" class="settings-range" min="0.4" max="1" step="0.01" value="1">
+                <span id="app-opacity-value" class="settings-value">100%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="sidebar-opacity-range">Прозрачность sidebar</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="sidebar-opacity-range" class="settings-range" min="0.2" max="1" step="0.01" value="0.78">
+                <span id="sidebar-opacity-value" class="settings-value">78%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="activity-opacity-range">Прозрачность activity</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="activity-opacity-range" class="settings-range" min="0.2" max="1" step="0.01" value="0.78">
+                <span id="activity-opacity-value" class="settings-value">78%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="editor-surface-opacity-range">Прозрачность области редактора</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="editor-surface-opacity-range" class="settings-range" min="0.2" max="1" step="0.01" value="0.78">
+                <span id="editor-surface-opacity-value" class="settings-value">78%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="terminal-opacity-range">Прозрачность терминала</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="terminal-opacity-range" class="settings-range" min="0.2" max="1" step="0.01" value="1">
+                <span id="terminal-opacity-value" class="settings-value">100%</span>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="bg-image-url">Фоновое изображение (URL)</label>
+              <div class="settings-control">
+                <input type="text" id="bg-image-url" class="settings-input" placeholder="url(https://...) или путь">
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="bg-image-opacity-range">Прозрачность фонового изображения</label>
+              <div class="settings-control settings-control-row">
+                <input type="range" id="bg-image-opacity-range" class="settings-range" min="0" max="1" step="0.01" value="0">
+                <span id="bg-image-opacity-value" class="settings-value">0%</span>
+              </div>
+            </div>
+            <p class="settings-hint">Диапазон прозрачности UI: 0.4–1. URL изображения необязателен; для CSS используйте формат <code>url(...)</code>.</p>
+          </section>
+
+          <section class="settings-panel" id="settings-panel-ai">
+            <h3 class="settings-panel-title">AI</h3>
+            <div class="settings-item">
+              <label class="settings-label" for="default-ai-provider">Провайдер по умолчанию</label>
+              <div class="settings-control">
+                <select id="default-ai-provider" class="settings-select">
+                  <option value="ollama" selected>Ollama</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="opencode">OpenCode</option>
+                  <option value="claude-code">Claude Code</option>
+                  <option value="codex">Codex</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="openrouter-key">OpenRouter API ключ</label>
+              <div class="settings-control settings-control-row">
+                <input type="password" id="openrouter-key" class="settings-input" placeholder="sk-or-v1-..." />
+                <button id="save-openrouter-key" class="settings-btn">Сохранить</button>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label">Статус OpenRouter</label>
+              <div class="settings-control">
+                <span id="openrouter-status" class="status-indicator">Не настроен</span>
+              </div>
+            </div>
+            <h3 class="settings-panel-title" style="margin-top:18px;">OpenCode</h3>
+            <div class="settings-item">
+              <label class="settings-label" for="opencode-url">URL сервера OpenCode</label>
+              <div class="settings-control settings-control-row">
+                <input type="text" id="opencode-url" class="settings-input" placeholder="http://127.0.0.1:4096" value="http://127.0.0.1:4096" />
+                <button type="button" id="opencode-test-btn" class="settings-btn">Проверить</button>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label">Статус OpenCode</label>
+              <div class="settings-control">
+                <span id="opencode-status" class="status-indicator">Не проверен</span>
+              </div>
+            </div>
+            <p class="settings-hint">Запустите <code>opencode serve</code> в проекте (порт 4096). Чат использует открытую папку workspace как directory.</p>
+            <h3 class="settings-panel-title" style="margin-top:18px;">Кодовые агенты</h3>
+            <p class="settings-hint" style="margin-top:0">Claude Code и Codex запускаются в папке проекта и отвечают в AI-чате; OpenCode работает через <code>opencode serve</code>. Авторизация берётся из самих CLI.</p>
+            <div class="settings-item">
+              <label class="settings-label" for="agent-access">Права агентов в чате</label>
+              <div class="settings-control">
+                <select id="agent-access" class="settings-select">
+                  <option value="read" selected>Только чтение (анализ и план)</option>
+                  <option value="edit">Правка файлов проекта</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-item agent-row">
+              <div class="agent-info">
+                <span class="settings-label">Claude Code</span>
+                <span class="agent-meta" id="agent-meta-claude"></span>
+              </div>
+              <div class="settings-control settings-control-row">
+                <span class="status-indicator" id="agent-status-claude">Не проверен</span>
+                <input type="text" class="settings-input agent-path" id="agent-path-claude" placeholder="Путь к бинарнику (необязательно)" spellcheck="false" />
+                <button type="button" class="settings-btn ghost" data-agent-terminal="claude" title="Открыть в терминале проекта">В терминале</button>
+              </div>
+            </div>
+            <div class="settings-item agent-row">
+              <div class="agent-info">
+                <span class="settings-label">Codex</span>
+                <span class="agent-meta" id="agent-meta-codex"></span>
+              </div>
+              <div class="settings-control settings-control-row">
+                <span class="status-indicator" id="agent-status-codex">Не проверен</span>
+                <input type="text" class="settings-input agent-path" id="agent-path-codex" placeholder="Путь к бинарнику (необязательно)" spellcheck="false" />
+                <button type="button" class="settings-btn ghost" data-agent-terminal="codex" title="Открыть в терминале проекта">В терминале</button>
+              </div>
+            </div>
+            <div class="settings-item agent-row">
+              <div class="agent-info">
+                <span class="settings-label">OpenCode</span>
+                <span class="agent-meta" id="agent-meta-opencode"></span>
+              </div>
+              <div class="settings-control settings-control-row">
+                <span class="status-indicator" id="agent-status-opencode">Не проверен</span>
+                <input type="text" class="settings-input agent-path" id="agent-path-opencode" placeholder="Путь к бинарнику (необязательно)" spellcheck="false" />
+                <button type="button" class="settings-btn ghost" id="opencode-serve-btn">Запустить serve</button><button type="button" class="settings-btn ghost" data-agent-terminal="opencode" title="Открыть в терминале проекта">В терминале</button>
+              </div>
+            </div>
+            <div class="settings-item">
+              <span class="settings-label">Установка</span>
+              <div class="settings-control"><button type="button" class="settings-btn" id="agents-refresh-btn">Проверить установку</button></div>
+            </div>
+          </section>
+
+          <section class="settings-panel" id="settings-panel-shortcuts">
+            <h3 class="settings-panel-title">Горячие клавиши</h3>
+            <div class="shortcut-list">
+              <div class="shortcut-row"><span>Новый файл</span><kbd>Ctrl/Cmd+N</kbd></div>
+              <div class="shortcut-row"><span>Открыть</span><kbd>Ctrl/Cmd+O</kbd></div>
+              <div class="shortcut-row"><span>Сохранить</span><kbd>Ctrl/Cmd+S</kbd></div>
+              <div class="shortcut-row"><span>Палитра команд</span><kbd>Ctrl/Cmd+Shift+P</kbd></div>
+              <div class="shortcut-row"><span>Быстрое открытие файла</span><kbd>Ctrl/Cmd+P</kbd></div>
+              <div class="shortcut-row"><span>Перейти к строке</span><kbd>Ctrl+G</kbd></div>
+              <div class="shortcut-row"><span>Запустить файл</span><kbd>F5</kbd></div>
+              <div class="shortcut-row"><span>Закомментировать строки</span><kbd>Ctrl/Cmd+/</kbd></div>
+              <div class="shortcut-row"><span>Переместить строку</span><kbd>Alt+↑/↓</kbd></div>
+              <div class="shortcut-row"><span>Дублировать строку</span><kbd>Alt+Shift+↑/↓</kbd></div>
+              <div class="shortcut-row"><span>Удалить строку</span><kbd>Ctrl/Cmd+Shift+K</kbd></div>
+              <div class="shortcut-row"><span>Найти в файле</span><kbd>Ctrl/Cmd+F</kbd></div>
+              <div class="shortcut-row"><span>Найти и заменить</span><kbd>Ctrl/Cmd+Alt+F</kbd></div>
+              <div class="shortcut-row"><span>Ноутбук: выполнить ячейку</span><kbd>Shift/Ctrl+Enter</kbd></div>
+              <div class="shortcut-row"><span>Ноутбук: вставить ячейку</span><kbd>A / B</kbd></div>
+              <div class="shortcut-row"><span>Ноутбук: удалить ячейку</span><kbd>D D</kbd></div>
+              <div class="shortcut-row"><span>Ноутбук: код / текст</span><kbd>Y / M</kbd></div>
+              <div class="shortcut-row"><span>Ноутбук: отменить действие</span><kbd>Z</kbd></div>
+              <div class="shortcut-row"><span>Поиск по проекту</span><kbd>Ctrl/Cmd+Shift+F</kbd></div>
+              <div class="shortcut-row"><span>Split справа</span><kbd>Ctrl/Cmd+\\</kbd></div>
+              <div class="shortcut-row"><span>Терминал</span><kbd>Ctrl/Cmd+`</kbd></div>
+              <div class="shortcut-row"><span>Увеличить масштаб</span><kbd>Ctrl/Cmd++</kbd></div>
+              <div class="shortcut-row"><span>Уменьшить масштаб</span><kbd>Ctrl/Cmd+-</kbd></div>
+              <div class="shortcut-row"><span>Сбросить масштаб</span><kbd>Ctrl/Cmd+0</kbd></div>
+            </div>
+          </section>
         </div>
       </div>
       <div class="modal-footer">
-        <button id="close-settings-btn" class="modal-ok-btn">OK</button>
+        <button id="close-settings-btn" class="modal-ok-btn">Готово</button>
       </div>
     </div>
   </div>
 
-  <script src="renderer.js"></script>
+  <script src="node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="node_modules/marked/marked.min.js"></script>
+  <script src="syntax.js"></script>
+  <script src="liquid-glass/optics.js"></script>
+  <script src="liquid-glass/presets.js"></script>
+  <script src="liquid-glass/displacement.js"></script>
+  <script src="liquid-glass/liquid-glass.js"></script>
+  <script type="module" src="renderer/app.js"></script>
 </body>
 </html> 
