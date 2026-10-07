@@ -7,8 +7,12 @@
     "start": "electron .",
     "rebuild": "electron-rebuild -f -w node-pty",
     "postinstall": "electron-rebuild -f -w node-pty || true",
-    "build": "electron-builder",
-    "dist": "electron-builder --publish=never"
+    "build": "electron-builder --publish=never",
+    "build:mac": "electron-builder --mac --publish=never",
+    "build:win": "electron-builder --win --publish=never",
+    "build:linux": "electron-builder --linux --publish=never",
+    "build:all": "electron-builder --mac --win --linux --publish=never",
+    "dist": "npm run build"
   },
   "keywords": [
     "electron",
@@ -40,19 +44,28 @@
     },
     "files": [
       "**/*",
-      "!node_modules/**/*",
       "!dist/**/*"
     ],
     "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.developer-tools",
-      "icon": "images/icon.ico"
+      "icon": "images/icon.png"
     },
     "win": {
-      "target": "nsis",
-      "icon": "images/icon.ico"
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "images/icon.png"
     },
     "linux": {
-      "target": "AppImage",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Development"
     },
     "nsis": {
