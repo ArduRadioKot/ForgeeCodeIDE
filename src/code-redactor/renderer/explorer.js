@@ -11,7 +11,8 @@ import { runInTerminal } from './terminal.js';
 import { runCurrentFile } from './palette.js';
 import { showSearchPanel } from './search-panel.js';
 import { refreshGitignoreBox, isIgnoredHidden, toggleHideIgnored } from './gitignore-ui.js';
-import { icon } from './glyphs.js';
+import { icon, hydrateIcons } from './glyphs.js';
+import { setupRunConfigPanel } from './run-configs.js';
 
 const dom = getDom();
 
@@ -106,6 +107,10 @@ export async function showRunPanel() {
     <div class="activity-header"><h3>Запуск</h3></div>
     <div class="run-panel">
       <div class="run-section">
+        <div class="run-title run-title-row"><span>Конфигурации</span><button type="button" class="activity-btn" id="run-config-add" title="Новая конфигурация запуска"><span class="ico-wrap" data-icon="plus" data-size="14"></span></button></div>
+        <div class="run-list" id="run-configs"></div>
+      </div>
+      <div class="run-section">
         <div class="run-title">Текущий файл</div>
         <button class="run-item" id="run-current-btn"><span class="run-play">${icon('play', 11)}</span><span class="run-name" id="run-current-name">—</span><kbd>F5</kbd></button>
       </div>
@@ -122,7 +127,9 @@ export async function showRunPanel() {
   const tab = state.currentTabs[state.activeTabIndex];
   const nameEl = document.getElementById('run-current-name');
   if (nameEl) nameEl.textContent = tab && tab.kind !== 'terminal' && tab.kind !== 'browser' ? tab.name : 'Откройте файл';
-  document.getElementById('run-current-btn')?.addEventListener('click', () => runCurrentFile());
+  document.getElementById('run-current-btn')?.addEventListener('click', () => runCurrentFile({ ignoreConfig: true }));
+  hydrateIcons(dom.activityPanel);
+  setupRunConfigPanel();
   document.getElementById('run-live-btn')?.addEventListener('click', () => toggleLive());
   document.getElementById('run-browser-btn')?.addEventListener('click', () => openBrowserTab('about:blank'));
 

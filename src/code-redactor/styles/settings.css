@@ -137,3 +137,25 @@
 .dl-cancel { color: var(--text-muted); font-size: 11px; }
 .dl-cancel:hover { color: var(--danger-color); }
 .settings-sub { display: block; margin-top: 2px; color: var(--text-faint); font-size: 11px; font-weight: 400; }
+
+/* Run configuration dialog */
+.rc-dialog { width: min(560px, 100%); max-height: min(640px, 100%); padding: 0; }
+.rc-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 8px 22px; }
+.rc-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.rc-body { display: flex; flex-direction: column; gap: 12px; padding: 4px 22px 14px; overflow-y: auto; }
+.rc-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--text-muted); }
+.rc-field input, .rc-field textarea { width: 100%; padding: 6px 10px; font: 13px var(--mono-font); color: var(--text-color); }
+.rc-field input { height: var(--ctl-h); }
+.rc-field small { color: var(--text-faint); line-height: 1.5; }
+.rc-field code { font: 11px var(--mono-font); padding: 0 4px; border-radius: var(--radius-xs); background: var(--hover-color); }
+.rc-presets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: -4px; }
+.rc-presets button { height: 24px; padding: 0 9px; border-radius: var(--radius-sm); background: var(--code-bg); color: var(--text-muted); font-size: 12px; }
+.rc-presets button:hover { background: var(--hover-color); color: var(--text-color); }
+.rc-check { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.rc-foot { display: flex; align-items: center; gap: 6px; padding: 10px 16px 14px 22px; border-top: 1px solid var(--border-color); }
+.rc-grow { flex: 1; }
+.rc-foot button { height: 28px; padding: 0 12px; border-radius: var(--radius-md); color: var(--text-muted); }
+.rc-foot button:hover { background: var(--hover-color); color: var(--text-color); }
+.rc-foot button.primary { background: var(--accent-color); color: var(--accent-text); }
+.rc-foot button.primary:hover { background: color-mix(in srgb, var(--accent-color) 86%, #fff); }
+.rc-check input { accent-color: var(--accent-color); }

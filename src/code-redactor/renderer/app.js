@@ -356,6 +356,7 @@ export function setupEventListeners() {
   hydrateIcons();
   setupMarkdown();
   setupAiReview();
+  import('./run-configs.js').then((m) => m.refreshRunButton());
   setupAutocomplete();
   setupCompletion();
   setupAutoIndentSetting();

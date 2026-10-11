@@ -67,3 +67,16 @@
 .panel-resizer.hidden { display: none; }
 body.resizing-panel { cursor: col-resize; user-select: none; }
 body.resizing-panel webview { pointer-events: none; }
+
+/* Run configurations */
+.run-title-row { display: flex; align-items: center; justify-content: space-between; }
+.run-cfg { display: flex; align-items: center; gap: 6px; padding-right: 4px; cursor: pointer; }
+.run-cfg .run-play { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); flex-shrink: 0; }
+.run-cfg .run-play:hover { background: var(--hover-color); color: var(--accent-color); }
+.run-cfg.selected { background: var(--accent-soft); }
+.run-cfg.selected .run-name { color: var(--link-color); }
+.run-cfg-tools { display: none; flex-shrink: 0; }
+.run-cfg:hover .run-cfg-tools, .run-cfg:focus-within .run-cfg-tools { display: flex; }
+.run-cfg-tools button { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--text-muted); }
+.run-cfg-tools button:hover { background: var(--hover-color); color: var(--text-color); }
+.run-empty { padding: 6px 10px; color: var(--text-faint); font-size: 12px; line-height: 1.5; }

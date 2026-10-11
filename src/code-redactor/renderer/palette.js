@@ -21,6 +21,7 @@ import { applyThemeClass } from './appearance.js';
 import { runNotebookCommand } from './notebook.js';
 import { toggleGlass, attachGlassTo } from './glass.js';
 import { problemItems, goToProblem } from './diagnostics.js';
+import { configCommands } from './run-configs.js';
 import { toggleMarkdownPreview, formatTable, insertTable } from './markdown.js';
 
 const dom = getDom();
@@ -157,7 +158,12 @@ function activeTab() {
   return state.currentTabs[state.activeTabIndex];
 }
 
-export async function runCurrentFile() {
+export async function runCurrentFile(opts) {
+  // F5 and the run button start the selected run configuration; a direct "run this file" skips it.
+  if (!(opts && opts.ignoreConfig)) {
+    const { runSelectedConfig } = await import('./run-configs.js');
+    if (await runSelectedConfig()) return;
+  }
   const tab = activeTab();
   if (!tab) return;
   if (isNotebookTab(tab)) { runNotebookCommand(tab, 'run-all'); return; }
@@ -188,10 +194,12 @@ export function toggleTheme() {
 }
 
 function buildCommands() {
+  const extra = configCommands().map((c) => ({ label: c.label, run: c.run, key: c.key, detail: c.detail }));
   const tab = activeTab();
   const nb = tab && isNotebookTab(tab);
   const cmd = (label, run, key = '', group = '') => ({ label, run, key, detail: group });
   const list = [
+    ...extra,
     cmd('Файл: новый файл', createNewFile, 'Ctrl+N'),
     cmd('Файл: новый ноутбук', createNewNotebook),
     cmd('Файл: открыть…', openFileOrFolder, 'Ctrl+O'),
@@ -222,7 +230,8 @@ function buildCommands() {
     cmd('Вид: увеличить масштаб', () => changeEditorZoom(0.1), 'Ctrl++'),
     cmd('Вид: уменьшить масштаб', () => changeEditorZoom(-0.1), 'Ctrl+-'),
     cmd('Вид: сбросить масштаб', () => applyEditorZoom(1, true), 'Ctrl+0'),
-    cmd('Запуск: выполнить текущий файл', runCurrentFile, 'F5'),
+    cmd('Запуск: выполнить текущий файл', () => runCurrentFile({ ignoreConfig: true })),
+    cmd('Запуск: выбранную конфигурацию или файл', runCurrentFile, 'F5'),
     cmd('Правка: перейти к символу…', openSymbols, 'Ctrl+Shift+O'),
     cmd('Markdown: предпросмотр', () => toggleMarkdownPreview(), 'Ctrl+Shift+V'),
     cmd('Markdown: вставить таблицу', insertTable),

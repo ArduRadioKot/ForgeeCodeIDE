@@ -16,6 +16,7 @@ const SHAPES = {
   refresh: `<path ${STROKE} d="M13 8.2A5 5 0 1 1 11.3 4.4"/><path ${FILL} d="M14 1.8v5H9z"/>`,
   undo: `<path ${STROKE} d="M4 7h5.2a3.3 3.3 0 0 1 0 6.6H6"/><path ${FILL} d="M2 7l4-4v8z"/>`,
   external: `<path ${STROKE} d="M6.5 3.5h-3v9h9v-3"/><path ${FILL} d="M13.5 2.5h-5l5 5z"/>`,
+  edit: `<path ${STROKE} d="M3 13l.8-3L11 2.8 13.2 5 6 12.2z"/><path ${STROKE} d="M9.6 4.2l2.2 2.2"/>`,
   play: `<path ${FILL} d="M4.5 2.5v11l9-5.5z"/>`,
   dot: `<circle ${FILL} cx="8" cy="8" r="3.4"/>`,
   live: `<circle ${FILL} cx="8" cy="8" r="1.9"/><path ${STROKE} d="M4.6 4.6a4.8 4.8 0 0 0 0 6.8M11.4 4.6a4.8 4.8 0 0 1 0 6.8"/>`,

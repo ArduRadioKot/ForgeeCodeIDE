@@ -18,6 +18,8 @@ export const state = {
   modelByProvider: {},
   customProviders: [],
   contextFiles: [],
+  runConfigs: {},
+  runSelected: {},
   ollamaStatus: null,
   bionicStatus: null,
   findBarVisible: false,

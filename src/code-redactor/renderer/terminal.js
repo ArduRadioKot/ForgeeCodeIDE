@@ -424,6 +424,27 @@ export function renderTerminalTabs() {
   });
 }
 
+const keyed = new Map(); // run key -> session id: a run configuration keeps its own tab
+
+/** Run a command in a terminal tab of its own. The same key reuses the tab (it is interrupted first). */
+export async function runInNamedTerminal(key, title, command, cwd) {
+  let s = key ? sessions.find((x) => x.id === keyed.get(key)) : null;
+  const fresh = !s;
+  if (!s) {
+    s = createSession();
+    if (!s) return;
+    s.title = title;
+    if (key) keyed.set(key, s.id);
+  } else s.title = title;
+  selectSession(s.id);
+  await setTerminalVisible(true, false);
+  if (!s.started) await startSession(s);
+  else if (!fresh) await window.electronAPI.terminalWrite('\x03', s.id);
+  fitTerminal();
+  const quote = (p) => (navigator.platform.startsWith('Win') ? `"${p}"` : `'${String(p).replace(/'/g, `'\\''`)}'`);
+  await window.electronAPI.terminalWrite(`${cwd ? `cd ${quote(cwd)} && ` : ''}${command}\r`, s.id);
+}
+
 export async function newTerminalSession() {
   const session = createSession();
   if (!session) return;

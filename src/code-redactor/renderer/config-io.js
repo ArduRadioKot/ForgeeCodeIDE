@@ -176,6 +176,8 @@ export async function initializeApp() {
     const ocUrl = document.getElementById('opencode-url');
     if (ocUrl) ocUrl.value = state.opencodeBaseUrl;
 
+    state.runConfigs = (config.runConfigs && typeof config.runConfigs === 'object') ? config.runConfigs : {};
+    state.runSelected = (config.runSelected && typeof config.runSelected === 'object') ? config.runSelected : {};
     state.customProviders = Array.isArray(config.customProviders) ? config.customProviders : [];
     (await import('./ai-settings.js')).syncProviderSelects();
     if (dom.defaultAiProviderSelect) dom.defaultAiProviderSelect.value = state.defaultAiProvider;
@@ -209,6 +211,8 @@ export async function saveAllConfig() {
       currentAiModel: state.currentAiModel,
       modelByProvider: state.modelByProvider,
       customProviders: state.customProviders,
+      runConfigs: state.runConfigs,
+      runSelected: state.runSelected,
       attachContext: state.attachContext,
       showWelcomePage: dom.showWelcomeCheckbox ? dom.showWelcomeCheckbox.checked : true,
       editorTabs: [], // open files are not remembered between sessions
