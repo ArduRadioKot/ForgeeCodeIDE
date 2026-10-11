@@ -1,5 +1,6 @@
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
+const { markIgnored } = require('./gitignore');
 const fs = require('fs').promises;
 
 function safeRemoveHandler(channel) {
@@ -137,11 +138,11 @@ function registerFileIpc(getMainWindow) {
   ipcMain.handle('list-files', async (event, folderPath) => {
     try {
       const files = await fs.readdir(folderPath, { withFileTypes: true });
-      const fileList = files.map(file => ({
+      const fileList = markIgnored(folderPath, files.map(file => ({
         name: file.name,
         isDirectory: file.isDirectory(),
         path: path.join(folderPath, file.name)
-      }));
+      })));
       return { success: true, files: fileList };
     } catch (error) {
       return { success: false, error: error.message };

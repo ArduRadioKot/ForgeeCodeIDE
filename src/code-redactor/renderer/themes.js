@@ -102,11 +102,10 @@ export function applyThemeVars(theme) {
     const set = (name, value) => { body.style.setProperty(name, value); applied.add(name); };
     Object.entries(theme.colors || {}).forEach(([k, v]) => set(`--${k}`, v));
     Object.entries(theme.syntax || {}).forEach(([k, v]) => set(`--syn-${k}`, v));
-    // A theme that defines its own accent wins over the accent picker.
-    if (theme.colors?.['accent-color']) document.documentElement.style.removeProperty('--accent-color');
-  } else {
-    document.documentElement.style.setProperty('--accent-color', state.accentColor);
   }
+  // The accent lives on <html> so every colour derived from it (links, selection, "ok" states) follows:
+  // a theme's own accent wins over the accent picker.
+  document.documentElement.style.setProperty('--accent-color', theme?.colors?.['accent-color'] || state.accentColor);
   const accentSelect = document.getElementById('accent-color-select');
   if (accentSelect) {
     const locked = !!theme?.colors?.['accent-color'];

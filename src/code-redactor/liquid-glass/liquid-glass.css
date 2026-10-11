@@ -15,6 +15,8 @@
         0 0 0 .5px rgb(var(--lg-shadow-rgb) / calc(var(--lg-ambient) * .5)),
         inset 0 -1px 8px rgb(var(--lg-shadow-rgb) / calc(var(--lg-inner-shadow) * .35)),
         inset 0 0 18px rgb(var(--lg-rim-rgb) / calc(var(--lg-inner-glow) * .18));
+    transform: scale(calc(1 - var(--lg-press) * .012));
+    transition: transform var(--lg-speed) cubic-bezier(.2, .8, .3, 1);
 }
 /* Soft reflection that appears only under the pointer (hover); nothing glows at rest. */
 .lg::before {
@@ -56,3 +58,5 @@
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .lg { background: color-mix(in srgb, var(--lg-tint) 88%, transparent); }
 }
+/* Morphing: size and radius ease together; the lens map is rebuilt at most once per frame. */
+.lg[data-lg-morph] { transition: width var(--lg-speed), height var(--lg-speed), border-radius var(--lg-speed), transform var(--lg-speed) cubic-bezier(.2, .8, .3, 1); }

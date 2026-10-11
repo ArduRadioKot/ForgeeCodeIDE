@@ -18,9 +18,7 @@
     "accent-text": "#1e1f29",
     "link-color": "#8be9fd",
     "selection": "#44475a",
-    "success-color": "#50fa7b",
-    "warning-color": "#f1fa8c",
-    "danger-color": "#ff5555"
+    "warning-color": "#f1fa8c"
   },
   "syntax": {
     "keyword": "#ff79c6",

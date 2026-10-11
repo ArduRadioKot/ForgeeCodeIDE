@@ -20,8 +20,8 @@
 ## colors
 `window-bg` фон окна · `card-bg` панели · `header-bg` вкладки · `code-bg` поля ввода и блоки кода · `editor-bg` редактор ·
 `text-color` · `text-muted` · `text-faint` · `border-color` · `hover-color` наведение · `active-bg` выбранный элемент ·
-`accent-color` акцент (кнопки, фокус) · `accent-text` текст на акценте · `link-color` · `selection` выделение ·
-`success-color` · `warning-color` · `danger-color` · `shadow-color` · `scrim` затемнение под окнами.
+`accent-color` акцент (кнопки, фокус, значки, статусы «готово» — всё, что было бы зелёным; тема, в которой он задан, перекрывает выбор в настройках) · `accent-text` текст на акценте · `link-color` · `selection` выделение ·
+`success-color` (по умолчанию = акцент) · `warning-color` · `danger-color` (по умолчанию нейтральный) · `shadow-color` · `scrim` затемнение под окнами.
 
 ## syntax
 `keyword` `string` `number` `comment` `function` `type` `field` `tag` `attr` `heading` `annotation`

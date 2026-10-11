@@ -165,19 +165,20 @@ export async function initializeApp() {
 
     state.defaultAiProvider = config.defaultAiProvider || 'ollama';
     state.currentAiProvider = config.currentAiProvider || state.defaultAiProvider;
-    state.currentAiModel = config.currentAiModel || (state.currentAiProvider === 'openrouter' ? 'deepseek/deepseek-r1-0528:free' : 'llama3');
+    state.modelByProvider = (config.modelByProvider && typeof config.modelByProvider === 'object') ? config.modelByProvider : {};
+    state.attachContext = config.attachContext !== false;
+    state.currentAiModel = state.modelByProvider[state.currentAiProvider] || config.currentAiModel || '';
     state.opencodeBaseUrl = config.opencodeBaseUrl || 'http://127.0.0.1:4096';
     const ocUrl = document.getElementById('opencode-url');
     if (ocUrl) ocUrl.value = state.opencodeBaseUrl;
 
+    state.customProviders = Array.isArray(config.customProviders) ? config.customProviders : [];
+    (await import('./ai-settings.js')).syncProviderSelects();
     if (dom.defaultAiProviderSelect) dom.defaultAiProviderSelect.value = state.defaultAiProvider;
     if (dom.aiProviderSelect) dom.aiProviderSelect.value = state.currentAiProvider;
     if (dom.aiModelSelect) {
       const { refreshModelSelectForProvider } = await import('./chat.js');
-      await refreshModelSelectForProvider();
-      if (state.currentAiModel) {
-        try { dom.aiModelSelect.value = state.currentAiModel; } catch {}
-      }
+      refreshModelSelectForProvider().catch(() => {}); // network / CLI calls: never block startup
     }
 
     await initializeOpenRouter();
@@ -202,9 +203,12 @@ export async function saveAllConfig() {
       defaultAiProvider: state.defaultAiProvider,
       currentAiProvider: state.currentAiProvider,
       currentAiModel: state.currentAiModel,
+      modelByProvider: state.modelByProvider,
+      customProviders: state.customProviders,
+      attachContext: state.attachContext,
       showWelcomePage: dom.showWelcomeCheckbox ? dom.showWelcomeCheckbox.checked : true,
       editorTabs: state.currentTabs
-        .filter((t) => t && t.kind !== 'terminal')
+        .filter((t) => t && t.kind !== 'terminal' && t.kind !== 'preview')
         .map((t) => ({
           name: t.name,
           content: t.content || '',

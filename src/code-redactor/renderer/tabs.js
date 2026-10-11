@@ -19,7 +19,8 @@ import {
   saveTabs,
   openFileOrFolder,
 } from './editor-api.js';
-import { isTerminalTab, findTerminalTabIndex, isNotebookTab, isNotebookPath, isBrowserTab, isEditorTab } from './tab-model.js';
+import { isTerminalTab, findTerminalTabIndex, isNotebookTab, isNotebookPath, isBrowserTab, isEditorTab, isPreviewTab } from './tab-model.js';
+import { renderPreview } from './markdown.js';
 import { applyBrowserSurface, renderBrowser, destroyBrowser, createBrowserTab } from './browser.js';
 import { registerTabsApi } from './tabs-api.js';
 import {
@@ -31,6 +32,7 @@ import {
   syncNotebookContent,
   createNotebookTab,
 } from './notebook.js';
+import { icon } from './glyphs.js';
 
 const dom = getDom();
 
@@ -111,7 +113,7 @@ export function handleWelcomeCheckboxChange() {
 // Функции для работы с активностью
 
 export function restoreTab(name, content = '', filePath = null, kind = 'file') {
-  if (kind === 'terminal') return;
+  if (kind === 'terminal' || kind === 'preview') return;
   if (kind === 'browser') {
     state.currentTabs.push(createBrowserTab(content || 'about:blank', name));
     return;
@@ -194,6 +196,7 @@ export function switchToTab(index) {
   if (index < 0 || index >= state.currentTabs.length) return;
   const tab = state.currentTabs[index];
   if (!tab) return;
+  if (isPreviewTab(tab)) { openTabInSplit(index); return; }
 
   // Сохраняем содержимое текущей файловой вкладки
   if (state.activeTabIndex >= 0 && state.activeTabIndex < state.currentTabs.length) {
@@ -362,7 +365,7 @@ function updatePaneTitles() {
   if (leftTitle) leftTitle.textContent = left && isEditorTab(left) ? left.name + (left.modified ? ' *' : '') : '';
   const right = state.currentTabs[state.rightTabIndex];
   const rightTitle = document.getElementById('right-pane-title');
-  if (rightTitle && state.splitView && right) rightTitle.textContent = right.name + (right.modified ? ' *' : '');
+  if (rightTitle && state.splitView && right) rightTitle.textContent = isPreviewTab(right) ? 'Просмотр' : right.name + (right.modified ? ' *' : '');
 }
 
 function rememberClosedTab(tab) {
@@ -403,6 +406,16 @@ export function closeTab(index) {
     }
     saveTabs();
     return;
+  }
+
+  // A preview goes away with the file it shows.
+  if (!isPreviewTab(tab)) {
+    const pv = state.currentTabs.findIndex((t) => isPreviewTab(t) && t.sourceId === tab.id);
+    if (pv >= 0) {
+      closeTab(pv);
+      closeTab(state.currentTabs.indexOf(tab));
+      return;
+    }
   }
 
   if (tab.modified) {
@@ -449,7 +462,7 @@ export function updateTabsList() {
   state.currentTabs.forEach((tab, index) => {
     const tabElement = document.createElement('div');
     const isLeft = index === state.activeTabIndex;
-    const isRight = state.splitView && index === state.rightTabIndex && (isEditorTab(tab) || isBrowserTab(tab));
+    const isRight = state.splitView && index === state.rightTabIndex && (isEditorTab(tab) || isBrowserTab(tab) || isPreviewTab(tab));
     const isTerm = isTerminalTab(tab);
     const isNb = isNotebookTab(tab);
     const isBr = isBrowserTab(tab);
@@ -458,9 +471,9 @@ export function updateTabsList() {
     tabElement.dataset.index = String(index);
     tabElement.dataset.kind = isTerm ? 'terminal' : (isNb ? 'notebook' : (isBr ? 'browser' : 'file'));
     tabElement.innerHTML = `
-      <span class="tab-name">${isTerm ? '⌘ ' : ''}${escapeHtml(tab.name)}${tab.modified ? ' *' : ''}</span>
+      <span class="tab-name">${escapeHtml(tab.name)}${tab.modified ? ' *' : ''}</span>
       ${isRight ? '<span class="tab-pane-badge" title="Справа">R</span>' : ''}
-      <button class="tab-close" type="button" data-close="${index}" title="Закрыть">&times;</button>
+      <button class="tab-close" type="button" data-close="${index}" title="Закрыть">${icon('close', 10)}</button>
     `;
     tabElement.querySelector('.tab-close')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -589,6 +602,19 @@ export function openTabInSplit(index) {
     openTerminalAsEditorTab();
     return;
   }
+  if (isPreviewTab(tab)) {
+    // The preview sits beside the file it shows.
+    const source = state.currentTabs.findIndex((t) => t.id === tab.sourceId);
+    if (source < 0) { closeTab(index); return; }
+    state.rightTabIndex = index;
+    state.splitView = true;
+    hideWelcomePage();
+    if (state.activeTabIndex !== source) switchToTab(source);
+    setSplitView(true);
+    renderRightPane();
+    updateTabsList();
+    return;
+  }
   if (isBrowserTab(tab)) {
     // Beside the code: the left pane keeps (or picks) an editor / notebook tab.
     const usable = (t) => isEditorTab(t) || isNotebookTab(t);
@@ -708,6 +734,16 @@ export function renderRightPane() {
   if (!state.splitView || state.rightTabIndex < 0 || !state.currentTabs[state.rightTabIndex]) return;
   if (!editorRight) return;
   const tab = state.currentTabs[state.rightTabIndex];
+  const previewing = isPreviewTab(tab);
+  const rightBody = document.querySelector('#editor-container-right > .editor-body');
+  const previewBody = document.getElementById('md-preview-body');
+  if (rightBody) rightBody.style.display = previewing ? 'none' : '';
+  if (previewBody) previewBody.hidden = !previewing;
+  if (previewing) {
+    if (title) title.textContent = 'Просмотр';
+    renderPreview();
+    return;
+  }
   if (isBrowserTab(tab)) {
     layoutSplit();
     renderBrowser(tab);
@@ -741,6 +777,7 @@ export function updateSecondaryChrome() {
     syntaxRight.innerHTML = window.SyntaxHighlight.highlight(text, name || '');
     syntaxRight.scrollTop = editorRight.scrollTop;
   }
+  window.dispatchEvent(new Event('frogee:content'));
 }
 
 export function markRightCurrentLine() {
@@ -932,6 +969,7 @@ export function updateTabTitle() {
     const tab = state.currentTabs[state.activeTabIndex];
     document.title = `${tab.name}${tab.modified ? ' *' : ''} - FrogeeCodeIDE`;
   }
+  window.dispatchEvent(new Event('frogee:title'));
 }
 
 registerTabsApi({

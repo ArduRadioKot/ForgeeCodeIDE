@@ -2,7 +2,9 @@ const { ipcMain } = require('electron');
 const { spawn } = require('child_process');
 const os = require('os');
 
-let terminalPty = null;
+// Any number of shells, one per terminal tab. `activeId` is where writes without an id go (agents, "run file").
+const sessions = new Map(); // id -> { write, resize, kill }
+let activeId = null;
 let terminalIpcRegistered = false;
 
 function safeRemoveHandler(channel) {
@@ -11,18 +13,24 @@ function safeRemoveHandler(channel) {
   } catch {}
 }
 
-function killTerminalProcess() {
-  if (!terminalPty) return;
+function killSession(id) {
+  const session = sessions.get(id);
+  if (!session) return;
+  sessions.delete(id);
   try {
-    terminalPty.kill();
+    session.kill();
   } catch (err) {
     console.warn('terminal kill:', err?.message || err);
   }
-  terminalPty = null;
+  if (activeId === id) activeId = sessions.size ? [...sessions.keys()].pop() : null;
 }
 
-function startTerminalProcess(getMainWindow, cwd, cols = 80, rows = 24) {
-  killTerminalProcess();
+function killTerminalProcess() {
+  for (const id of [...sessions.keys()]) killSession(id);
+}
+
+function startTerminalProcess(getMainWindow, id, cwd, cols = 80, rows = 24) {
+  killSession(id);
 
   const shellPath = process.env.SHELL || (process.platform === 'win32' ? (process.env.ComSpec || 'powershell.exe') : '/bin/zsh');
   const workDir = cwd && typeof cwd === 'string' ? cwd : os.homedir();
@@ -36,10 +44,17 @@ function startTerminalProcess(getMainWindow, cwd, cols = 80, rows = 24) {
       mainWindow.webContents.send(channel, payload);
     }
   };
+  const finish = (code) => {
+    // A restart replaces the session under the same id: only the current one may report its own exit.
+    if (sessions.get(id) !== current) return;
+    sessions.delete(id);
+    send('terminal-exit', { id, code });
+  };
+  let current = null;
 
   try {
     const pty = require('node-pty');
-    terminalPty = pty.spawn(shellPath, args, {
+    const proc = pty.spawn(shellPath, args, {
       name: 'xterm-256color',
       cols: colsN,
       rows: rowsN,
@@ -51,12 +66,12 @@ function startTerminalProcess(getMainWindow, cwd, cols = 80, rows = 24) {
         LANG: process.env.LANG || 'en_US.UTF-8'
       }
     });
-    terminalPty.onData((data) => send('terminal-data', data));
-    terminalPty.onExit(({ exitCode }) => {
-      terminalPty = null;
-      send('terminal-exit', { code: exitCode });
-    });
-    console.log('[terminal] PTY started', shellPath, workDir);
+    current = { write: (d) => proc.write(d), resize: (c, r) => proc.resize(c, r), kill: () => proc.kill() };
+    sessions.set(id, current);
+    activeId = id;
+    proc.onData((data) => send('terminal-data', { id, data }));
+    proc.onExit(({ exitCode }) => finish(exitCode));
+    console.log('[terminal] PTY started', id, shellPath, workDir);
     return { success: true, shell: shellPath, cwd: workDir, pty: true };
   } catch (err) {
     console.warn('[terminal] PTY failed, fallback spawn:', err.message || err);
@@ -68,49 +83,51 @@ function startTerminalProcess(getMainWindow, cwd, cols = 80, rows = 24) {
       env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' },
       stdio: ['pipe', 'pipe', 'pipe']
     });
-    terminalPty = {
+    current = {
       write: (data) => child.stdin.write(data),
       resize: () => {},
-      kill: () => {
-        try { child.kill(); } catch {}
-      }
+      kill: () => { try { child.kill(); } catch {} }
     };
-    child.stdout.on('data', (d) => send('terminal-data', d.toString()));
-    child.stderr.on('data', (d) => send('terminal-data', d.toString()));
-    child.on('close', (code) => {
-      terminalPty = null;
-      send('terminal-exit', { code });
-    });
-    send('terminal-data', `[fallback shell] ${shellPath}\r\n`);
+    sessions.set(id, current);
+    activeId = id;
+    child.stdout.on('data', (d) => send('terminal-data', { id, data: d.toString() }));
+    child.stderr.on('data', (d) => send('terminal-data', { id, data: d.toString() }));
+    child.on('close', (code) => finish(code));
+    send('terminal-data', { id, data: `[fallback shell] ${shellPath}\r\n` });
     return { success: true, shell: shellPath, cwd: workDir, pty: false };
   } catch (err) {
-    terminalPty = null;
     return { success: false, error: err.message || String(err) };
   }
 }
 
 function registerTerminalIpc(getMainWindow) {
-  const channels = ['terminal-start', 'terminal-write', 'terminal-resize', 'terminal-restart', 'terminal-kill', 'terminal-ping'];
+  const channels = ['terminal-start', 'terminal-write', 'terminal-resize', 'terminal-restart', 'terminal-kill', 'terminal-ping', 'terminal-active'];
   for (const ch of channels) safeRemoveHandler(ch);
 
-  ipcMain.handle('terminal-ping', async () => ({ ok: true, pty: !!terminalPty }));
+  ipcMain.handle('terminal-ping', async () => ({ ok: true, sessions: sessions.size }));
 
-  ipcMain.handle('terminal-start', async (event, options = {}) => {
+  const start = async (event, options = {}) => {
     try {
-      const cwd = typeof options === 'string' ? options : options?.cwd;
-      const cols = typeof options === 'object' ? options?.cols : undefined;
-      const rows = typeof options === 'object' ? options?.rows : undefined;
-      return startTerminalProcess(getMainWindow, cwd, cols, rows);
+      const o = typeof options === 'object' && options ? options : { cwd: options };
+      return startTerminalProcess(getMainWindow, o.id || 't1', o.cwd, o.cols, o.rows);
     } catch (err) {
       console.error('[terminal] start error:', err);
       return { success: false, error: err.message || String(err) };
     }
+  };
+  ipcMain.handle('terminal-start', start);
+  ipcMain.handle('terminal-restart', start);
+
+  ipcMain.handle('terminal-active', async (event, id) => {
+    if (sessions.has(id)) activeId = id;
+    return { success: true };
   });
 
-  ipcMain.handle('terminal-write', async (event, data) => {
+  ipcMain.handle('terminal-write', async (event, data, id) => {
     try {
-      if (!terminalPty) return { success: false, error: 'Terminal is not running' };
-      terminalPty.write(String(data ?? ''));
+      const session = sessions.get(id || activeId);
+      if (!session) return { success: false, error: 'Terminal is not running' };
+      session.write(String(data ?? ''));
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -119,31 +136,19 @@ function registerTerminalIpc(getMainWindow) {
 
   ipcMain.handle('terminal-resize', async (event, size = {}) => {
     try {
-      if (!terminalPty) return { success: false, error: 'Terminal is not running' };
+      const session = sessions.get(size.id || activeId);
+      if (!session) return { success: false, error: 'Terminal is not running' };
       const cols = Math.max(20, (size.cols | 0) || 80);
       const rows = Math.max(5, (size.rows | 0) || 24);
-      if (typeof terminalPty.resize === 'function') {
-        terminalPty.resize(cols, rows);
-      }
+      session.resize(cols, rows);
       return { success: true, cols, rows };
     } catch (err) {
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle('terminal-restart', async (event, options = {}) => {
-    try {
-      const cwd = typeof options === 'string' ? options : options?.cwd;
-      const cols = typeof options === 'object' ? options?.cols : undefined;
-      const rows = typeof options === 'object' ? options?.rows : undefined;
-      return startTerminalProcess(getMainWindow, cwd, cols, rows);
-    } catch (err) {
-      return { success: false, error: err.message };
-    }
-  });
-
-  ipcMain.handle('terminal-kill', async () => {
-    killTerminalProcess();
+  ipcMain.handle('terminal-kill', async (event, id) => {
+    killSession(id || activeId);
     return { success: true };
   });
 

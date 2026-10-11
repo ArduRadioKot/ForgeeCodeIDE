@@ -20,6 +20,8 @@ import { switchActivity, setActivityVisible, openSearchFile, openSearchFileAtLin
 import { applyThemeClass } from './appearance.js';
 import { runNotebookCommand } from './notebook.js';
 import { toggleGlass, attachGlassTo } from './glass.js';
+import { problemItems, goToProblem } from './diagnostics.js';
+import { toggleMarkdownPreview, formatTable, insertTable } from './markdown.js';
 
 const dom = getDom();
 let overlay = null;
@@ -178,7 +180,7 @@ export async function runCurrentFile() {
   await window.electronAPI.terminalWrite(`${build(tab.filePath)}\r`);
 }
 
-function toggleTheme() {
+export function toggleTheme() {
   const next = document.body.classList.contains('light-theme') ? 'dark' : 'light';
   if (dom.themeSelect) dom.themeSelect.value = next;
   applyThemeClass(next);
@@ -222,6 +224,11 @@ function buildCommands() {
     cmd('Вид: сбросить масштаб', () => applyEditorZoom(1, true), 'Ctrl+0'),
     cmd('Запуск: выполнить текущий файл', runCurrentFile, 'F5'),
     cmd('Правка: перейти к символу…', openSymbols, 'Ctrl+Shift+O'),
+    cmd('Markdown: предпросмотр', () => toggleMarkdownPreview(), 'Ctrl+Shift+V'),
+    cmd('Markdown: вставить таблицу', insertTable),
+    cmd('Markdown: выровнять таблицу', formatTable),
+    cmd('Проблемы: список ошибок файла…', openProblems),
+    cmd('Проблемы: следующая ошибка', () => goToProblem(1), 'F8'),
     cmd('Правка: переименовать слово во всём файле…', renameWord, 'Shift+F6'),
     cmd('Правка: форматировать документ', formatDocument, 'Shift+Alt+F'),
     cmd('Правка: ВЕРХНИЙ РЕГИСТР', () => transformSelection((t) => t.toUpperCase()), 'Ctrl+Shift+U'),
@@ -263,8 +270,8 @@ function buildCommands() {
     list.push(
       cmd('Браузер: обновить страницу', () => browserCommand('reload'), 'F5'),
       cmd('Браузер: инструменты разработчика', () => browserCommand('devtools')),
-      cmd('Браузер: назад', () => browserCommand('back'), 'Alt+←'),
-      cmd('Браузер: вперёд', () => browserCommand('forward'), 'Alt+→'),
+      cmd('Браузер: назад', () => browserCommand('back'), 'Alt+Влево'),
+      cmd('Браузер: вперёд', () => browserCommand('forward'), 'Alt+Вправо'),
     );
   }
   if (nb) {
@@ -369,7 +376,7 @@ function transformSelection(fn, wholeIfEmpty = false) {
   ed.setSelectionRange(s, s + out.length);
 }
 
-function formatDocument() {
+export function formatDocument() {
   const tab = activeTab();
   if (!isEditorTab(tab) || !dom.editor) return;
   const text = dom.editor.value;
@@ -429,7 +436,7 @@ function agentPrompt(instruction) {
 }
 
 export function openCommandPalette() {
-  open('commands', 'Введите команду…', buildCommands(), '↑↓ выбор · Enter выполнить · Esc закрыть');
+  open('commands', 'Введите команду…', buildCommands(), 'Стрелки — выбор · Enter — выполнить · Esc — закрыть');
 }
 
 async function loadFiles() {
@@ -456,6 +463,11 @@ export async function openQuickOpen() {
     run: () => openSearchFile(f.path),
   }));
   open('files', state.currentFolder ? 'Имя файла или :номер строки' : 'Откройте папку, чтобы искать файлы · :номер строки', [...openTabs, ...fromDisk], 'Enter открыть · «:42» — перейти к строке');
+}
+
+export function openProblems() {
+  const items = problemItems();
+  open('problems', items.length ? 'Проблемы в файле…' : 'Проблем не найдено', items, 'Enter — перейти к месту · F8 — следующая проблема');
 }
 
 export function openGoToLine() {

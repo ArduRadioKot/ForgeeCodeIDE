@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { getDom } from './dom.js';
 import { pathUtils, escapeHtml } from './utils.js';
 import { hideWelcomePage, createTab } from './tabs.js';
+import { icon } from './glyphs.js';
 
 const dom = getDom();
 function ago(unixSeconds) {
@@ -107,7 +108,7 @@ function renderRepo(root, status) {
   const cwd = status.cwd;
   const staged = status.files.filter((f) => f.staged);
   const changes = status.files.filter((f) => f.unstaged || f.status === 'untracked');
-  const sync = [status.ahead ? `↑${status.ahead}` : '', status.behind ? `↓${status.behind}` : ''].filter(Boolean).join(' ');
+  const sync = [status.ahead ? `${icon('up', 9)}${status.ahead}` : '', status.behind ? `${icon('down', 9)}${status.behind}` : ''].filter(Boolean).join(' ');
 
   root.innerHTML = `
     <button class="git-branch-row" id="git-branch-btn" title="Сменить ветку">
@@ -120,8 +121,8 @@ function renderRepo(root, status) {
       <textarea id="git-commit-msg" class="git-commit-input" rows="3" placeholder="Сообщение коммита (Ctrl+Enter — закоммитить)"></textarea>
       <div class="git-actions">
         <button class="git-btn primary" id="git-commit-btn" ${staged.length ? '' : 'disabled'}>Закоммитить${staged.length ? ` (${staged.length})` : ''}</button>
-        <button class="git-btn" id="git-pull-btn" title="git pull --ff-only">Pull${status.behind ? ` ↓${status.behind}` : ''}</button>
-        <button class="git-btn" id="git-push-btn">Push${status.ahead ? ` ↑${status.ahead}` : ''}</button>
+        <button class="git-btn" id="git-pull-btn" title="git pull --ff-only">Pull${status.behind ? ` ${icon('down', 9)}${status.behind}` : ''}</button>
+        <button class="git-btn" id="git-push-btn">Push${status.ahead ? ` ${icon('up', 9)}${status.ahead}` : ''}</button>
       </div>
     </div>
     <div class="git-section">
@@ -159,8 +160,8 @@ function renderRepo(root, status) {
       <span class="git-file-status ${file.status}" title="${STATUS_TITLE[file.status] || ''}">${STATUS_LABEL[file.status] || '?'}</span>
       <span class="git-file-path" title="${escapeHtml(file.path)}"><span class="git-file-name">${escapeHtml(pathUtils.basename(file.path))}</span>${dir ? `<span class="git-file-dir">${escapeHtml(dir)}</span>` : ''}</span>
       <span class="git-file-actions">
-        <button class="git-file-action" data-act="open" title="Открыть файл">↗</button>
-        ${isStaged ? '' : '<button class="git-file-action" data-act="discard" title="Отменить изменения">↺</button>'}
+        <button class="git-file-action" data-act="open" title="Открыть файл">${icon('external', 12)}</button>
+        ${isStaged ? '' : `<button class="git-file-action" data-act="discard" title="Отменить изменения">${icon('undo', 12)}</button>`}
         <button class="git-file-action" data-act="toggle" title="${isStaged ? 'Убрать из коммита' : 'Добавить в коммит'}">${isStaged ? '−' : '+'}</button>
       </span>`;
     el.querySelector('.git-file-path').addEventListener('click', () => openDiff(cwd, file, isStaged));
@@ -229,7 +230,7 @@ async function openBranchMenu(anchor, cwd) {
   menu.className = 'git-menu context-menu';
   const r = anchor.getBoundingClientRect();
   menu.style.cssText = `position:fixed;left:${r.left}px;top:${r.bottom + 4}px;min-width:${r.width}px;max-height:300px;overflow:auto;z-index:10000`;
-  const items = (res?.branches || []).map((b) => `<div class="context-menu-item${b.current ? ' current' : ''}" data-branch="${escapeHtml(b.name)}">${b.current ? '✓ ' : ''}${escapeHtml(b.name)}</div>`);
+  const items = (res?.branches || []).map((b) => `<div class="context-menu-item${b.current ? ' current' : ''}" data-branch="${escapeHtml(b.name)}">${b.current ? icon('check', 12) + ' ' : ''}${escapeHtml(b.name)}</div>`);
   menu.innerHTML = items.join('') + '<div class="git-menu-sep"></div><div class="context-menu-item" data-new="1">Новая ветка…</div>';
   document.body.appendChild(menu);
   const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('mousedown', close, true); } };

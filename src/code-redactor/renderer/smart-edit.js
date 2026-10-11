@@ -120,7 +120,19 @@ function deleteLines(ta) {
   replaceRange(ta, start, end, '', start);
 }
 
+const AUTO_INDENT_KEY = 'frogee.autoIndent';
+export const autoIndentEnabled = () => { try { return localStorage.getItem(AUTO_INDENT_KEY) === '1'; } catch { return false; } };
+
+/** Settings checkbox: Enter keeps the indentation (and continues Markdown lists) only when this is on. */
+export function setupAutoIndentSetting() {
+  const box = document.getElementById('auto-indent-checkbox');
+  if (!box) return;
+  box.checked = autoIndentEnabled();
+  box.addEventListener('change', () => { try { localStorage.setItem(AUTO_INDENT_KEY, box.checked ? '1' : '0'); } catch { /* ignore */ } });
+}
+
 function handleEnter(ta, opts) {
+  if (!autoIndentEnabled()) return false; // a plain Enter inserts a plain line break
   const { value, selectionStart: s, selectionEnd: e } = ta;
   const lineStart = value.lastIndexOf('\n', s - 1) + 1;
   const before = value.slice(lineStart, s);

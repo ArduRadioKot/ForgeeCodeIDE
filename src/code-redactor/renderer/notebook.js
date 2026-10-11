@@ -4,6 +4,7 @@ import { saveAllConfig } from './save-hook.js';
 import { isNotebookTab, isNotebookPath } from './tab-model.js';
 import { updateTabsList, updateTabTitle } from './tabs-api.js';
 import { createSmartKeydown } from './smart-edit.js';
+import { icon } from './glyphs.js';
 
 let cachedEnvsByWorkspace = new Map();
 
@@ -537,7 +538,7 @@ function paintCellState(tab, cell) {
     else if (cell._state === 'queued') status.textContent = 'В очереди';
     else if (cell._lastDuration != null) {
       const sec = cell._lastDuration < 10 ? cell._lastDuration.toFixed(2) : cell._lastDuration.toFixed(1);
-      status.textContent = `${cell._status === 'error' ? '✕' : '✓'} ${sec} с`;
+      status.innerHTML = `${icon(cell._status === 'error' ? 'close' : 'check', 11)} ${Number(sec)} с`;
     } else status.textContent = '';
     status.dataset.kind = cell._status === 'error' && !cell._state ? 'error' : '';
   }
@@ -884,8 +885,8 @@ function buildCell(tab, cell, index) {
   const toolbar = document.createElement('div');
   toolbar.className = 'nb-cell-toolbar';
   toolbar.innerHTML = [
-    iconBtn('up', ICONS.up, 'Вверх (Alt+↑)'),
-    iconBtn('down', ICONS.down, 'Вниз (Alt+↓)'),
+    iconBtn('up', ICONS.up, 'Вверх (Alt+Вверх)'),
+    iconBtn('down', ICONS.down, 'Вниз (Alt+Вниз)'),
     iconBtn('dup', ICONS.copy, 'Дублировать'),
     iconBtn('type', ICONS.swap, isCode ? 'Сделать текстом (M)' : 'Сделать кодом (Y)'),
     isCode ? iconBtn('clear', ICONS.eraser, 'Очистить вывод', 'nb-clear-out') : '',

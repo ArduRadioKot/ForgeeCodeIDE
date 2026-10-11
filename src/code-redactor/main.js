@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, nativeTheme } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, nativeTheme, Menu } = require('electron');
 const path = require('path');
 const axios = require('axios');
 
@@ -12,6 +12,12 @@ const { registerProjectFilesIpc } = require('./lib/project-files');
 const { registerLiveServerIpc, stopAllLiveServers } = require('./lib/liveserver');
 const { registerAgentsIpc, killAgents } = require('./lib/agents');
 const { registerThemesIpc } = require('./lib/themes');
+const { registerOllamaIpc } = require('./lib/ollama');
+const { registerBionicIpc } = require('./lib/bionic');
+const { registerDiagnosticsIpc } = require('./lib/diagnostics');
+const { registerSearchIpc } = require('./lib/search');
+const { registerGitignoreIpc } = require('./lib/gitignore');
+const { registerContextFilesIpc } = require('./lib/context-files');
 
 let mainWindow = null;
 
@@ -28,8 +34,52 @@ async function checkOllamaRunning() {
   }
 }
 
+// Only macOS gives a translucent window (vibrancy). On Windows the acrylic material is unreliable (the window can come out
+// plain white, and the whole glass UI with it), so Windows and Linux get an opaque window in the theme colour and Liquid
+// Glass works inside the app: lenses and frosted panels over the page.
+const nativeBlur = process.platform === 'darwin';
+const windowColor = () => (nativeTheme.shouldUseDarkColors ? '#17181a' : '#e8ebf1');
+
 // The native blur follows the system appearance, so keep it in step with the app theme.
-ipcMain.on('set-native-theme', (event, theme) => { nativeTheme.themeSource = theme === 'light' ? 'light' : 'dark'; });
+ipcMain.on('set-native-theme', (event, theme) => {
+  nativeTheme.themeSource = theme === 'light' ? 'light' : 'dark';
+  if (!nativeBlur && mainWindow && !mainWindow.isDestroyed()) mainWindow.setBackgroundColor(windowColor());
+});
+
+/** Menu entries just tell the renderer which command to run; shortcuts are shown but handled by the page itself. */
+function buildMacMenu() {
+  const send = (id) => () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('menu-command', id); };
+  const item = (label, id, accelerator) => ({ label, click: send(id), ...(accelerator ? { accelerator, registerAccelerator: false } : {}) });
+  const sep = { type: 'separator' };
+  return Menu.buildFromTemplate([
+    { label: app.getName(), submenu: [{ role: 'about', label: 'О программе ' + app.getName() }, sep, item('Настройки…', 'settings', 'Cmd+,'), sep, { role: 'hide', label: 'Скрыть' }, { role: 'hideOthers', label: 'Скрыть остальные' }, { role: 'unhide', label: 'Показать все' }, sep, { role: 'quit', label: 'Выйти' }] },
+    { label: 'Файл', submenu: [
+      item('Новый файл', 'new-file', 'Cmd+N'), item('Новый ноутбук', 'new-notebook'), sep,
+      item('Открыть файл или папку…', 'open', 'Cmd+O'), item('Открыть папку проекта…', 'open-folder'), item('Быстрое открытие…', 'quick-open', 'Cmd+P'), sep,
+      item('Сохранить', 'save', 'Cmd+S'), item('Сохранить как…', 'save-as', 'Shift+Cmd+S'), item('Автосохранение', 'autosave'), sep,
+      item('Закрыть вкладку', 'close-tab', 'Cmd+W'), item('Открыть закрытую вкладку', 'reopen-tab', 'Shift+Cmd+T'),
+    ] },
+    { label: 'Правка', submenu: [
+      { role: 'undo', label: 'Отменить' }, { role: 'redo', label: 'Повторить' }, sep,
+      { role: 'cut', label: 'Вырезать' }, { role: 'copy', label: 'Копировать' }, { role: 'paste', label: 'Вставить' }, { role: 'selectAll', label: 'Выделить всё' }, sep,
+      item('Найти в файле', 'find', 'Cmd+F'), item('Найти и заменить', 'replace', 'Alt+Cmd+F'), item('Перейти к строке…', 'goto-line', 'Ctrl+G'), item('Перейти к символу…', 'symbols', 'Shift+Cmd+O'), sep,
+      item('Форматировать документ', 'format', 'Shift+Alt+F'), sep,
+      item('Поиск по проекту', 'search-project', 'Shift+Cmd+F'), item('TODO / FIXME проекта', 'todos'), sep,
+      item('Палитра команд…', 'palette', 'Shift+Cmd+P'),
+    ] },
+    { label: 'Вид', submenu: [
+      item('Проводник', 'view-explorer'), item('Поиск', 'view-search'), item('Git', 'view-git'), item('Запуск', 'view-run'), sep,
+      item('Боковая панель', 'toggle-sidebar', 'Cmd+B'), item('Терминал', 'toggle-terminal', 'Cmd+`'), item('AI-чат', 'toggle-chat'), item('Браузер', 'browser', 'Shift+Cmd+B'),
+      item('Предпросмотр Markdown', 'md-preview', 'Shift+Cmd+V'), item('Разделить редактор', 'split', 'Cmd+\\'), sep,
+      item('Увеличить масштаб', 'zoom-in', 'Cmd+Plus'), item('Уменьшить масштаб', 'zoom-out', 'Cmd+-'), item('Сбросить масштаб', 'zoom-reset', 'Cmd+0'), sep,
+      { role: 'togglefullscreen', label: 'Полноэкранный режим' },
+    ] },
+    { label: 'Запуск', submenu: [
+      item('Выполнить текущий файл', 'run-file', 'F5'), item('Live Server: запустить / остановить', 'live'), item('Браузер рядом с редактором', 'browser-side'), item('Терминал', 'terminal'),
+    ] },
+    { role: 'windowMenu', label: 'Окно' },
+  ]);
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -38,9 +88,11 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     // A translucent native window: the page stays opaque until Liquid Glass makes its background transparent.
-    ...(process.platform === 'darwin' ? { backgroundColor: '#00000000', vibrancy: 'under-window', visualEffectState: 'active' } : {}),
-    ...(process.platform === 'win32' ? { backgroundColor: '#00000000', backgroundMaterial: 'acrylic' } : {}),
+    // Without a system blur the window is a plain themed one (a transparent colour would show black or white).
+    backgroundColor: nativeBlur ? '#00000000' : windowColor(),
+    ...(nativeBlur ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
     webPreferences: {
+      additionalArguments: [`--frogee-native-blur=${nativeBlur ? 1 : 0}`],
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
@@ -75,6 +127,8 @@ function createWindow() {
     });
   });
 
+  // macOS gets the native menu bar at the top of the screen; Windows and Linux use the system window frame without a menu.
+  Menu.setApplicationMenu(process.platform === 'darwin' ? buildMacMenu() : null);
   mainWindow.loadFile('index.html');
 }
 
@@ -96,10 +150,27 @@ function registerAllIpc() {
   registerLiveServerIpc(getMainWindow);
   registerAgentsIpc(getMainWindow);
   registerThemesIpc(getMainWindow);
+  registerOllamaIpc();
+  registerBionicIpc();
+  registerDiagnosticsIpc();
+  registerSearchIpc();
+  registerGitignoreIpc();
+  registerContextFilesIpc(getMainWindow);
 }
 
 // Terminal + git must be available as soon as the app is ready
+app.setName('FrogeeCodeIDE');
+app.setAboutPanelOptions({
+  applicationName: 'FrogeeCodeIDE',
+  applicationVersion: app.getVersion(),
+  version: '',
+  copyright: '© Frogeesoft',
+  credits: 'Автор: arduradiokot\nКомпания: Frogeesoft',
+  iconPath: path.join(__dirname, 'images', 'icon.png'),
+});
+
 app.whenReady().then(async () => {
+  if (process.platform === 'darwin') { try { app.dock.setIcon(path.join(__dirname, 'images', 'icon.png')); } catch {} }
   registerAllIpc();
 
   const ollamaRunning = await checkOllamaRunning();

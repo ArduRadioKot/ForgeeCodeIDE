@@ -35,7 +35,7 @@ export async function detectAgents() {
 export async function openAgentInTerminal(agent) {
   const info = detected?.[agent] || (await detectAgents())?.[agent];
   if (!info?.found) {
-    alert(`${NAMES[agent]} не найден.\nУстановка: ${info?.install || ''}\nМожно указать путь к бинарнику в Настройках → AI.`);
+    alert(`${NAMES[agent]} не найден.\nУстановка: ${info?.install || ''}\nМожно указать путь к бинарнику в настройках, раздел AI.`);
     return;
   }
   await setTerminalVisible(true, false);
@@ -102,7 +102,6 @@ export function setupAgents() {
   document.querySelectorAll('[data-agent-terminal]').forEach((btn) => {
     btn.addEventListener('click', () => openAgentInTerminal(btn.dataset.agentTerminal));
   });
-  document.getElementById('agents-refresh-btn')?.addEventListener('click', detectAgents);
   document.getElementById('opencode-serve-btn')?.addEventListener('click', toggleOpenCodeServe);
   document.querySelector('[data-settings-tab="ai"]')?.addEventListener('click', detectAgents);
   detectAgents();

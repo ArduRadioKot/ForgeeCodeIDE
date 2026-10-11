@@ -12,9 +12,13 @@ export function isBrowserTab(tab) {
   return !!(tab && tab.kind === 'browser');
 }
 
+export function isPreviewTab(tab) {
+  return !!(tab && tab.kind === 'preview');
+}
+
 /** Tabs that edit text in the main textarea (everything that is not a special surface). */
 export function isEditorTab(tab) {
-  return !!(tab && tab.kind !== 'terminal' && tab.kind !== 'notebook' && tab.kind !== 'browser');
+  return !!(tab && tab.kind !== 'terminal' && tab.kind !== 'notebook' && tab.kind !== 'browser' && tab.kind !== 'preview');
 }
 
 export function isNotebookPath(filePathOrName) {

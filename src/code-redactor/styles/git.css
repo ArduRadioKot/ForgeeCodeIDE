@@ -9,7 +9,7 @@
 .git-branch-row { display: flex; align-items: center; gap: 8px; width: 100%; height: calc(var(--ctl-h) + 2px); padding: 0 10px; border-radius: var(--radius-md); background: var(--code-bg); text-align: left; color: var(--text-muted); }
 .git-branch-row:hover { background: var(--hover-color); }
 .git-branch { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-color); font-weight: 600; }
-.git-sync { padding: 0 6px; border-radius: 999px; background: var(--accent-soft); color: var(--link-color); font-size: 11px; font-weight: 600; }
+.git-sync { padding: 0 6px; border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--link-color); font-size: 11px; font-weight: 600; }
 .git-menu .context-menu-item.current { color: var(--link-color); font-weight: 600; }
 .git-menu-sep { height: 1px; margin: 4px 6px; background: var(--border-color); }
 
@@ -27,9 +27,8 @@
 .git-file-item { display: flex; align-items: center; gap: 8px; min-height: var(--row-h); padding: 0 4px 0 6px; border-radius: var(--radius-sm); }
 .git-file-item:hover { background: var(--hover-color); }
 .git-file-status { width: 16px; flex-shrink: 0; text-align: center; font: 700 11px var(--mono-font); color: var(--link-color); }
-.git-file-status.untracked, .git-file-status.added { color: var(--success-color); }
-.git-file-status.deleted, .git-file-status.conflict { color: var(--danger-color); }
-.git-file-status.renamed { color: var(--warning-color); }
+.git-file-status.untracked, .git-file-status.added { color: var(--accent-color); }
+.git-file-status.deleted, .git-file-status.conflict, .git-file-status.renamed { color: var(--text-muted); }
 .git-file-path { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; overflow: hidden; cursor: pointer; }
 .git-file-name { white-space: nowrap; font-size: 13px; }
 .git-file-dir { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); font-size: 11px; }
@@ -57,7 +56,7 @@
 .run-list { display: flex; flex-direction: column; gap: 1px; }
 .run-item { display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--ctl-h-sm); padding: 0 8px; border-radius: var(--radius-md); text-align: left; }
 .run-item:hover { background: var(--hover-color); }
-.run-play { width: 14px; text-align: center; color: var(--success-color); font-size: 11px; }
+.run-play { width: 14px; text-align: center; color: var(--text-muted); font-size: 11px; }
 .run-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .run-cmd { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); font: 11px var(--mono-font); }
 

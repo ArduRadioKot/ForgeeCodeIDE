@@ -35,7 +35,7 @@ button:disabled { opacity: .4; cursor: default; }
 *:hover { scrollbar-color: var(--active-bg) transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
-::-webkit-scrollbar-thumb { border-radius: 8px; background: transparent; }
+::-webkit-scrollbar-thumb { border-radius: var(--radius-md); background: transparent; }
 :hover::-webkit-scrollbar-thumb { background: var(--active-bg); }
 
 /* Shared controls: one hover fill, one radius, one focus ring */
@@ -76,3 +76,7 @@ kbd {
   /* Motion policy: only the left toolbar and the top tabs animate (see flow.css). */
   .sidebar-btn, .tab-item, .tab-close { transition: background-color .15s, color .15s; }
 }
+
+/* Own icon set (renderer/glyphs.js) */
+.ico-wrap { display: inline-flex; align-items: center; justify-content: center; line-height: 0; pointer-events: none; }
+.ico { display: inline-block; flex-shrink: 0; vertical-align: -2px; }

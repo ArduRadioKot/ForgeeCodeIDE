@@ -8,6 +8,7 @@ import {
   switchToTab,
   updateTabsList,
 } from './tabs-api.js';
+import { icon } from './glyphs.js';
 
 const dom = getDom();
 
@@ -30,6 +31,9 @@ export function getXtermTheme() {
         brightBlack: '#8c8c8c', brightRed: '#e5484d', brightGreen: '#2e8b3e', brightYellow: '#b8860b', brightBlue: '#3574f0', brightMagenta: '#a02bb0', brightCyan: '#0e7490', brightWhite: '#27282e' }
     : { black: '#27282c', red: '#f0524f', green: '#5fb865', yellow: '#e0bb73', blue: '#56a8f5', magenta: '#c77dbb', cyan: '#2aacb8', white: '#bcbec4',
         brightBlack: '#6f737a', brightRed: '#ff7b78', brightGreen: '#7fd185', brightYellow: '#f0cd8a', brightBlue: '#7dbcff', brightMagenta: '#dd9ad0', brightCyan: '#4fc7d3', brightWhite: '#ffffff' };
+  const accent = v('--accent-color') || '#21aabe';
+  ansi.green = accent;
+  ansi.brightGreen = accent;
   return {
     background: v('--code-bg') || '#1f2023',
     foreground: v('--text-color') || '#dfe1e5',
@@ -210,23 +214,38 @@ export function setupTerminalPanelDrag() {
   }
   if (!handle || !dom.terminalPanel) return;
 
-  // Drag only from header handle, not whole panel (avoids fighting state.xterm)
-  dom.terminalPanel.removeAttribute('draggable');
-  handle.setAttribute('draggable', 'true');
-  handle.addEventListener('dragstart', (e) => {
+  // The panel can be grabbed by its grip or by any terminal tab and dropped on the editor tabs.
+  const stripWasHidden = () => !dom.editorTabs || getComputedStyle(dom.editorTabs).display === 'none';
+  let revealed = false;
+  const begin = (e) => {
     e.dataTransfer.setData('text/terminal-panel', '1');
     e.dataTransfer.setData('text/plain', 'terminal-panel');
     e.dataTransfer.effectAllowed = 'move';
     dom.terminalPanel.classList.add('dragging-terminal');
-    if (dom.editorTabs) dom.editorTabs.classList.add('tabs-drop-target');
-  });
-  handle.addEventListener('dragend', () => {
+    if (dom.editorTabs) {
+      // With no file open the tab strip is hidden: show it so there is somewhere to drop.
+      if (stripWasHidden()) { dom.editorTabs.style.display = 'flex'; revealed = true; }
+      dom.editorTabs.classList.add('tabs-drop-target');
+    }
+  };
+  const end = () => {
     dom.terminalPanel.classList.remove('dragging-terminal');
     if (dom.editorTabs) {
       dom.editorTabs.classList.remove('tabs-drop-target');
       dom.editorTabs.classList.remove('tabs-drop-hover');
+      if (revealed && !state.currentTabs.length) dom.editorTabs.style.display = 'none';
+      revealed = false;
     }
-  });
+  };
+  dom.terminalPanel.removeAttribute('draggable');
+  handle.setAttribute('draggable', 'true');
+  handle.addEventListener('dragstart', begin);
+  handle.addEventListener('dragend', end);
+  const list = document.getElementById('terminal-tab-list');
+  if (list) {
+    list.addEventListener('dragstart', (e) => { if (e.target.closest('.terminal-tab')) begin(e); });
+    list.addEventListener('dragend', end);
+  }
 }
 
 export function setupTerminal() {
@@ -287,6 +306,13 @@ export function setupTerminal() {
       if (state.xterm) state.xterm.clear();
     });
   }
+  document.getElementById('terminal-new-btn')?.addEventListener('click', () => newTerminalSession());
+  document.getElementById('terminal-tab-list')?.addEventListener('click', (e) => {
+    const tab = e.target.closest('.terminal-tab');
+    if (!tab) return;
+    if (e.target.closest('.terminal-tab-close')) closeTerminalSession(tab.dataset.id);
+    else if (tab.dataset.id !== state.activeTerminalId) selectSession(tab.dataset.id);
+  });
   if (dom.terminalRestartBtn) {
     dom.terminalRestartBtn.addEventListener('click', () => restartTerminal());
   }
@@ -296,17 +322,19 @@ export function setupTerminal() {
   setupTerminalPanelDrag();
 
   if (window.electronAPI?.onTerminalData) {
-    window.electronAPI.onTerminalData((data) => {
-      if (state.xterm) state.xterm.write(data);
+    window.electronAPI.onTerminalData(({ id, data }) => {
+      sessions.find((s) => s.id === id)?.xterm.write(data);
     });
   }
   if (window.electronAPI?.onTerminalExit) {
-    window.electronAPI.onTerminalExit((payload) => {
-      state.terminalStarted = false;
-      if (state.xterm) {
-        state.xterm.writeln(`\r\n[процесс завершён${payload && payload.code != null ? ', код ' + payload.code : ''}]`);
-      }
-      if (dom.terminalMeta) dom.terminalMeta.textContent = 'остановлен';
+    window.electronAPI.onTerminalExit(({ id, code }) => {
+      const s = sessions.find((x) => x.id === id);
+      if (!s) return;
+      s.started = false;
+      s.meta = 'остановлен';
+      s.xterm.writeln(`\r\n[процесс завершён${code != null ? ', код ' + code : ''}]`);
+      syncActiveAlias();
+      if (id === state.activeTerminalId && dom.terminalMeta) dom.terminalMeta.textContent = 'остановлен';
     });
   }
   window.addEventListener('resize', () => {
@@ -314,37 +342,43 @@ export function setupTerminal() {
   });
 }
 
-export function ensureXterm() {
-  if (state.xterm || !dom.terminalXtermHost) {
-    if (!dom.terminalXtermHost) {
-      const host = document.getElementById('terminal-xterm');
-      if (host) dom.terminalXtermHost = host;
-    }
-    if (state.xterm || !dom.terminalXtermHost) return;
-  }
+// ───────────────────────── sessions (terminal tabs) ─────────────────────────
 
-  const TerminalCtor =
-    window.Terminal ||
-    window.Terminal?.Terminal ||
-    (typeof window.exports !== 'undefined' && window.exports.Terminal);
+const sessions = []; // { id, title, xterm, fit, host, started }
+let sessionSeq = 0;
 
-  let FitCtor = null;
-  if (typeof window.FitAddon === 'function') {
-    FitCtor = window.FitAddon;
-  } else if (window.FitAddon && typeof window.FitAddon.FitAddon === 'function') {
-    FitCtor = window.FitAddon.FitAddon;
-  }
+const activeSession = () => sessions.find((s) => s.id === state.activeTerminalId) || null;
 
+/** The rest of the app still talks about "the" terminal: keep these pointing at the front tab. */
+function syncActiveAlias() {
+  const s = activeSession();
+  state.xterm = s?.xterm || null;
+  state.fitAddon = s?.fit || null;
+  state.terminalStarted = !!s?.started;
+}
+
+function xtermConstructors() {
+  const Terminal = window.Terminal || window.Terminal?.Terminal;
+  let Fit = null;
+  if (typeof window.FitAddon === 'function') Fit = window.FitAddon;
+  else if (window.FitAddon && typeof window.FitAddon.FitAddon === 'function') Fit = window.FitAddon.FitAddon;
+  return { Terminal, Fit };
+}
+
+function createSession() {
+  if (!dom.terminalXtermHost) dom.terminalXtermHost = document.getElementById('terminal-xterm');
+  if (!dom.terminalXtermHost) return null;
+  const { Terminal: TerminalCtor, Fit: FitCtor } = xtermConstructors();
   if (!TerminalCtor || !FitCtor) {
-    console.error('[terminal] xterm не загружен', {
-      Terminal: !!TerminalCtor,
-      FitAddon: !!window.FitAddon,
-    });
+    console.error('[terminal] xterm не загружен');
     if (dom.terminalMeta) dom.terminalMeta.textContent = 'xterm не загружен';
-    return;
+    return null;
   }
-
-  state.xterm = new TerminalCtor({
+  const id = `t${Date.now().toString(36)}${++sessionSeq}`;
+  const host = document.createElement('div');
+  host.className = 'term-host';
+  dom.terminalXtermHost.appendChild(host);
+  const xterm = new TerminalCtor({
     cursorBlink: true,
     cursorStyle: 'bar',
     fontFamily: getComputedStyle(document.documentElement).getPropertyValue('--mono-font').trim() || "'JetBrains Mono', 'SF Mono', Menlo, Monaco, Consolas, monospace",
@@ -355,28 +389,111 @@ export function ensureXterm() {
     scrollback: 5000,
     convertEol: false
   });
+  const fit = new FitCtor();
+  xterm.loadAddon(fit);
+  xterm.open(host);
+  const session = { id, title: `Терминал ${sessions.length + 1}`, xterm, fit, host, started: false, meta: '' };
+  xterm.onData((data) => window.electronAPI?.terminalWrite?.(data, id)?.catch?.(() => {}));
+  sessions.push(session);
+  return session;
+}
 
-  state.fitAddon = new FitCtor();
-  state.xterm.loadAddon(state.fitAddon);
-  state.xterm.open(dom.terminalXtermHost);
-  state.xterm.onData((data) => {
-    if (window.electronAPI?.terminalWrite) {
-      window.electronAPI.terminalWrite(data).catch(() => {});
-    }
+function selectSession(id) {
+  state.activeTerminalId = id;
+  sessions.forEach((s) => { s.host.style.display = s.id === id ? '' : 'none'; });
+  syncActiveAlias();
+  window.electronAPI?.terminalActive?.(id);
+  const s = activeSession();
+  if (dom.terminalMeta) dom.terminalMeta.textContent = s?.meta || '';
+  renderTerminalTabs();
+  requestAnimationFrame(() => { fitTerminal(); s?.xterm.focus(); });
+}
+
+export function renderTerminalTabs() {
+  const list = document.getElementById('terminal-tab-list');
+  if (!list) return;
+  list.innerHTML = '';
+  sessions.forEach((s) => {
+    const tab = document.createElement('div');
+    tab.className = `terminal-tab${s.id === state.activeTerminalId ? ' active' : ''}`;
+    tab.draggable = true;
+    tab.dataset.id = s.id;
+    tab.innerHTML = '<span class="terminal-tab-name"></span><button type="button" class="terminal-tab-close" title="Закрыть терминал">' + icon('close', 10) + '</button>';
+    tab.querySelector('.terminal-tab-name').textContent = s.title;
+    list.appendChild(tab);
   });
 }
 
-export function fitTerminal() {
-  if (!state.xterm || !state.fitAddon || !state.terminalVisible) return;
-  try {
-    state.fitAddon.fit();
-    const dims = { cols: state.xterm.cols, rows: state.xterm.rows };
-    if (state.terminalStarted) {
-      window.electronAPI.terminalResize(dims);
+export async function newTerminalSession() {
+  const session = createSession();
+  if (!session) return;
+  selectSession(session.id);
+  await startSession(session);
+}
+
+export function closeTerminalSession(id) {
+  const index = sessions.findIndex((s) => s.id === id);
+  if (index < 0) return;
+  const [session] = sessions.splice(index, 1);
+  window.electronAPI?.terminalKill?.(id);
+  try { session.xterm.dispose(); } catch {}
+  session.host.remove();
+  if (!sessions.length) {
+    state.activeTerminalId = null;
+    syncActiveAlias();
+    renderTerminalTabs();
+    if (state.terminalInEditor) {
+      const idx = findTerminalTabIndex();
+      if (idx >= 0) closeTab(idx);
     }
+    setTerminalVisible(false, true);
+    return;
+  }
+  selectSession(sessions[Math.min(index, sessions.length - 1)].id);
+}
+
+export function ensureXterm() {
+  if (sessions.length) return;
+  const session = createSession();
+  if (session) selectSession(session.id);
+}
+
+export function fitTerminal() {
+  const s = activeSession();
+  if (!s || !state.terminalVisible) return;
+  try {
+    s.fit.fit();
+    if (s.started) window.electronAPI.terminalResize({ id: s.id, cols: s.xterm.cols, rows: s.xterm.rows });
   } catch (err) {
     console.warn('fitTerminal:', err);
   }
+}
+
+async function startSession(s, restart = false) {
+  if (!window.electronAPI?.terminalStart) {
+    s.xterm.writeln('[терминал] API недоступен — перезапустите приложение');
+    return;
+  }
+  if (s.id === state.activeTerminalId) fitTerminal();
+  else try { s.fit.fit(); } catch {}
+  const options = { id: s.id, cwd: state.currentFolder || undefined, cols: s.xterm.cols, rows: s.xterm.rows };
+  let result;
+  try {
+    result = await (restart ? window.electronAPI.terminalRestart(options) : window.electronAPI.terminalStart(options));
+  } catch (err) {
+    result = { success: false, error: err?.message || String(err) };
+  }
+  if (result && result.success) {
+    s.started = true;
+    const shellName = (result.shell || '').split(/[\\/]/).pop() || 'shell';
+    s.meta = `${shellName} · ${result.cwd || '~'}${result.pty ? '' : ' · fallback'}`;
+    s.title = shellName === 'shell' ? s.title : s.title.replace(/^Терминал/, 'Терминал');
+  } else {
+    s.xterm.writeln(`[не удалось запустить терминал] ${(result && result.error) || ''}`);
+    s.meta = 'ошибка';
+  }
+  syncActiveAlias();
+  if (s.id === state.activeTerminalId && dom.terminalMeta) dom.terminalMeta.textContent = s.meta;
 }
 
 export function setupTerminalResize() {
@@ -461,75 +578,30 @@ export async function setTerminalVisible(visible, shouldSave = true) {
 }
 
 export async function ensureTerminalStarted() {
-  if (!window.electronAPI?.terminalStart) {
-    if (state.xterm) state.xterm.writeln('[терминал] API недоступен — перезапустите приложение');
-    return;
-  }
-  if (state.terminalStarted) {
-    fitTerminal();
-    return;
-  }
   ensureXterm();
-  // Проверка IPC
+  const s = activeSession();
+  if (!s) return;
+  if (s.started) { fitTerminal(); return; }
   try {
-    if (window.electronAPI.terminalPing) {
-      await window.electronAPI.terminalPing();
-    }
+    await window.electronAPI?.terminalPing?.();
   } catch (err) {
-    const msg = err?.message || String(err);
-    if (state.xterm) {
-      state.xterm.writeln('[терминал] IPC не зарегистрирован. Полностью перезапустите приложение (Quit → Start).');
-      state.xterm.writeln(msg);
-    }
+    s.xterm.writeln('[терминал] IPC не зарегистрирован. Полностью перезапустите приложение.');
     if (dom.terminalMeta) dom.terminalMeta.textContent = 'нет IPC';
     return;
   }
-
-  fitTerminal();
-  const cols = state.xterm ? state.xterm.cols : 80;
-  const rows = state.xterm ? state.xterm.rows : 24;
-  let result;
-  try {
-    result = await window.electronAPI.terminalStart({
-      cwd: state.currentFolder || undefined,
-      cols,
-      rows
-    });
-  } catch (err) {
-    result = { success: false, error: err?.message || String(err) };
-  }
-  if (result && result.success) {
-    state.terminalStarted = true;
-    if (dom.terminalMeta) {
-      const shellName = (result.shell || '').split(/[\\/]/).pop() || 'shell';
-      dom.terminalMeta.textContent = `${shellName} · ${result.cwd || '~'}${result.pty ? '' : ' · fallback'}`;
-    }
-  } else if (state.xterm) {
-    state.xterm.writeln(`[не удалось запустить терминал] ${(result && result.error) || ''}`);
-    if (dom.terminalMeta) dom.terminalMeta.textContent = 'ошибка';
-  }
+  await startSession(s);
 }
 
 export async function restartTerminal() {
   ensureXterm();
-  if (state.xterm) state.xterm.reset();
-  state.terminalStarted = false;
-  fitTerminal();
-  const result = await window.electronAPI.terminalRestart({
-    cwd: state.currentFolder || undefined,
-    cols: state.xterm ? state.xterm.cols : 80,
-    rows: state.xterm ? state.xterm.rows : 24
-  });
-  if (result && result.success) {
-    state.terminalStarted = true;
-    if (dom.terminalMeta) {
-      dom.terminalMeta.textContent = `${result.shell.split('/').pop()} · ${result.cwd} · сеть системы`;
-    }
-    if (state.xterm) state.xterm.focus();
-  } else if (state.xterm) {
-    state.xterm.writeln(`[ошибка перезапуска] ${(result && result.error) || ''}`);
-  }
+  const s = activeSession();
+  if (!s) return;
+  s.xterm.reset();
+  s.started = false;
+  await startSession(s, true);
+  s.xterm.focus();
 }
+
 /** Run a shell command in the integrated terminal (optionally after cd-ing into a folder). */
 export async function runInTerminal(command, cwd) {
   await setTerminalVisible(true, false);

@@ -43,3 +43,14 @@ body.compact-ui .chat-panel { width: 300px; }
   .activity-panel { width: 200px; }
   .chat-panel { width: 260px; }
 }
+
+/* Problems chip and hover hint */
+.status-chip.problems { font-weight: 600; }
+.status-chip.problems.has-errors { color: var(--danger-color); }
+.status-chip.problems.has-warnings { color: var(--warning-color); }
+.status-chip[hidden] { display: none; }
+.diag-tip { position: fixed; z-index: 10001; max-width: 380px; padding: 7px 11px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--card-bg); box-shadow: 0 8px 22px var(--shadow-color); pointer-events: none; font-size: 12px; line-height: 1.45; }
+.diag-tip .diag-tip-msg::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--danger-color); vertical-align: 1px; }
+.diag-tip.warning .diag-tip-msg::before { background: var(--warning-color); }
+.diag-tip[hidden] { display: none; }
+.diag-tip-src { margin-top: 2px; color: var(--text-faint); font-size: 11px; }

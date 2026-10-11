@@ -11,6 +11,7 @@ const net = require('net');
 const os = require('os');
 const path = require('path');
 const opencode = require('./opencode');
+const { abortAll } = require('./abort');
 
 const AGENTS = {
   claude: { bin: 'claude', install: 'npm i -g @anthropic-ai/claude-code' },
@@ -225,7 +226,7 @@ function registerAgentsIpc(getMainWindow) {
   });
 
   ipcMain.handle('agent-abort', () => { abortAgents(); return { success: true }; });
-  ipcMain.handle('abort-request', () => { abortAgents(); return { success: true }; });
+  ipcMain.handle('abort-request', () => { abortAgents(); abortAll(); return { success: true }; });
 
   ipcMain.handle('opencode-serve-start', async (e, { bin: custom, cwd, port } = {}) => {
     const bin = await resolveBin('opencode', custom);

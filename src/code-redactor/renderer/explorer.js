@@ -9,6 +9,9 @@ import { liveOpenPath, toggleLive } from './liveserver-ui.js';
 import { openBrowserTab } from './browser.js';
 import { runInTerminal } from './terminal.js';
 import { runCurrentFile } from './palette.js';
+import { showSearchPanel } from './search-panel.js';
+import { refreshGitignoreBox, isIgnoredHidden, toggleHideIgnored } from './gitignore-ui.js';
+import { icon } from './glyphs.js';
 
 const dom = getDom();
 
@@ -68,6 +71,9 @@ export function showExplorerPanel() {
             <line x1="9" y1="15" x2="15" y2="15"/>
           </svg>
         </button>
+        <button class="activity-btn" title="Скрыть файлы из .gitignore" id="toggle-ignored-btn" ${!state.currentFolder ? 'disabled' : ''}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
         <button class="activity-btn" title="Новая папка" id="new-folder-btn" ${!state.currentFolder ? 'disabled' : ''}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
@@ -80,118 +86,19 @@ export function showExplorerPanel() {
     <div id="file-explorer" class="file-explorer">
       <div class="file-explorer-placeholder">Откройте папку для просмотра файлов</div>
     </div>
+    <div id="gitignore-box" class="gitignore-box"></div>
   `;
   
   // Переподключаем обработчики для новых кнопок
   document.getElementById('open-folder-btn').addEventListener('click', openFolder);
   document.getElementById('new-file-in-folder-btn').addEventListener('click', createNewFileInFolder);
   document.getElementById('new-folder-btn').addEventListener('click', createNewFolderInFolder);
+  document.getElementById('toggle-ignored-btn').addEventListener('click', () => toggleHideIgnored(updateFileExplorer));
   
   // Обновляем explorer если папка уже открыта
   if (state.currentFolder) {
     updateFileExplorer();
   }
-}
-
-export function showSearchPanel() {
-  dom.activityPanel.innerHTML = `
-    <div class="activity-header">
-      <h3>Поиск</h3>
-    </div>
-    <div class="search-panel">
-      <div class="search-mode-tabs">
-        <button class="search-mode-btn active" data-mode="file" id="search-mode-file">В файле</button>
-        <button class="search-mode-btn" data-mode="workspace" id="search-mode-workspace">В проекте</button>
-      </div>
-      <div class="search-input-container">
-        <input type="text" id="search-input" class="search-input" placeholder="Поиск..." />
-        <div class="search-options">
-          <button class="search-option-btn" id="search-case-sensitive" title="Учитывать регистр">Aa</button>
-          <button class="search-option-btn" id="search-regex" title="Регулярные выражения">.*</button>
-        </div>
-        <button id="search-btn" class="search-btn">Найти</button>
-      </div>
-      <div class="search-filters" id="search-filters" style="display:none;">
-        <input type="text" id="search-file-filter" class="search-filter-input" placeholder="Фильтр файлов (например: js,ts,py)" />
-      </div>
-      <div id="search-results" class="search-results">
-        <div class="search-placeholder">Введите текст для поиска в текущем файле</div>
-      </div>
-    </div>
-  `;
-  
-  const searchInput = document.getElementById('search-input');
-  const searchBtn = document.getElementById('search-btn');
-  const caseSensitiveBtn = document.getElementById('search-case-sensitive');
-  const regexBtn = document.getElementById('search-regex');
-  const fileFilterInput = document.getElementById('search-file-filter');
-  const searchFilters = document.getElementById('search-filters');
-  const modeFileBtn = document.getElementById('search-mode-file');
-  const modeWorkspaceBtn = document.getElementById('search-mode-workspace');
-  
-  let searchOptions = {
-    mode: 'file',
-    caseSensitive: false,
-    useRegex: false,
-    fileFilter: ''
-  };
-  
-  const updateModeUI = () => {
-    modeFileBtn.classList.toggle('active', searchOptions.mode === 'file');
-    modeWorkspaceBtn.classList.toggle('active', searchOptions.mode === 'workspace');
-    searchFilters.style.display = searchOptions.mode === 'workspace' ? 'block' : 'none';
-    searchInput.placeholder = searchOptions.mode === 'file'
-      ? 'Поиск в текущем файле...'
-      : 'Поиск в файлах проекта...';
-    const results = document.getElementById('search-results');
-    if (results) {
-      results.innerHTML = searchOptions.mode === 'file'
-        ? '<div class="search-placeholder">Введите текст для поиска в текущем файле</div>'
-        : '<div class="search-placeholder">Откройте папку для поиска по проекту</div>';
-    }
-  };
-  
-  modeFileBtn.addEventListener('click', () => {
-    searchOptions.mode = 'file';
-    updateModeUI();
-    if (searchInput.value.trim()) performSearch();
-  });
-  
-  modeWorkspaceBtn.addEventListener('click', () => {
-    searchOptions.mode = 'workspace';
-    updateModeUI();
-    if (searchInput.value.trim()) performSearch();
-  });
-  
-  caseSensitiveBtn.addEventListener('click', () => {
-    searchOptions.caseSensitive = !searchOptions.caseSensitive;
-    caseSensitiveBtn.classList.toggle('active', searchOptions.caseSensitive);
-    if (searchInput.value.trim()) performSearch();
-  });
-  
-  regexBtn.addEventListener('click', () => {
-    searchOptions.useRegex = !searchOptions.useRegex;
-    regexBtn.classList.toggle('active', searchOptions.useRegex);
-    if (searchInput.value.trim()) performSearch();
-  });
-  
-  fileFilterInput.addEventListener('input', () => {
-    searchOptions.fileFilter = fileFilterInput.value.trim();
-    if (searchInput.value.trim()) performSearch();
-  });
-  
-  searchBtn.addEventListener('click', performSearch);
-  searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') performSearch();
-  });
-  searchInput.addEventListener('input', () => {
-    if (searchOptions.mode === 'file' && searchInput.value.trim()) {
-      performSearch();
-    }
-  });
-  
-  window.currentSearchOptions = searchOptions;
-  updateModeUI();
 }
 
 export async function showRunPanel() {
@@ -200,7 +107,7 @@ export async function showRunPanel() {
     <div class="run-panel">
       <div class="run-section">
         <div class="run-title">Текущий файл</div>
-        <button class="run-item" id="run-current-btn"><span class="run-play">▶</span><span class="run-name" id="run-current-name">—</span><kbd>F5</kbd></button>
+        <button class="run-item" id="run-current-btn"><span class="run-play">${icon('play', 11)}</span><span class="run-name" id="run-current-name">—</span><kbd>F5</kbd></button>
       </div>
       <div class="run-section" id="run-scripts" hidden>
         <div class="run-title">Скрипты package.json</div>
@@ -208,8 +115,8 @@ export async function showRunPanel() {
       </div>
       <div class="run-section">
         <div class="run-title">Сайт</div>
-        <button class="run-item" id="run-live-btn"><span class="run-play">◉</span><span class="run-name">Live Server для проекта</span></button>
-        <button class="run-item" id="run-browser-btn"><span class="run-play">◍</span><span class="run-name">Открыть браузер</span></button>
+        <button class="run-item" id="run-live-btn"><span class="run-play">${icon('live', 13)}</span><span class="run-name">Live Server для проекта</span></button>
+        <button class="run-item" id="run-browser-btn"><span class="run-play">${icon('window', 13)}</span><span class="run-name">Открыть браузер</span></button>
       </div>
     </div>`;
   const tab = state.currentTabs[state.activeTabIndex];
@@ -228,193 +135,12 @@ export async function showRunPanel() {
     if (!names.length) return;
     document.getElementById('run-scripts').hidden = false;
     const list = document.getElementById('run-scripts-list');
-    list.innerHTML = names.map((n) => `<button class="run-item" data-script="${escapeHtml(n)}" title="${escapeHtml(scripts[n])}"><span class="run-play">▶</span><span class="run-name">${escapeHtml(n)}</span><span class="run-cmd">${escapeHtml(scripts[n]).slice(0, 40)}</span></button>`).join('');
+    list.innerHTML = names.map((n) => `<button class="run-item" data-script="${escapeHtml(n)}" title="${escapeHtml(scripts[n])}"><span class="run-play">${icon('play', 11)}</span><span class="run-name">${escapeHtml(n)}</span><span class="run-cmd">${escapeHtml(scripts[n]).slice(0, 40)}</span></button>`).join('');
     list.querySelectorAll('[data-script]').forEach((btn) => btn.addEventListener('click', () => {
       const n = btn.dataset.script;
       runInTerminal(n === 'start' || n === 'test' ? `npm ${n}` : `npm run ${n}`, state.currentFolder);
     }));
   } catch {}
-}
-
-export async function performSearch() {
-  const searchInput = document.getElementById('search-input');
-  const searchResults = document.getElementById('search-results');
-  const query = searchInput.value.trim();
-  const options = window.currentSearchOptions || {
-    mode: 'file',
-    caseSensitive: false,
-    useRegex: false,
-    fileFilter: ''
-  };
-  
-  if (!query) {
-    searchResults.innerHTML = '<div class="search-placeholder">Введите текст для поиска</div>';
-    return;
-  }
-
-  // Поиск в текущем открытом файле
-  if (options.mode === 'file') {
-    performSearchInCurrentFile(query, options, searchResults);
-    return;
-  }
-  
-  if (!state.currentFolder) {
-    searchResults.innerHTML = '<div class="search-placeholder">Откройте папку для поиска по файлам</div>';
-    return;
-  }
-  
-  // Показываем индикатор загрузки
-  searchResults.innerHTML = '<div class="search-placeholder">Поиск...</div>';
-  
-  try {
-    const result = await window.electronAPI.searchInFiles(state.currentFolder, query, options);
-    
-    if (!result.success) {
-      searchResults.innerHTML = `<div class="search-placeholder error">Ошибка: ${result.error}</div>`;
-      return;
-    }
-    
-    if (result.results.length === 0) {
-      searchResults.innerHTML = '<div class="search-placeholder">Ничего не найдено</div>';
-      return;
-    }
-    
-    // Формируем HTML с результатами
-    let html = `<div class="search-summary">Найдено ${result.totalMatches} совпадений в ${result.results.length} файлах</div>`;
-    
-    result.results.forEach(fileResult => {
-      // Экранируем путь для использования в onclick
-      const escapedPath = fileResult.fullPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      
-      html += `
-        <div class="search-file-group">
-          <div class="search-file-header" onclick="openSearchFile('${escapedPath}')">
-            <span class="search-file-name">${escapeHtml(fileResult.file)}</span>
-            <span class="search-file-matches">${fileResult.matchCount} совпадений</span>
-          </div>
-          <div class="search-file-matches-list">
-            ${fileResult.matches.map(match => {
-              // Обрезаем длинные строки (показываем максимум 150 символов вокруг совпадения)
-              const maxContext = 75;
-              let beforeMatch = match.text.substring(0, match.matchIndex);
-              const matchText = match.matchText;
-              let afterMatch = match.text.substring(match.matchIndex + matchText.length);
-              
-              // Обрезаем контекст, если строка слишком длинная
-              if (beforeMatch.length > maxContext) {
-                beforeMatch = '...' + beforeMatch.substring(beforeMatch.length - maxContext);
-              }
-              if (afterMatch.length > maxContext) {
-                afterMatch = afterMatch.substring(0, maxContext) + '...';
-              }
-              
-              // Экранируем путь для использования в onclick
-              const escapedPath = fileResult.fullPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-              
-              return `
-                <div class="search-match-line" onclick="openSearchFileAtLine('${escapedPath}', ${match.line})">
-                  <span class="search-line-number">${match.line}</span>
-                  <span class="search-line-text">
-                    ${escapeHtml(beforeMatch)}<mark class="search-match">${escapeHtml(matchText)}</mark>${escapeHtml(afterMatch)}
-                  </span>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      `;
-    });
-    
-    searchResults.innerHTML = html;
-  } catch (error) {
-    console.error('Ошибка поиска:', error);
-    searchResults.innerHTML = `<div class="search-placeholder error">Ошибка поиска: ${error.message}</div>`;
-  }
-}
-
-// Вспомогательные функции для поиска
-
-export function buildSearchRegex(query, options) {
-  try {
-    if (options.useRegex) {
-      return new RegExp(query, options.caseSensitive ? 'g' : 'gi');
-    }
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(escaped, options.caseSensitive ? 'g' : 'gi');
-  } catch (err) {
-    return null;
-  }
-}
-
-export function performSearchInCurrentFile(query, options, searchResults) {
-  if (state.activeTabIndex < 0 || !dom.editor) {
-    searchResults.innerHTML = '<div class="search-placeholder">Откройте файл для поиска</div>';
-    return;
-  }
-
-  const content = dom.editor.value || '';
-  const fileName = state.currentTabs[state.activeTabIndex]?.name || 'current';
-  const regex = buildSearchRegex(query, options);
-  if (!regex) {
-    searchResults.innerHTML = '<div class="search-placeholder error">Неверное регулярное выражение</div>';
-    return;
-  }
-
-  const lines = content.split('\n');
-  const matches = [];
-  lines.forEach((line, lineIndex) => {
-    regex.lastIndex = 0;
-    let match;
-    while ((match = regex.exec(line)) !== null) {
-      matches.push({
-        line: lineIndex + 1,
-        text: line.trim(),
-        matchIndex: match.index,
-        matchText: match[0]
-      });
-      if (match[0].length === 0) {
-        regex.lastIndex++;
-      }
-    }
-  });
-
-  if (matches.length === 0) {
-    searchResults.innerHTML = '<div class="search-placeholder">Ничего не найдено</div>';
-    return;
-  }
-
-  let html = `<div class="search-summary">Найдено ${matches.length} совпадений в ${escapeHtml(fileName)}</div>`;
-  html += `
-    <div class="search-file-group">
-      <div class="search-file-header">
-        <span class="search-file-name">${escapeHtml(fileName)}</span>
-        <span class="search-file-matches">${matches.length} совпадений</span>
-      </div>
-      <div class="search-file-matches-list">
-        ${matches.map(match => {
-          const maxContext = 75;
-          let beforeMatch = match.text.substring(0, match.matchIndex);
-          const matchText = match.matchText;
-          let afterMatch = match.text.substring(match.matchIndex + matchText.length);
-          if (beforeMatch.length > maxContext) {
-            beforeMatch = '...' + beforeMatch.substring(beforeMatch.length - maxContext);
-          }
-          if (afterMatch.length > maxContext) {
-            afterMatch = afterMatch.substring(0, maxContext) + '...';
-          }
-          return `
-            <div class="search-match-line" onclick="goToEditorLine(${match.line})">
-              <span class="search-line-number">${match.line}</span>
-              <span class="search-line-text">
-                ${escapeHtml(beforeMatch)}<mark class="search-match">${escapeHtml(matchText)}</mark>${escapeHtml(afterMatch)}
-              </span>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-  searchResults.innerHTML = html;
 }
 
 export function goToEditorLine(lineNumber) {
@@ -495,6 +221,7 @@ export async function loadFolderContents(folderPath) {
       state.fileExplorerItems = sorted;
       state.folderChildrenCache.set(folderPath, sorted);
       updateFileExplorer();
+      window.dispatchEvent(new Event('frogee:title'));
     }
   } catch (error) {
     console.error('Ошибка загрузки содержимого папки:', error);
@@ -550,6 +277,7 @@ export function updateFileExplorer() {
   if (newFileInFolderBtn) newFileInFolderBtn.disabled = false;
   if (newFolderBtn) newFolderBtn.disabled = false;
 
+  refreshGitignoreBox();
   const rootName = pathUtils.basename(state.currentFolder) || state.currentFolder;
   const rootHeader = document.createElement('div');
   rootHeader.className = 'explorer-root';
@@ -583,8 +311,14 @@ export function renderExplorerChildren(container, items, depth) {
     const row = document.createElement('div');
     const isDir = !!item.isDirectory;
     const isExpanded = isDir && state.expandedFolders.has(item.path);
-    row.className = 'file-item' + (state.selectedExplorerPath === item.path ? ' selected' : '');
+    if (item.ignored && isIgnoredHidden()) return;
+    row.className = 'file-item' + (state.selectedExplorerPath === item.path ? ' selected' : '') + (item.ignored ? ' ignored' : '');
+    if (item.ignored) row.title = 'Игнорируется Git (.gitignore)';
     row.dataset.path = item.path;
+    if (!isDir) {
+      row.draggable = true;
+      row.addEventListener('dragstart', (ev) => { ev.dataTransfer.setData('application/x-frogee-path', item.path); ev.dataTransfer.setData('text/plain', item.path); ev.dataTransfer.effectAllowed = 'copy'; });
+    }
     row.dataset.isDirectory = String(isDir);
     row.style.setProperty('--tree-depth', String(depth));
 
@@ -747,6 +481,7 @@ export function showContextMenu(event, item) {
     { label: 'Копировать', action: () => copyFileItem(item) },
     { label: 'Скопировать путь', action: () => navigator.clipboard?.writeText(item.path) },
   );
+  if (!item.isDirectory) menuItems.push({ label: 'Добавить в контекст чата', action: () => import('./chat.js').then((m) => m.addContextFileByPath(item.path)) });
   
   // Добавляем "Вставить" только если есть скопированный файл
   if (state.copiedFilePath) {

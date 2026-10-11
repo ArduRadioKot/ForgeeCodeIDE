@@ -16,6 +16,10 @@
 }
 
 /* Substrate: no lens, no rim, no motion, it just tints the translucent window. */
+/* Without a system blur (Windows, Linux) the window is opaque: the page must not turn transparent. */
+:root[data-native-blur="off"][data-liquid-glass]:not([data-liquid-glass="off"]),
+:root[data-native-blur="off"][data-liquid-glass]:not([data-liquid-glass="off"]) body { background: var(--window-bg); }
+
 [data-liquid-glass]:not([data-liquid-glass="off"]) #app-shell.lg::before,
 [data-liquid-glass]:not([data-liquid-glass="off"]) #app-shell.lg::after { display: none; }
 [data-liquid-glass]:not([data-liquid-glass="off"]) #app-shell.lg {
@@ -56,7 +60,8 @@
   background: color-mix(in srgb, var(--card-bg) 86%, transparent);
   -webkit-backdrop-filter: blur(28px) saturate(1.35); backdrop-filter: blur(28px) saturate(1.35);
 }
-[data-liquid-glass]:not([data-liquid-glass="off"]) .modal-window.lg :is(.settings-nav, .settings-body) { background: transparent; }
+[data-liquid-glass]:not([data-liquid-glass="off"]) .settings-window.lg { background: color-mix(in srgb, var(--window-bg) 55%, transparent); }
+[data-liquid-glass]:not([data-liquid-glass="off"]) .settings-window.lg :is(.settings-nav, .settings-main) { background: color-mix(in srgb, var(--card-bg) calc(var(--lg-island, .68) * 100%), transparent); }
 [data-liquid-glass]:not([data-liquid-glass="off"]) :is(.palette, .context-menu, .nb-menu) {
   background: color-mix(in srgb, var(--card-bg) 88%, transparent);
   -webkit-backdrop-filter: blur(28px) saturate(1.35); backdrop-filter: blur(28px) saturate(1.35);

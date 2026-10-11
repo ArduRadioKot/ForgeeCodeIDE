@@ -9,6 +9,9 @@ const {
 } = require('./config');
 
 const opencode = require('./opencode');
+const { streamOllama, streamOpenAI } = require('./llm');
+const { track } = require('./abort');
+const bionic = require('./bionic');
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';
 
@@ -18,112 +21,16 @@ function safeRemoveHandler(channel) {
   } catch {}
 }
 
-async function sendMessageOpenRouter(message, model, event) {
-  const openRouterApiKey = getOpenRouterApiKey();
-  if (!openRouterApiKey) {
-    throw new Error('OpenRouter API ключ не настроен');
-  }
+const ROLES = new Set(['system', 'user', 'assistant']);
 
-  try {
-    const response = await axios.post(`${OPENROUTER_API_URL}/chat/completions`, {
-      model: model || 'openai/gpt-3.5-turbo',
-      messages: [
-        { role: 'user', content: message }
-      ],
-      stream: true
-    }, {
-      headers: {
-        Authorization: `Bearer ${openRouterApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      responseType: 'stream'
-    });
-
-    let aiMsg = '';
-
-    return new Promise((resolve, reject) => {
-      response.data.on('data', (chunk) => {
-        const lines = chunk.toString().split('\n');
-        for (const line of lines) {
-          if (line.trim() === '' || !line.startsWith('data: ')) continue;
-
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
-              const content = data.choices[0].delta.content;
-              aiMsg += content;
-
-              event.sender.send('stream-update', {
-                content,
-                fullMessage: aiMsg
-              });
-            }
-          } catch {}
-        }
-      });
-
-      response.data.on('end', () => {
-        resolve({ answer: aiMsg, think: '' });
-      });
-
-      response.data.on('error', (err) => {
-        reject(err);
-      });
-    });
-  } catch (error) {
-    console.error('OpenRouter API error:', error);
-    let errorMessage = error.message;
-    if (error.response) {
-      errorMessage = `HTTP status ${error.response.status}: ${error.response.data?.error?.message || error.response.data}`;
-    }
-    throw new Error(`OpenRouter API ошибка: ${errorMessage}`);
-  }
-}
-
-async function sendMessageOllama(message, model, event) {
-  try {
-    const response = await axios.post('http://localhost:11434/api/chat', {
-      model: model || 'llama3',
-      messages: [
-        { role: 'user', content: message }
-      ],
-      stream: true
-    }, {
-      responseType: 'stream'
-    });
-
-    let aiMsg = '';
-
-    return new Promise((resolve, reject) => {
-      response.data.on('data', (chunk) => {
-        const lines = chunk.toString().split('\n');
-        for (const line of lines) {
-          if (line.trim() === '') continue;
-          try {
-            const data = JSON.parse(line);
-            if (data.message?.content) {
-              aiMsg += data.message.content;
-              event.sender.send('stream-update', {
-                content: data.message.content,
-                fullMessage: aiMsg
-              });
-            }
-          } catch {}
-        }
-      });
-
-      response.data.on('end', () => {
-        resolve({ answer: aiMsg, think: '' });
-      });
-
-      response.data.on('error', (err) => {
-        reject(err);
-      });
-    });
-  } catch (error) {
-    console.error('Ollama API error:', error);
-    throw new Error(`Ollama API ошибка: ${error.message}`);
-  }
+/** Conversation sent to the model: optional system prompt + history + the new user message. */
+function buildMessages(opts, message) {
+  const history = Array.isArray(opts.messages) ? opts.messages : [{ role: 'user', content: message }];
+  const clean = history
+    .filter((m) => m && ROLES.has(m.role) && typeof m.content === 'string' && m.content.trim())
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 60000) }));
+  if (opts.system && String(opts.system).trim()) clean.unshift({ role: 'system', content: String(opts.system).slice(0, 30000) });
+  return clean;
 }
 
 const AI_CHANNELS = [
@@ -238,10 +145,47 @@ function registerAiIpc() {
         }
         return result;
       }
-      if (provider === 'openrouter') {
-        return await sendMessageOpenRouter(message, model, event);
+      const config = await loadConfig().catch(() => ({}));
+      const controller = new AbortController();
+      const untrack = track(controller);
+      let answer = '';
+      let thinking = '';
+      const push = (extra) => { try { event.sender.send('stream-update', { fullMessage: answer, thinking, ...extra }); } catch {} };
+      const handlers = {
+        signal: controller.signal,
+        messages: buildMessages(opts, message),
+        model,
+        onDelta: (text) => { answer += text; push({ content: text }); },
+        onThinking: (text) => { thinking += text; push({ thinkingDelta: text }); },
+      };
+      try {
+        let result;
+        if (provider === 'openrouter') {
+          const key = getOpenRouterApiKey();
+          if (!key) throw new Error('OpenRouter API ключ не настроен');
+          result = await streamOpenAI({ ...handlers, baseUrl: OPENROUTER_API_URL, apiKey: key, headers: { 'HTTP-Referer': 'https://github.com/frogee-code-ide', 'X-Title': 'FrogeeCodeIDE' } });
+        } else if (String(provider).startsWith('custom:')) {
+          const custom = opts.custom || {};
+          if (!custom.baseUrl) throw new Error('У провайдера не указан адрес API');
+          result = await streamOpenAI({ ...handlers, baseUrl: custom.baseUrl, apiKey: custom.apiKey });
+        } else if (provider === 'bionic') {
+          const base = `${await bionic.baseUrl()}/v1`;
+          try {
+            result = await streamOpenAI({ ...handlers, baseUrl: base });
+          } catch (err) {
+            if (!/ECONNREFUSED|connect|socket hang up/i.test(String(err?.code || err?.message))) throw err;
+            push({ notice: 'Запускаю сервер Bionic…' });
+            const started = await bionic.startServer();
+            if (!started.success) throw new Error(`Сервер Bionic не запущен: ${started.error}`);
+            result = await streamOpenAI({ ...handlers, baseUrl: base });
+          }
+        } else {
+          result = await streamOllama({ ...handlers, baseUrl: config.ollamaBaseUrl, think: !!opts.think });
+        }
+        return { success: true, answer, thinking, aborted: !!result.aborted, stats: result.stats || null };
+      } finally {
+        untrack();
       }
-      return await sendMessageOllama(message, model, event);
     } catch (err) {
       const msg = err?.message || String(err);
       console.error('AI Error:', msg);
@@ -255,9 +199,22 @@ function registerAiIpc() {
     }
   });
 
+  ipcMain.handle('custom-models', async (_event, { baseUrl, apiKey } = {}) => {
+    try {
+      const base = String(baseUrl || '').replace(/\/+$/, '');
+      if (!/^https?:\/\//i.test(base)) return { success: false, error: 'Адрес должен начинаться с http:// или https://' };
+      const res = await axios.get(`${base}/models`, { timeout: 10000, headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {} });
+      const list = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data?.models) ? res.data.models : Array.isArray(res.data) ? res.data : [];
+      const models = list.map((m) => (typeof m === 'string' ? m : m.id || m.name)).filter(Boolean).sort((a, b) => a.localeCompare(b));
+      return { success: true, models };
+    } catch (err) {
+      return { success: false, error: err.response?.status ? `сервер ответил ${err.response.status}` : (err.code || err.message) };
+    }
+  });
+
   ipcMain.handle('get-models', async () => {
     try {
-      const response = await axios.get('http://localhost:11434/api/tags');
+      const response = await axios.get('http://127.0.0.1:11434/api/tags');
       return response.data.models.map(m => m.name);
     } catch {
       return [];

@@ -2,6 +2,7 @@
 import { state } from './state.js';
 import { isEditorTab } from './tab-model.js';
 import { openBrowserTab } from './browser.js';
+import { icon } from './glyphs.js';
 
 const dirname = (p) => p.replace(/[\\/][^\\/]*$/, '') || '/';
 const chip = () => document.getElementById('status-live-btn');
@@ -12,7 +13,7 @@ function paintChip(flash = false) {
   const live = state.live;
   el.classList.toggle('active', !!live);
   el.classList.toggle('flash', flash);
-  el.textContent = live ? `● :${live.port}${live.clients ? ` · ${live.clients}` : ''}` : 'Go Live';
+  if (live) el.innerHTML = `${icon('dot', 10)} :${Number(live.port)}${live.clients ? ` · ${Number(live.clients)}` : ''}`; else el.textContent = 'Go Live';
   el.title = live ? `Live Server: ${live.url}\nКлик — остановить` : 'Запустить Live Server для проекта';
   if (flash) setTimeout(() => el.classList.remove('flash'), 400);
 }

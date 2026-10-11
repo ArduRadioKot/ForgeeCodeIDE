@@ -9,6 +9,7 @@ export const defaultGlassPreset = () => (/Mac|Win/i.test(navigator.platform) ? '
 
 export function applyGlass() {
   const root = document.documentElement;
+  root.dataset.nativeBlur = window.electronAPI?.nativeBlur ? 'on' : 'off';
   const lg = window.LiquidGlass;
   const preset = state.glassPreset;
   root.dataset.liquidGlass = preset;

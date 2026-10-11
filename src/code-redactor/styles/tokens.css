@@ -20,22 +20,22 @@
   --accent-soft: color-mix(in srgb, var(--accent-color) 22%, transparent);
   --link-color: color-mix(in srgb, var(--accent-color) 68%, #fff);
   --selection: color-mix(in srgb, var(--accent-color) 42%, transparent);
-  --success-color: #5fb865;
+  --success-color: var(--accent-color); /* "ok" states use the accent, not green */
   --warning-color: #e0bb73;
-  --danger-color: #f0524f;
+  --danger-color: var(--text-color); /* errors are neutral: weight and wording carry the meaning, not red */
   --shadow-color: #0009;
   --scrim: #0000008c;
 
   --syn-keyword: #cf8e6d;
-  --syn-string: #6aab73;
+  --syn-string: color-mix(in srgb, var(--accent-color) 85%, #fff);
   --syn-number: #2aacb8;
   --syn-comment: #7a7e85;
-  --syn-function: #56a8f5;
+  --syn-function: #7c9cf5;
   --syn-type: #e0bb73;
   --syn-field: #c77dbb;
   --syn-tag: #d5b778;
   --syn-attr: #bcbec4;
-  --syn-heading: #56a8f5;
+  --syn-heading: #7c9cf5;
   --syn-annotation: #b3ae60;
 
   --radius-xs: 4px;
@@ -86,14 +86,14 @@ body.light-theme {
   --active-bg: #e2e7f2;
   --link-color: color-mix(in srgb, var(--accent-color) 78%, #000);
   --selection: color-mix(in srgb, var(--accent-color) 26%, transparent);
-  --success-color: #3a9a4a;
+  --success-color: var(--accent-color);
   --warning-color: #9e6a03;
-  --danger-color: #d12f2c;
+  --danger-color: var(--text-color);
   --shadow-color: #1d233a33;
   --scrim: #1d233a59;
 
   --syn-keyword: #0033b3;
-  --syn-string: #067d17;
+  --syn-string: color-mix(in srgb, var(--accent-color) 80%, #000);
   --syn-number: #1750eb;
   --syn-comment: #8c8c8c;
   --syn-function: #00627a;

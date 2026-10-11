@@ -43,12 +43,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   opencodeSend: (payload) => ipcRenderer.invoke('opencode-send', payload),
   terminalPing: () => ipcRenderer.invoke('terminal-ping'),
   terminalStart: (options) => ipcRenderer.invoke('terminal-start', options),
-  terminalWrite: (data) => ipcRenderer.invoke('terminal-write', data),
+  terminalWrite: (data, id) => ipcRenderer.invoke('terminal-write', data, id),
+  terminalActive: (id) => ipcRenderer.invoke('terminal-active', id),
   terminalResize: (size) => ipcRenderer.invoke('terminal-resize', size),
   terminalRestart: (options) => ipcRenderer.invoke('terminal-restart', options),
-  terminalKill: () => ipcRenderer.invoke('terminal-kill'),
+  terminalKill: (id) => ipcRenderer.invoke('terminal-kill', id),
   onTerminalData: (callback) => {
-    const handler = (_event, data) => callback(data);
+    const handler = (_event, payload) => callback(payload);
     ipcRenderer.on('terminal-data', handler);
     return () => ipcRenderer.removeListener('terminal-data', handler);
   },
@@ -61,6 +62,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
   themesList: () => ipcRenderer.invoke('themes-list'),
   themesOpenFolder: () => ipcRenderer.invoke('themes-open-folder'),
   themesImport: () => ipcRenderer.invoke('themes-import'),
+  projectSearch: (opts) => ipcRenderer.invoke('project-search', opts),
+  projectSearchCancel: (id) => ipcRenderer.invoke('project-search-cancel', id),
+  projectReplace: (opts) => ipcRenderer.invoke('project-replace', opts),
+  gitignoreInfo: (root) => ipcRenderer.invoke('gitignore-info', root),
+  onMenuCommand: (cb) => ipcRenderer.on('menu-command', (_e, id) => cb(id)),
+  pickContextFiles: () => ipcRenderer.invoke('pick-context-files'),
+  readContextFile: (file) => ipcRenderer.invoke('read-context-file', file),
+  customModels: (opts) => ipcRenderer.invoke('custom-models', opts),
+  diagnose: (payload) => ipcRenderer.invoke('diagnose', payload),
+  ollamaStatus: () => ipcRenderer.invoke('ollama-status'),
+  ollamaStart: () => ipcRenderer.invoke('ollama-start'),
+  ollamaPull: (name) => ipcRenderer.invoke('ollama-pull', name),
+  ollamaPullCancel: (name) => ipcRenderer.invoke('ollama-pull-cancel', name),
+  ollamaDelete: (name) => ipcRenderer.invoke('ollama-delete', name),
+  onOllamaPullProgress: (callback) => {
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on('ollama-pull-progress', handler);
+    return () => ipcRenderer.removeListener('ollama-pull-progress', handler);
+  },
+  bionicStatus: () => ipcRenderer.invoke('bionic-status'),
+  bionicServer: (opts) => ipcRenderer.invoke('bionic-server', opts),
+  bionicOpen: (folder) => ipcRenderer.invoke('bionic-open', folder),
+  platform: process.platform,
+  nativeBlur: process.argv.includes('--frogee-native-blur=1'),
+  versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
   setNativeTheme: (theme) => ipcRenderer.send('set-native-theme', theme),
   listProjectFiles: (root) => ipcRenderer.invoke('list-project-files', root),
   liveStart: (opts) => ipcRenderer.invoke('live-start', opts),

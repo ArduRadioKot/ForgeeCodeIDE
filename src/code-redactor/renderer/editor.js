@@ -250,6 +250,7 @@ export function updateSyntaxHighlight() {
   const fileName = state.activeTabIndex >= 0 ? state.currentTabs[state.activeTabIndex]?.name : '';
   syntaxEl.innerHTML = window.SyntaxHighlight.highlight(dom.editor.value || '', fileName);
   syncSyntaxScroll();
+  window.dispatchEvent(new Event('frogee:content'));
 }
 
 export function syncSyntaxScroll() {
@@ -554,30 +555,5 @@ export function findPrev() {
 export function path() {
   return pathUtils;
 }
-
-// Обработчик потоковых обновлений от AI
-if (window.electronAPI && typeof window.electronAPI.onStreamUpdate === 'function') {
-  window.electronAPI.onStreamUpdate((event, data) => {
-    if (!dom.chatMessages) return;
-    const aiMessages = dom.chatMessages.querySelectorAll('.message.ai');
-    if (aiMessages.length > 0) {
-      const lastMessage = aiMessages[aiMessages.length - 1];
-      try {
-        lastMessage.innerHTML = data.fullMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                               .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                               .replace(/`(.*?)`/g, '<code>$1</code>')
-                                               .replace(/\n/g, '<br>');
-      } catch (error) {
-        lastMessage.textContent = data.fullMessage;
-      }
-      setTimeout(() => {
-        dom.chatMessages.scrollTo({
-          top: dom.chatMessages.scrollHeight,
-          behavior: 'auto'
-        });
-      }, 10);
-    }
-  });
-} 
 
 // Функции для работы с папками и файлами

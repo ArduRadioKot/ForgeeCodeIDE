@@ -75,6 +75,12 @@ import { setupAgents } from './agents.js';
 import { setupGlass } from './glass.js';
 import { setupFonts } from './fonts.js';
 import { setupFlow } from './flow.js';
+import { setupMenuBridge } from './menu-bridge.js';
+import { setupAiSettings } from './ai-settings.js';
+import { setupDiagnostics, goToProblem } from './diagnostics.js';
+import { setupMarkdown } from './markdown.js';
+import { hydrateIcons } from './glyphs.js';
+import { setupAutoIndentSetting } from './smart-edit.js';
 import { setupThemeControls } from './themes.js';
 import { reopenClosedTab } from './tabs.js';
 import { isBrowserTab } from './tab-model.js';
@@ -341,6 +347,12 @@ export function setupEventListeners() {
   setupGlass();
   setupFonts();
   setupFlow();
+  setupMenuBridge();
+  setupAiSettings();
+  setupDiagnostics();
+  hydrateIcons();
+  setupMarkdown();
+  setupAutoIndentSetting();
   setupThemeControls();
   setupActivityResizer();
   document.getElementById('browser-btn')?.addEventListener('click', () => openBrowserTab('about:blank'));
@@ -387,6 +399,8 @@ export function setupSettingsTabs() {
       const tab = btn.dataset.settingsTab;
       nav.querySelectorAll('.settings-nav-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      const title = document.getElementById('settings-main-title');
+      if (title) title.textContent = btn.textContent.trim();
       document.querySelectorAll('.settings-panel').forEach(panel => {
         panel.classList.toggle('active', panel.id === `settings-panel-${tab}`);
       });
@@ -409,6 +423,11 @@ export function handleGlobalKeydown(e) {
   if (e.ctrlKey && !e.metaKey && (e.key === 'g' || e.key === 'G')) {
     e.preventDefault();
     openGoToLine();
+    return;
+  }
+  if (e.key === 'F8') {
+    e.preventDefault();
+    goToProblem(e.shiftKey ? -1 : 1);
     return;
   }
   if (e.key === 'F5') {

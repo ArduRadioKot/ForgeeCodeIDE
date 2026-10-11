@@ -4,7 +4,7 @@
     const presets = root.LiquidGlassPresets;
     const optics = root.LiquidGlassOptics;
     const displacement = root.LiquidGlassDisplacement;
-    const storageKey = 'fgsnotes.glass.v1';
+    const storageKey = 'frogee.glass.v1';
     const SVG_NS = 'http://www.w3.org/2000/svg';
     const instances = new Map();
     const state = { preset: 'regular', overrides: {}, quality: 'auto', refraction: true, animations: true };

@@ -66,8 +66,8 @@ function buildView(tab) {
   el.className = 'browser-view';
   el.innerHTML = `
     <div class="browser-bar">
-      <button type="button" class="browser-btn" data-act="back" title="Назад (Alt+←)" disabled>${ICON.back}</button>
-      <button type="button" class="browser-btn" data-act="forward" title="Вперёд (Alt+→)" disabled>${ICON.forward}</button>
+      <button type="button" class="browser-btn" data-act="back" title="Назад (Alt+Влево)" disabled>${ICON.back}</button>
+      <button type="button" class="browser-btn" data-act="forward" title="Вперёд (Alt+Вправо)" disabled>${ICON.forward}</button>
       <button type="button" class="browser-btn" data-act="reload" title="Обновить">${ICON.reload}</button>
       <input class="browser-url" type="text" spellcheck="false" placeholder="Адрес сайта, порт (5500) или поисковый запрос" />
       <select class="browser-device" title="Размер окна">${Object.entries(DEVICES).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join('')}</select>
