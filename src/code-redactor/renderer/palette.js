@@ -227,6 +227,8 @@ function buildCommands() {
     cmd('Markdown: предпросмотр', () => toggleMarkdownPreview(), 'Ctrl+Shift+V'),
     cmd('Markdown: вставить таблицу', insertTable),
     cmd('Markdown: выровнять таблицу', formatTable),
+    cmd('ИИ: оставить все правки', () => import('./ai-review.js').then((m) => m.keepAll())),
+    cmd('ИИ: отменить все правки', () => import('./ai-review.js').then((m) => m.undoAll())),
     cmd('Окно: новое окно', () => window.electronAPI?.newWindow?.(), 'Ctrl+Shift+N'),
     cmd('Проблемы: список ошибок файла…', openProblems),
     cmd('Проблемы: следующая ошибка', () => goToProblem(1), 'F8'),

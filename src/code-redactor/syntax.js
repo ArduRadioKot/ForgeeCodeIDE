@@ -158,6 +158,19 @@
     'boolean byte char double float int long short void String Object Integer Long Double List Map Set',
     { deco: true, capTypes: true, self: 'this super' },
   );
+  // Processing (.pde): Java with the sketch API. Built-in functions, built-in variables and #rrggbb colours get their own colours.
+  LANGS.pde = cLike(
+    'abstract break case catch class continue default do else enum extends final finally for if implements import instanceof interface new package private protected public return static super switch synchronized this throw throws try void volatile while',
+    'boolean byte char color double float int long short String Object Integer Float Boolean PVector PImage PFont PShape PGraphics PApplet PMatrix2D PMatrix3D PShader Table TableRow XML JSONObject JSONArray FloatList IntList StringList ArrayList HashMap List Map',
+    {
+      deco: true, capTypes: true, self: 'this super width height mouseX mouseY pmouseX pmouseY frameCount frameRate key keyCode mouseButton mousePressed keyPressed displayWidth displayHeight pixels PI TWO_PI HALF_PI QUARTER_PI TAU',
+      pre: [['number', '#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?\\b']],
+      post: [
+        ['function', '(?<![\\w.])(?:setup|draw|settings|size|fullScreen|background|fill|noFill|stroke|noStroke|strokeWeight|strokeCap|strokeJoin|smooth|noSmooth|ellipse|circle|rect|square|line|point|triangle|quad|arc|curve|bezier|vertex|beginShape|endShape|translate|rotate|rotateX|rotateY|rotateZ|scale|pushMatrix|popMatrix|pushStyle|popStyle|resetMatrix|image|loadImage|imageMode|rectMode|ellipseMode|colorMode|text|textSize|textFont|textAlign|createFont|loadFont|loadShape|shape|random|randomSeed|noise|noiseSeed|map|constrain|dist|lerp|lerpColor|norm|mag|sq|sqrt|abs|ceil|floor|round|min|max|pow|sin|cos|tan|atan2|radians|degrees|red|green|blue|alpha|hue|saturation|brightness|frameRate|millis|second|minute|hour|day|month|year|noLoop|loop|redraw|exit|delay|println|print|printArray|save|saveFrame|loadPixels|updatePixels|get|set|createGraphics|createImage|mousePressed|mouseReleased|mouseMoved|mouseDragged|mouseClicked|mouseWheel|keyPressed|keyReleased|keyTyped|lights|camera|perspective|ortho|box|sphere|beginCamera|endCamera|tint|noTint|blendMode|cursor|noCursor|loadStrings|loadTable|loadJSONObject|saveStrings|thread|selectInput|selectOutput)(?=\\s*\\()'],
+        ['function', P.method],
+      ],
+    },
+  );
   LANGS.kt = cLike(
     'as break by catch class companion constructor continue data do else enum external final finally for fun if import in infix init inline inner interface internal is lateinit lazy object open operator out override package private protected public reified return sealed suspend throw try typealias val var vararg when where while get set',
     'Int Long Short Byte Float Double Boolean Char String Unit Any Nothing List Map Set Array',
@@ -354,7 +367,7 @@
     sh: 'sh', bash: 'sh', zsh: 'sh', fish: 'sh', ksh: 'sh', env: 'ini', yml: 'yaml', yaml: 'yaml', toml: 'toml',
     ini: 'ini', cfg: 'ini', conf: 'ini', properties: 'ini', editorconfig: 'ini', gitconfig: 'ini', sql: 'sql', psql: 'sql',
     c: 'c', h: 'c', cpp: 'cpp', cc: 'cpp', cxx: 'cpp', hpp: 'cpp', hh: 'cpp', hxx: 'cpp', ino: 'cpp', cs: 'cs', csx: 'cs',
-    java: 'java', kt: 'kt', kts: 'kt', swift: 'swift', go: 'go', rs: 'rs', dart: 'dart', scala: 'scala', sc: 'scala',
+    java: 'java', pde: 'pde', kt: 'kt', kts: 'kt', swift: 'swift', go: 'go', rs: 'rs', dart: 'dart', scala: 'scala', sc: 'scala',
     php: 'php', phtml: 'php', rb: 'rb', rake: 'rb', gemspec: 'rb', lua: 'lua', r: 'r', ps1: 'ps1', psm1: 'ps1', psd1: 'ps1',
     diff: 'diff', patch: 'diff', lisp: 'lisp', cl: 'lisp', el: 'lisp', clj: 'lisp', scm: 'lisp', mk: 'makefile',
   };
@@ -374,7 +387,7 @@
 
   const LABELS = {
     js: 'JavaScript', jsx: 'JavaScript (JSX)', ts: 'TypeScript', tsx: 'TypeScript (TSX)', py: 'Python', json: 'JSON', html: 'HTML / XML', css: 'CSS', scss: 'SCSS',
-    md: 'Markdown', sh: 'Shell', yaml: 'YAML', toml: 'TOML', ini: 'Config', sql: 'SQL', c: 'C', cpp: 'C++', cs: 'C#', java: 'Java', kt: 'Kotlin', swift: 'Swift',
+    md: 'Markdown', sh: 'Shell', yaml: 'YAML', toml: 'TOML', ini: 'Config', sql: 'SQL', c: 'C', cpp: 'C++', cs: 'C#', java: 'Java', pde: 'Processing', kt: 'Kotlin', swift: 'Swift',
     go: 'Go', rs: 'Rust', dart: 'Dart', scala: 'Scala', php: 'PHP', rb: 'Ruby', lua: 'Lua', r: 'R', ps1: 'PowerShell', dockerfile: 'Dockerfile', makefile: 'Makefile',
     diff: 'Diff', lisp: 'Lisp', plain: 'Plain Text',
   };

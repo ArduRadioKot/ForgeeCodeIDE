@@ -132,7 +132,15 @@ export function setupAutoIndentSetting() {
 }
 
 function handleEnter(ta, opts) {
-  if (!autoIndentEnabled()) return false; // a plain Enter inserts a plain line break
+  if (!autoIndentEnabled()) {
+    // A plain Enter is a plain line break, except between an auto-paired "{}" / "()" / "[]": the closer moves to its own line (no indentation).
+    const { value, selectionStart: s, selectionEnd: e } = ta;
+    if (s === e && s > 0 && '([{'.includes(value[s - 1]) && PAIRS[value[s - 1]] === value[s]) {
+      replaceRange(ta, s, e, '\n\n', s + 1);
+      return true;
+    }
+    return false;
+  }
   const { value, selectionStart: s, selectionEnd: e } = ta;
   const lineStart = value.lastIndexOf('\n', s - 1) + 1;
   const before = value.slice(lineStart, s);

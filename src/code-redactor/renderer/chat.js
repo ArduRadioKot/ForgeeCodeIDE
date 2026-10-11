@@ -52,6 +52,7 @@ function enhanceCode(container) {
     card.className = 'code-card';
     card.innerHTML = `<div class="code-head"><span class="code-lang">${escapeHtml(lang || 'код')}</span><span class="code-actions">
       <button type="button" data-code="copy" title="Скопировать">${COPY_ICON}Копировать</button>
+      <button type="button" class="code-apply" data-code="apply" title="Применить к открытому файлу: правки подсветятся, их нужно подтвердить">Применить</button>
       <button type="button" data-code="insert" title="Вставить в редактор на место курсора">Вставить</button>
       <button type="button" data-code="newfile" title="Открыть в новой вкладке">В файл</button></span></div>`;
     pre.replaceWith(card);
@@ -69,6 +70,9 @@ async function onCodeAction(btn) {
   if (action === 'copy') {
     try { await navigator.clipboard.writeText(text); btn.lastChild.textContent = 'Скопировано'; } catch { btn.lastChild.textContent = 'Не удалось'; }
     setTimeout(() => { btn.lastChild.textContent = 'Копировать'; }, 1400);
+  } else if (action === 'apply') {
+    const { applyCode } = await import('./ai-review.js');
+    if (!applyCode(text, card.dataset.lang)) await openAsNewFile(text, card.dataset.lang);
   } else if (action === 'insert') {
     const tab = state.currentTabs[state.activeTabIndex];
     if (isEditorTab(tab) && dom.editor) {

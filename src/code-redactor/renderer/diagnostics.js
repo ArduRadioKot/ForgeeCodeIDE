@@ -9,7 +9,7 @@ import { isBrowserSplit } from './tabs-api.js';
 
 const DELAY = 450;
 const MAX_SIZE = 250000;
-const C_LIKE = new Set(['js', 'jsx', 'ts', 'tsx', 'java', 'c', 'cpp', 'cs', 'go', 'rs', 'kt', 'swift', 'dart', 'scala', 'php', 'css', 'scss']);
+const C_LIKE = new Set(['js', 'jsx', 'ts', 'tsx', 'java', 'pde', 'c', 'cpp', 'cs', 'go', 'rs', 'kt', 'swift', 'dart', 'scala', 'php', 'css', 'scss']);
 const LENIENT_STRINGS = new Set(['jsx', 'tsx', 'rs', 'php', 'kt', 'scala']);
 const PAIRS = { '(': ')', '[': ']', '{': '}' };
 const CLOSERS = new Set([')', ']', '}']);

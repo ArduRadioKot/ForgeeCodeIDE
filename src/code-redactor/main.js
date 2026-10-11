@@ -18,6 +18,20 @@ const { registerDiagnosticsIpc } = require('./lib/diagnostics');
 const { registerSearchIpc } = require('./lib/search');
 const { registerGitignoreIpc } = require('./lib/gitignore');
 const { registerContextFilesIpc } = require('./lib/context-files');
+const { registerCompletionIpc } = require('./lib/completion');
+
+// `npm start` and the installed app share the name, so they would share one profile. A second process on the same profile
+// waits for the first one's storage lock: every start took ~4 s (the page blocks on its first localStorage read).
+// Development gets a profile of its own; the installed app runs once, and a second launch just brings the first to the front.
+if (!app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), 'FrogeeCodeIDE-dev'));
+const hasInstanceLock = app.isPackaged ? app.requestSingleInstanceLock() : true;
+if (!hasInstanceLock) app.quit();
+app.on('second-instance', (_event, argv) => {
+  // The Windows taskbar "New window" task starts the app again with this flag.
+  if (argv.includes('--new-window') && app.isReady()) { createWindow(true); return; }
+  const win = getMainWindow();
+  if (win) { if (win.isMinimized()) win.restore(); win.focus(); } else if (app.isReady()) createWindow();
+});
 
 // Any number of windows. Code that needs "the" window (dialogs, menu commands) gets the one in front.
 const windows = new Set();
@@ -170,6 +184,7 @@ function registerAllIpc() {
   registerSearchIpc();
   registerGitignoreIpc();
   registerContextFilesIpc(getMainWindow);
+  registerCompletionIpc();
 }
 
 // Terminal + git must be available as soon as the app is ready
@@ -184,23 +199,23 @@ app.setAboutPanelOptions({
 });
 
 app.whenReady().then(async () => {
+  if (!hasInstanceLock) return;
   if (process.platform === 'darwin') { try { app.dock.setIcon(path.join(__dirname, 'build', 'icon.png')); } catch {} }
   registerAllIpc();
 
-  const ollamaRunning = await checkOllamaRunning();
-  if (!ollamaRunning) {
-    console.log('Ollama не запущен. Пользователь должен запустить его вручную.');
+  // Right-click on the Dock icon (macOS) / taskbar icon (Windows): "New window".
+  if (process.platform === 'darwin') {
+    try { app.dock.setMenu(Menu.buildFromTemplate([{ label: 'Новое окно', click: () => createWindow(true) }])); } catch {}
+  } else if (process.platform === 'win32') {
+    try { app.setUserTasks([{ program: process.execPath, arguments: '--new-window', iconPath: process.execPath, iconIndex: 0, title: 'Новое окно', description: 'Открыть ещё одно окно FrogeeCodeIDE' }]); } catch {}
   }
 
-  try {
-    const config = await loadConfig();
-    setOpenRouterApiKey((config && config.openRouterApiKey) || '');
-  } catch (err) {
-    console.error('Не удалось загрузить конфиг при старте:', err);
-    setOpenRouterApiKey('');
-  }
-
+  // The window opens first; nothing below may hold it up.
   createWindow();
+  checkOllamaRunning().then((running) => { if (!running) console.log('Ollama не запущен. Пользователь должен запустить его вручную.'); });
+  loadConfig()
+    .then((config) => setOpenRouterApiKey((config && config.openRouterApiKey) || ''))
+    .catch((err) => { console.error('Не удалось загрузить конфиг при старте:', err); setOpenRouterApiKey(''); });
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

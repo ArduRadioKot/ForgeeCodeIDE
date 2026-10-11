@@ -207,3 +207,41 @@ body.is-dragging-tab .split-drop-zone, .split-drop-zone.active { display: flex; 
 .markdown-body li > input[type="checkbox"] { margin: 0 6px 0 -18px; accent-color: var(--accent-color); }
 .markdown-body li:has(> input[type="checkbox"]) { list-style: none; }
 .new-tab-btn[hidden] { display: none; }
+
+/* AI review: added lines tinted with the accent, a bar with Keep / Undo */
+.diff-layer { z-index: 1; color: transparent; }
+.diff-layer .dl { display: block; }
+.diff-layer .dl.add { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent-color); }
+.diff-layer .dl.del { box-shadow: inset 0 1px 0 var(--text-faint); }
+.diff-layer .dl.add.del { box-shadow: inset 2px 0 0 var(--accent-color), inset 0 1px 0 var(--text-faint); }
+.line-number.has-add { color: var(--accent-color); font-weight: 600; }
+.line-number.has-del { text-decoration: underline; text-decoration-color: var(--text-faint); text-underline-offset: 3px; }
+.review-bar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 24px); padding: 6px 8px 6px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--card-bg); box-shadow: 0 8px 24px var(--shadow-color); font-size: 12px; white-space: nowrap; }
+.review-bar[hidden] { display: none; }
+.review-bar .rb-icon { color: var(--accent-color); display: flex; }
+.review-bar .rb-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.review-bar .rb-stat { color: var(--text-muted); }
+.review-bar .rb-add { color: var(--accent-color); font-weight: 600; }
+.review-bar .rb-del { color: var(--text-muted); font-weight: 600; }
+.review-bar .rb-sep { width: 1px; height: 16px; background: var(--border-color); }
+.review-bar button { height: 26px; padding: 0 10px; border-radius: var(--radius-md); color: var(--text-muted); }
+.review-bar button:hover { background: var(--hover-color); color: var(--text-color); }
+.review-bar button.primary { background: var(--accent-color); color: var(--accent-text); }
+.review-bar button.primary:hover { background: color-mix(in srgb, var(--accent-color) 86%, #fff); }
+.code-actions .code-apply { color: var(--link-color); }
+
+/* Code suggestions */
+.ac-popup { position: fixed; z-index: 10002; min-width: 160px; max-width: 360px; padding: 3px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--card-bg); box-shadow: 0 8px 22px var(--shadow-color); font: 12.5px var(--mono-font); }
+.ac-popup[hidden] { display: none; }
+.ac-row { padding: 3px 8px; border-radius: var(--radius-sm); color: var(--text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.ac-row.active, .ac-row:hover { background: var(--accent-soft); }
+
+/* AI suggestions: grey continuation after the caret and a card for the rest of a block */
+.ghost-layer { z-index: 4; color: transparent; }
+.ghost-text { color: var(--text-faint); opacity: .95; }
+.ghost-card { position: fixed; z-index: 10001; max-width: min(640px, 80vw); border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--card-bg); box-shadow: 0 8px 22px var(--shadow-color); overflow: hidden; pointer-events: none; }
+.ghost-card[hidden] { display: none; }
+.ghost-card pre { margin: 0; padding: 8px 12px; font: 12.5px/1.5 var(--mono-font); color: var(--text-muted); white-space: pre; overflow: hidden; opacity: .9; }
+.ghost-hint { padding: 4px 12px; border-top: 1px solid var(--border-color); color: var(--text-faint); font-size: 11px; }
+.status-complete { color: var(--link-color); }
+.status-complete[hidden] { display: none; }

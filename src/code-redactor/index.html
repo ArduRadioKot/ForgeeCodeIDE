@@ -198,8 +198,10 @@
         <div class="editor-body glass-editor-surface">
           <div id="line-numbers" class="line-numbers"></div>
           <div class="code-editor-wrap">
+            <pre id="diff-layer" class="syntax-highlight diff-layer" aria-hidden="true"></pre>
             <pre id="syntax-highlight" class="syntax-highlight" aria-hidden="true"></pre>
             <pre id="diag-layer" class="syntax-highlight diag-layer" aria-hidden="true"></pre>
+            <pre id="ghost-layer" class="syntax-highlight ghost-layer" aria-hidden="true"></pre>
             <textarea id="editor" placeholder="Начните писать код..." spellcheck="false"></textarea>
           </div>
         </div>
@@ -330,6 +332,7 @@
       <span id="status-file">Welcome</span>
       <span id="status-cursor">Ln 1, Col 1</span>
       <span id="status-words" hidden></span>
+      <span id="status-complete" class="status-complete" hidden>ИИ думает…</span>
       <button type="button" id="status-problems" class="status-chip problems" hidden title="Проблемы в файле"></button>
     </div>
     <div class="status-right">
@@ -426,6 +429,23 @@
                   <span class="settings-checkmark"></span>
                 </label>
               </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="ai-complete-enabled">Подсказки ИИ в редакторе<span class="settings-sub">Серое продолжение после курсора. Tab — принять, Alt+\ — спросить сразу</span></label>
+              <div class="settings-control">
+                <label class="settings-checkbox-label">
+                  <input type="checkbox" id="ai-complete-enabled" class="settings-checkbox">
+                  <span class="settings-checkmark"></span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="ai-complete-provider">Провайдер подсказок<span class="settings-sub" id="ai-complete-note"></span></label>
+              <div class="settings-control"><select id="ai-complete-provider" class="settings-select"></select></div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="ai-complete-model">Модель для подсказок<span class="settings-sub">Выберите из списка или впишите название сами. Лучше небольшая и быстрая модель</span></label>
+              <div class="settings-control"><input type="text" id="ai-complete-model" class="settings-input" list="ai-complete-models" placeholder="Название модели" spellcheck="false" autocomplete="off"><datalist id="ai-complete-models"></datalist></div>
             </div>
             <div class="settings-item">
               <label class="settings-label" for="word-wrap-checkbox">Перенос строк</label>

@@ -142,8 +142,10 @@ export async function initializeApp() {
     applyThemeClass(dom.themeSelect ? dom.themeSelect.value : 'dark');
     applyGlass();
 
-    // Extra windows start empty and never write the shared config: they would overwrite the first window's tabs.
-    if (window.electronAPI?.isSecondaryWindow) config.editorTabs = [];
+    // Every start is a clean workspace: the tabs of the last session are not brought back (reading them all made the start slow).
+    const hadSavedTabs = Array.isArray(config.editorTabs) && config.editorTabs.length > 0;
+    config.editorTabs = [];
+    if (hadSavedTabs) setTimeout(() => saveAllConfig(), 0); // drop the old session's file contents from the config
     if (config.editorTabs && Array.isArray(config.editorTabs) && config.editorTabs.length > 0) {
       if (config.editorTabs.length > 40) {
         console.warn('Повреждённый editorTabs в конфиге:', config.editorTabs.length, '— сбрасываем');
@@ -196,7 +198,6 @@ export async function initializeApp() {
 }
 
 export async function saveAllConfig() {
-  if (window.electronAPI?.isSecondaryWindow) return;
   try {
     const config = {
       designVersion: DESIGN_VERSION,
@@ -210,15 +211,7 @@ export async function saveAllConfig() {
       customProviders: state.customProviders,
       attachContext: state.attachContext,
       showWelcomePage: dom.showWelcomeCheckbox ? dom.showWelcomeCheckbox.checked : true,
-      editorTabs: state.currentTabs
-        .filter((t) => t && t.kind !== 'terminal' && t.kind !== 'preview')
-        .map((t) => ({
-          name: t.name,
-          content: t.content || '',
-          filePath: t.filePath || null,
-          modified: !!t.modified,
-          kind: t.kind === 'notebook' ? 'notebook' : (t.kind === 'browser' ? 'browser' : 'file')
-        })),
+      editorTabs: [], // open files are not remembered between sessions
       chatHistory: state.chatHistory,
       glassOpacity: dom.glassOpacityRange ? parseFloat(dom.glassOpacityRange.value) : 0.78,
       glassBlur: dom.glassBlurRange ? parseInt(dom.glassBlurRange.value, 10) : 16,

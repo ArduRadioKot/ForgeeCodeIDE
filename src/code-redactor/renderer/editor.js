@@ -216,48 +216,79 @@ export function updateCurrentLine() {
   updateLineNumbers();
 }
 
+let currentLineEl = null;
+
 export function updateLineNumbers() {
-  const lines = dom.editor.value.split('\n');
+  const value = dom.editor.value;
+  let count = 1;
+  for (let i = value.indexOf('\n'); i >= 0; i = value.indexOf('\n', i + 1)) count++;
   const scrollTop = dom.editor.scrollTop;
-  const lineHeight = parseInt(getComputedStyle(dom.editor).lineHeight);
-  const visibleLines = Math.ceil(dom.editor.clientHeight / lineHeight);
-  const startLine = Math.floor(scrollTop / lineHeight);
-  const endLine = Math.min(startLine + visibleLines + 1, lines.length);
-  
-  // Получаем текущую позицию курсора
-  const cursorPosition = dom.editor.selectionStart;
-  const textBeforeCursor = dom.editor.value.substring(0, cursorPosition);
-  const currentLineNumber = textBeforeCursor.split('\n').length;
-  
-  let lineNumberHtml = '';
-  for (let i = 0; i < lines.length; i++) {
-    const lineNum = i + 1;
-    const isCurrentLine = lineNum === currentLineNumber;
-    const lineClass = isCurrentLine ? 'line-number current' : 'line-number';
-    lineNumberHtml += `<span class="${lineClass}">${lineNum}</span>`;
+  const current = value.slice(0, dom.editor.selectionStart).split('\n').length;
+  const box = dom.lineNumbers;
+
+  if (box.children.length !== count) {
+    // The number of lines changed: rebuild. (A key press that keeps the count only moves the "current" mark.)
+    let html = '';
+    for (let n = 1; n <= count; n++) html += `<span class="line-number${n === current ? ' current' : ''}">${n}</span>`;
+    box.innerHTML = html;
+    currentLineEl = box.children[current - 1] || null;
+  } else {
+    if (currentLineEl) currentLineEl.classList.remove('current');
+    box.querySelectorAll('.line-number.current').forEach((el) => el.classList.remove('current'));
+    currentLineEl = box.children[current - 1] || null;
+    currentLineEl?.classList.add('current');
   }
-  
-  dom.lineNumbers.innerHTML = lineNumberHtml;
-  
-  // Синхронизируем прокрутку нумерации строк с редактором
-  dom.lineNumbers.scrollTop = scrollTop;
+  box.scrollTop = scrollTop;
 }
+
+// Files this long are highlighted only around the visible lines (the rest of the overlay is blank lines of the same height),
+// otherwise every key press re-colours the whole file and typing lags.
+const WINDOW_FROM_LINES = 1500;
+const WINDOW_MARGIN = 80;
+let hlWindow = null; // { first, last } of the lines currently coloured, or null when the whole file is
 
 export function updateSyntaxHighlight() {
   const syntaxEl = document.getElementById('syntax-highlight');
   if (!syntaxEl || !dom.editor || !window.SyntaxHighlight) return;
 
   const fileName = state.activeTabIndex >= 0 ? state.currentTabs[state.activeTabIndex]?.name : '';
-  syntaxEl.innerHTML = window.SyntaxHighlight.highlight(dom.editor.value || '', fileName);
+  const text = dom.editor.value || '';
+  let lineCount = 1;
+  for (let i = text.indexOf('\n'); i >= 0; i = text.indexOf('\n', i + 1)) lineCount++;
+  hlWindow = null;
+  if (lineCount > WINDOW_FROM_LINES && !dom.editor.classList.contains('word-wrap')) {
+    const lh = parseFloat(getComputedStyle(dom.editor).lineHeight) || 22;
+    const first = Math.max(0, Math.floor(dom.editor.scrollTop / lh) - WINDOW_MARGIN);
+    const last = Math.min(lineCount, Math.ceil((dom.editor.scrollTop + dom.editor.clientHeight) / lh) + WINDOW_MARGIN);
+    let from = 0;
+    for (let n = 0; n < first; n++) from = text.indexOf('\n', from) + 1;
+    let to = from;
+    for (let n = first; n < last && to >= 0; n++) { to = text.indexOf('\n', to); if (to >= 0) to++; }
+    const slice = text.slice(from, to < 0 ? text.length : to);
+    syntaxEl.innerHTML = '\n'.repeat(first) + window.SyntaxHighlight.highlight(slice, fileName);
+    hlWindow = { first, last };
+  } else {
+    syntaxEl.innerHTML = window.SyntaxHighlight.highlight(text, fileName);
+  }
   syncSyntaxScroll();
   window.dispatchEvent(new Event('frogee:content'));
 }
 
+let rewindowFrame = 0;
 export function syncSyntaxScroll() {
   const syntaxEl = document.getElementById('syntax-highlight');
   if (!syntaxEl || !dom.editor) return;
   syntaxEl.scrollTop = dom.editor.scrollTop;
   syntaxEl.scrollLeft = dom.editor.scrollLeft;
+  if (hlWindow && !rewindowFrame) {
+    // Scrolled close to the edge of the coloured part: move the window.
+    const lh = parseFloat(getComputedStyle(dom.editor).lineHeight) || 22;
+    const top = Math.floor(dom.editor.scrollTop / lh);
+    const bottom = Math.ceil((dom.editor.scrollTop + dom.editor.clientHeight) / lh);
+    if ((top < hlWindow.first + 15 && hlWindow.first > 0) || bottom > hlWindow.last - 15) {
+      rewindowFrame = requestAnimationFrame(() => { rewindowFrame = 0; updateSyntaxHighlight(); });
+    }
+  }
 }
 
 // Для обратной совместимости

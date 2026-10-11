@@ -69,6 +69,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMenuCommand: (cb) => ipcRenderer.on('menu-command', (_e, id) => cb(id)),
   pickContextFiles: () => ipcRenderer.invoke('pick-context-files'),
   readContextFile: (file) => ipcRenderer.invoke('read-context-file', file),
+  aiComplete: (job) => ipcRenderer.invoke('ai-complete', job),
+  aiCompleteCancel: (id) => ipcRenderer.invoke('ai-complete-cancel', id),
   customModels: (opts) => ipcRenderer.invoke('custom-models', opts),
   diagnose: (payload) => ipcRenderer.invoke('diagnose', payload),
   ollamaStatus: () => ipcRenderer.invoke('ollama-status'),
