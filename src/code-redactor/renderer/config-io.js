@@ -142,6 +142,8 @@ export async function initializeApp() {
     applyThemeClass(dom.themeSelect ? dom.themeSelect.value : 'dark');
     applyGlass();
 
+    // Extra windows start empty and never write the shared config: they would overwrite the first window's tabs.
+    if (window.electronAPI?.isSecondaryWindow) config.editorTabs = [];
     if (config.editorTabs && Array.isArray(config.editorTabs) && config.editorTabs.length > 0) {
       if (config.editorTabs.length > 40) {
         console.warn('Повреждённый editorTabs в конфиге:', config.editorTabs.length, '— сбрасываем');
@@ -194,6 +196,7 @@ export async function initializeApp() {
 }
 
 export async function saveAllConfig() {
+  if (window.electronAPI?.isSecondaryWindow) return;
   try {
     const config = {
       designVersion: DESIGN_VERSION,

@@ -3,7 +3,7 @@ const path = require('path');
 const axios = require('axios');
 
 const { loadConfig, setOpenRouterApiKey } = require('./lib/config');
-const { killTerminalProcess, registerTerminalIpc } = require('./lib/terminal');
+const { killTerminalProcess, killSessionsOf, registerTerminalIpc } = require('./lib/terminal');
 const { registerGitIpc } = require('./lib/git');
 const { registerFileIpc } = require('./lib/ipc-files');
 const { registerAiIpc } = require('./lib/ipc-ai');
@@ -19,10 +19,14 @@ const { registerSearchIpc } = require('./lib/search');
 const { registerGitignoreIpc } = require('./lib/gitignore');
 const { registerContextFilesIpc } = require('./lib/context-files');
 
-let mainWindow = null;
+// Any number of windows. Code that needs "the" window (dialogs, menu commands) gets the one in front.
+const windows = new Set();
 
 function getMainWindow() {
-  return mainWindow;
+  const front = BrowserWindow.getFocusedWindow();
+  if (front && !front.isDestroyed()) return front;
+  const all = [...windows].filter((w) => !w.isDestroyed());
+  return all.length ? all[all.length - 1] : null;
 }
 
 async function checkOllamaRunning() {
@@ -43,17 +47,18 @@ const windowColor = () => (nativeTheme.shouldUseDarkColors ? '#17181a' : '#e8ebf
 // The native blur follows the system appearance, so keep it in step with the app theme.
 ipcMain.on('set-native-theme', (event, theme) => {
   nativeTheme.themeSource = theme === 'light' ? 'light' : 'dark';
-  if (!nativeBlur && mainWindow && !mainWindow.isDestroyed()) mainWindow.setBackgroundColor(windowColor());
+  if (!nativeBlur) for (const w of windows) if (!w.isDestroyed()) w.setBackgroundColor(windowColor());
 });
 
 /** Menu entries just tell the renderer which command to run; shortcuts are shown but handled by the page itself. */
 function buildMacMenu() {
-  const send = (id) => () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('menu-command', id); };
+  const send = (id) => () => { const w = getMainWindow(); if (w) w.webContents.send('menu-command', id); };
   const item = (label, id, accelerator) => ({ label, click: send(id), ...(accelerator ? { accelerator, registerAccelerator: false } : {}) });
   const sep = { type: 'separator' };
   return Menu.buildFromTemplate([
     { label: app.getName(), submenu: [{ role: 'about', label: 'О программе ' + app.getName() }, sep, item('Настройки…', 'settings', 'Cmd+,'), sep, { role: 'hide', label: 'Скрыть' }, { role: 'hideOthers', label: 'Скрыть остальные' }, { role: 'unhide', label: 'Показать все' }, sep, { role: 'quit', label: 'Выйти' }] },
     { label: 'Файл', submenu: [
+      { label: 'Новое окно', click: () => createWindow(true), accelerator: 'Shift+Cmd+N', registerAccelerator: false },
       item('Новый файл', 'new-file', 'Cmd+N'), item('Новый ноутбук', 'new-notebook'), sep,
       item('Открыть файл или папку…', 'open', 'Cmd+O'), item('Открыть папку проекта…', 'open-folder'), item('Быстрое открытие…', 'quick-open', 'Cmd+P'), sep,
       item('Сохранить', 'save', 'Cmd+S'), item('Сохранить как…', 'save-as', 'Shift+Cmd+S'), item('Автосохранение', 'autosave'), sep,
@@ -81,8 +86,11 @@ function buildMacMenu() {
   ]);
 }
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
+function createWindow(secondary = false) {
+  // Further windows are cascaded so they do not hide each other.
+  const position = secondary ? (() => { const f = getMainWindow(); const [x, y] = f ? f.getPosition() : [80, 80]; return { x: x + 28, y: y + 28 }; })() : {};
+  const win = new BrowserWindow({
+    ...position,
     width: 1200,
     height: 800,
     minWidth: 800,
@@ -92,7 +100,7 @@ function createWindow() {
     backgroundColor: nativeBlur ? '#00000000' : windowColor(),
     ...(nativeBlur ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
     webPreferences: {
-      additionalArguments: [`--frogee-native-blur=${nativeBlur ? 1 : 0}`],
+      additionalArguments: [`--frogee-native-blur=${nativeBlur ? 1 : 0}`, `--frogee-secondary=${secondary ? 1 : 0}`],
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
@@ -101,12 +109,12 @@ function createWindow() {
   });
 
   // The IDE shell may only navigate within itself; external links open in the system browser.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
 
-  mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+  win.webContents.on('will-attach-webview', (event, webPreferences, params) => {
     delete webPreferences.preload;
     delete webPreferences.preloadURL;
     webPreferences.nodeIntegration = false;
@@ -118,10 +126,10 @@ function createWindow() {
   });
 
   // Pages that try to open a window become a new browser tab inside the IDE.
-  mainWindow.webContents.on('did-attach-webview', (event, contents) => {
+  win.webContents.on('did-attach-webview', (event, contents) => {
     contents.setWindowOpenHandler(({ url }) => {
-      if (/^https?:/i.test(url) && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('browser-new-tab', { url });
+      if (/^https?:/i.test(url) && !win.isDestroyed()) {
+        win.webContents.send('browser-new-tab', { url });
       }
       return { action: 'deny' };
     });
@@ -129,8 +137,14 @@ function createWindow() {
 
   // macOS gets the native menu bar at the top of the screen; Windows and Linux use the system window frame without a menu.
   Menu.setApplicationMenu(process.platform === 'darwin' ? buildMacMenu() : null);
-  mainWindow.loadFile('index.html');
+  windows.add(win);
+  win.on('close', () => killSessionsOf(win.webContents));
+  win.on('closed', () => windows.delete(win));
+  win.loadFile('index.html');
+  return win;
 }
+
+ipcMain.handle('new-window', () => { createWindow(true); return true; });
 
 function registerCoreIpc() {
   try {
@@ -170,7 +184,7 @@ app.setAboutPanelOptions({
 });
 
 app.whenReady().then(async () => {
-  if (process.platform === 'darwin') { try { app.dock.setIcon(path.join(__dirname, 'images', 'icon.png')); } catch {} }
+  if (process.platform === 'darwin') { try { app.dock.setIcon(path.join(__dirname, 'build', 'icon.png')); } catch {} }
   registerAllIpc();
 
   const ollamaRunning = await checkOllamaRunning();

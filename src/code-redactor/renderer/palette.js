@@ -227,6 +227,7 @@ function buildCommands() {
     cmd('Markdown: предпросмотр', () => toggleMarkdownPreview(), 'Ctrl+Shift+V'),
     cmd('Markdown: вставить таблицу', insertTable),
     cmd('Markdown: выровнять таблицу', formatTable),
+    cmd('Окно: новое окно', () => window.electronAPI?.newWindow?.(), 'Ctrl+Shift+N'),
     cmd('Проблемы: список ошибок файла…', openProblems),
     cmd('Проблемы: следующая ошибка', () => goToProblem(1), 'F8'),
     cmd('Правка: переименовать слово во всём файле…', renameWord, 'Shift+F6'),

@@ -410,6 +410,11 @@ export function setupSettingsTabs() {
 
 export function handleGlobalKeydown(e) {
   const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+    e.preventDefault();
+    window.electronAPI?.newWindow?.();
+    return;
+  }
   if (mod && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
     e.preventDefault();
     openCommandPalette();

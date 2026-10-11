@@ -86,6 +86,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   bionicOpen: (folder) => ipcRenderer.invoke('bionic-open', folder),
   platform: process.platform,
   nativeBlur: process.argv.includes('--frogee-native-blur=1'),
+  isSecondaryWindow: process.argv.includes('--frogee-secondary=1'),
+  newWindow: () => ipcRenderer.invoke('new-window'),
   versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
   setNativeTheme: (theme) => ipcRenderer.send('set-native-theme', theme),
   listProjectFiles: (root) => ipcRenderer.invoke('list-project-files', root),

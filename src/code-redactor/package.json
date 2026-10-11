@@ -52,7 +52,7 @@
         "zip"
       ],
       "category": "public.app-category.developer-tools",
-      "icon": "images/icon.png"
+      "icon": "build/icon.icns"
     },
     "win": {
       "target": [
