@@ -143,7 +143,7 @@ async function replaceAll() {
   for (const tab of state.currentTabs) {
     if (!tab.filePath || tab.modified || !files.some((f) => f.fullPath === tab.filePath)) continue;
     const fresh = await window.electronAPI.getFileContent(tab.filePath);
-    if (!fresh.success) continue;
+    if (!fresh.success || fresh.content == null) continue;
     tab.content = fresh.content;
     if (state.currentTabs[state.activeTabIndex] === tab && dom.editor) { dom.editor.value = fresh.content; dom.editor.dispatchEvent(new Event('input', { bubbles: true })); }
   }

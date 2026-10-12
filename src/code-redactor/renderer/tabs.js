@@ -19,7 +19,8 @@ import {
   saveTabs,
   openFileOrFolder,
 } from './editor-api.js';
-import { isTerminalTab, findTerminalTabIndex, isNotebookTab, isNotebookPath, isBrowserTab, isEditorTab, isPreviewTab } from './tab-model.js';
+import { isTerminalTab, findTerminalTabIndex, isNotebookTab, isNotebookPath, isBrowserTab, isEditorTab, isPreviewTab, isImageTab } from './tab-model.js';
+import { isImagePath, isBinaryPath, createImageTab, applyImageSurface, renderImage, toast } from './image-view.js';
 import { renderPreview } from './markdown.js';
 import { applyBrowserSurface, renderBrowser, destroyBrowser, createBrowserTab } from './browser.js';
 import { registerTabsApi } from './tabs-api.js';
@@ -140,6 +141,21 @@ export function restoreTab(name, content = '', filePath = null, kind = 'file') {
 }
 
 export function createTab(name, content = '', filePath = null) {
+  // Pictures get a viewer; binary files (wheels, archives, executables…) are never shown as text.
+  if (filePath && isImagePath(filePath)) {
+    const at = state.currentTabs.findIndex((t) => isImageTab(t) && t.filePath === filePath);
+    if (at >= 0) { hideWelcomePage(); showTab(at); return; }
+    state.currentTabs.push(createImageTab(name || filePath.split(/[\\/]/).pop(), filePath));
+    hideWelcomePage();
+    showTab(state.currentTabs.length - 1);
+    return;
+  }
+  if (content === null || (filePath && isBinaryPath(filePath))) {
+    const shown = name || (filePath || '').split(/[\\/]/).pop();
+    const ext = (/\.([A-Za-z0-9]+)$/.exec(shown) || [])[1];
+    toast(isBinaryPath(shown) ? `«${shown}» — бинарный файл${ext ? ` (.${ext})` : ''}, в редакторе он не открывается` : `«${shown}» не открыт: файл бинарный или слишком большой`);
+    return;
+  }
   if (filePath) {
     const existing = state.currentTabs.findIndex(
       (t) => t && t.kind !== 'terminal' && t.filePath && t.filePath === filePath
@@ -197,6 +213,22 @@ export function switchToTab(index) {
   const tab = state.currentTabs[index];
   if (!tab) return;
   if (isPreviewTab(tab)) { openTabInSplit(index); return; }
+  if (!isImageTab(tab)) applyImageSurface(false);
+  if (isImageTab(tab)) {
+    // A picture takes the whole editor area.
+    if (state.splitView) setSplitView(false);
+    state.activeTabIndex = index;
+    applyNotebookSurface(false);
+    applyBrowserSurface(false);
+    if (state.terminalInEditor) { state.terminalInEditor = false; applyTerminalPlacement(); }
+    hideWelcomePage();
+    applyImageSurface(true);
+    renderImage(tab);
+    updateTabsList();
+    updateTabTitle();
+    updateStatusBar();
+    return;
+  }
 
   // Сохраняем содержимое текущей файловой вкладки
   if (state.activeTabIndex >= 0 && state.activeTabIndex < state.currentTabs.length) {
@@ -638,7 +670,7 @@ export function openTabInSplit(index) {
     updateTabsList();
     return;
   }
-  if (isNotebookTab(tab)) {
+  if (isNotebookTab(tab) || isImageTab(tab)) {
     switchToTab(index);
     return;
   }

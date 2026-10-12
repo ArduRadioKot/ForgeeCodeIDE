@@ -303,6 +303,15 @@ export function updateFileExplorer() {
   const children = state.folderChildrenCache.get(state.currentFolder) || state.fileExplorerItems || [];
   renderExplorerChildren(fileExplorer, children, 1);
 
+  // Dropping on the project name or on the empty part of the tree moves into the project's top folder.
+  const toRoot = (ev) => { if (!canDropOn(state.currentFolder)) return false; ev.preventDefault(); ev.dataTransfer.dropEffect = 'move'; return true; };
+  rootHeader.addEventListener('dragover', (ev) => { if (toRoot(ev)) markDrop(rootHeader); });
+  rootHeader.addEventListener('dragleave', (ev) => { if (!rootHeader.contains(ev.relatedTarget)) rootHeader.classList.remove('drop-target'); });
+  rootHeader.addEventListener('drop', (ev) => { ev.preventDefault(); finishDrop(state.currentFolder); });
+  fileExplorer.ondragover = (ev) => { if (!ev.target.closest('.file-item') && !ev.target.closest('.explorer-root') && toRoot(ev)) markDrop(fileExplorer); };
+  fileExplorer.ondragleave = (ev) => { if (!fileExplorer.contains(ev.relatedTarget)) fileExplorer.classList.remove('drop-target'); };
+  fileExplorer.ondrop = (ev) => { if (ev.target.closest('.file-item') || ev.target.closest('.explorer-root')) return; ev.preventDefault(); finishDrop(state.currentFolder); };
+
   fileExplorer.onclick = null;
   fileExplorer.oncontextmenu = (e) => {
     if (!e.target.closest('.file-item') && !e.target.closest('.explorer-root') && state.currentFolder) {
@@ -310,6 +319,58 @@ export function updateFileExplorer() {
       showContextMenuForFolder(e, state.currentFolder);
     }
   };
+}
+
+// ───────── drag and drop (move into a folder) ─────────
+
+let dragged = null; // { path, isDirectory } of what is being dragged
+let dropRow = null;
+let springTimer = 0;
+const sameOrInside = (child, parent) => { const c = child.replace(/\\/g, '/'); const p = parent.replace(/\\/g, '/'); return c === p || c.startsWith(p.endsWith('/') ? p : p + '/'); };
+
+function canDropOn(destDir) {
+  if (!dragged) return false;
+  if (sameOrInside(destDir, dragged.path)) return false; // into itself or its own subfolder
+  return pathUtils.dirname(dragged.path).replace(/\\/g, '/') !== destDir.replace(/\\/g, '/'); // already there
+}
+
+function markDrop(el) {
+  if (dropRow && dropRow !== el) dropRow.classList.remove('drop-target');
+  dropRow = el;
+  el.classList.add('drop-target');
+}
+
+function clearDropMarks() {
+  clearTimeout(springTimer);
+  springTimer = 0;
+  dropRow = null;
+  document.querySelectorAll('.drop-target').forEach((el) => el.classList.remove('drop-target'));
+}
+
+async function finishDrop(destDir) {
+  const item = dragged;
+  clearDropMarks();
+  dragged = null;
+  if (item) await moveItem(item.path, destDir);
+}
+
+/** Move a file or folder into `destDir` and bring the open tabs, the tree and the selection along. */
+export async function moveItem(srcPath, destDir) {
+  const res = await window.electronAPI.movePath(srcPath, destDir);
+  if (!res?.success) {
+    if (!res?.noop) alert(`Не удалось переместить: ${res?.error || 'неизвестная ошибка'}`);
+    return false;
+  }
+  const rebase = (p) => (p && sameOrInside(p, srcPath) ? res.newPath + p.slice(srcPath.length) : p);
+  for (const tab of state.currentTabs) if (tab.filePath) tab.filePath = rebase(tab.filePath);
+  state.expandedFolders = new Set([...state.expandedFolders].map(rebase));
+  if (state.selectedExplorerPath) state.selectedExplorerPath = rebase(state.selectedExplorerPath);
+  state.expandedFolders.add(destDir);
+  for (const key of [...state.folderChildrenCache.keys()]) if (sameOrInside(key, srcPath)) state.folderChildrenCache.delete(key);
+  await refreshExplorerTree();
+  updateTabsList();
+  updateTabTitle();
+  return true;
 }
 
 export function renderExplorerChildren(container, items, depth) {
@@ -322,9 +383,28 @@ export function renderExplorerChildren(container, items, depth) {
     row.className = 'file-item' + (state.selectedExplorerPath === item.path ? ' selected' : '') + (item.ignored ? ' ignored' : '');
     if (item.ignored) row.title = 'Игнорируется Git (.gitignore)';
     row.dataset.path = item.path;
-    if (!isDir) {
-      row.draggable = true;
-      row.addEventListener('dragstart', (ev) => { ev.dataTransfer.setData('application/x-frogee-path', item.path); ev.dataTransfer.setData('text/plain', item.path); ev.dataTransfer.effectAllowed = 'copy'; });
+    // Files and folders can be dragged onto a folder to move them; a file dropped on the chat becomes its context.
+    row.draggable = true;
+    row.addEventListener('dragstart', (ev) => {
+      dragged = { path: item.path, isDirectory: isDir };
+      ev.dataTransfer.setData('application/x-frogee-move', item.path);
+      if (!isDir) { ev.dataTransfer.setData('application/x-frogee-path', item.path); ev.dataTransfer.setData('text/plain', item.path); }
+      ev.dataTransfer.effectAllowed = 'copyMove';
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', () => { dragged = null; clearDropMarks(); row.classList.remove('dragging'); });
+    if (isDir) {
+      row.addEventListener('dragover', (ev) => {
+        if (!canDropOn(item.path)) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.dataTransfer.dropEffect = 'move';
+        markDrop(row);
+        // a closed folder opens when the drag rests on it
+        if (!state.expandedFolders.has(item.path) && !springTimer) springTimer = setTimeout(() => { springTimer = 0; if (dropRow === row) toggleFolderExpand(item.path); }, 700);
+      });
+      row.addEventListener('dragleave', (ev) => { if (!row.contains(ev.relatedTarget)) { row.classList.remove('drop-target'); if (dropRow === row) dropRow = null; clearTimeout(springTimer); springTimer = 0; } });
+      row.addEventListener('drop', (ev) => { ev.preventDefault(); ev.stopPropagation(); finishDrop(item.path); });
     }
     row.dataset.isDirectory = String(isDir);
     row.style.setProperty('--tree-depth', String(depth));

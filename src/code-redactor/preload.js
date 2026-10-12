@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   createFileInFolder: (folderPath, fileName) => ipcRenderer.invoke('create-file-in-folder', folderPath, fileName),
   createFolderInFolder: (parentPath, folderName) => ipcRenderer.invoke('create-folder-in-folder', parentPath, folderName),
+  movePath: (src, destDir) => ipcRenderer.invoke('move-path', src, destDir),
   renameFile: (oldPath, newName) => ipcRenderer.invoke('rename-file', oldPath, newName),
   deleteFile: (filePath) => ipcRenderer.invoke('delete-file', filePath),
   copyFile: (sourcePath, destinationPath) => ipcRenderer.invoke('copy-file', sourcePath, destinationPath),

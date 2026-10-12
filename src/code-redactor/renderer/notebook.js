@@ -210,22 +210,19 @@ function workspaceForTab(tab) {
   return state.currentFolder || null;
 }
 
-async function loadPythonEnvs(workspace) {
-  const key = workspace || '__global__';
-  if (cachedEnvsByWorkspace.has(key)) {
-    return cachedEnvsByWorkspace.get(key);
-  }
+/** Interpreters for this notebook: next to the file, up the folder tree, below the project, in the usual places. `saved` is the one stored in the file. */
+async function loadPythonEnvs(workspace, saved) {
+  const project = state.currentFolder || null;
+  const key = `${workspace || ''}|${project || ''}|${saved || ''}`;
+  if (cachedEnvsByWorkspace.has(key)) return cachedEnvsByWorkspace.get(key);
   let envs = [];
   try {
     const api = window.electronAPI.listPythonEnvs || window.electronAPI.listKernels;
-    const res = await api(workspace || null);
-    if (res?.success) {
-      envs = res.environments || res.kernels || [];
-    }
+    const res = await api({ workspace: workspace || project, project, extra: saved ? [saved] : [] });
+    if (res?.success) envs = res.environments || res.kernels || [];
   } catch (err) {
     console.warn('[notebook] listPythonEnvs:', err);
   }
-  // Normalize shape
   envs = (envs || []).map((e) => ({
     id: e.id || e.pythonPath || e.name,
     name: e.name || e.id,
@@ -237,7 +234,8 @@ async function loadPythonEnvs(workspace) {
     version: e.version || '',
     preferred: !!e.preferred
   }));
-  cachedEnvsByWorkspace.set(key, envs);
+  // Only a real result is remembered: an empty list is most likely a failure and must not stick.
+  if (envs.length) cachedEnvsByWorkspace.set(key, envs);
   return envs;
 }
 
@@ -1139,8 +1137,8 @@ export async function renderNotebook(tab) {
   const sess = session(tab);
   ensureKernelListener();
   const workspace = workspaceForTab(tab);
-  const envs = await loadPythonEnvs(workspace);
   const current = getSelectedKernel(nb);
+  const envs = await loadPythonEnvs(workspace, current.pythonPath);
 
   const matchCurrent = envs.find((e) => e.pythonPath === current.pythonPath || e.id === current.name || e.pythonPath === current.name);
   if (!matchCurrent && envs.length) setSelectedKernel(nb, envs.find((e) => e.preferred) || envs[0]);

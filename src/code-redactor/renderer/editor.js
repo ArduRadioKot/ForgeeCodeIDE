@@ -371,6 +371,8 @@ export function updateStatusBar() {
 
     if (state.activeTabIndex >= 0 && isNotebookTab(state.currentTabs[state.activeTabIndex])) {
       dom.statusLang.textContent = 'Jupyter Notebook';
+    } else if (state.currentTabs[state.activeTabIndex]?.kind === 'image') {
+      dom.statusLang.textContent = 'Изображение';
     } else {
       dom.statusLang.textContent = window.SyntaxHighlight ? window.SyntaxHighlight.label(lang) : lang.toUpperCase();
     }

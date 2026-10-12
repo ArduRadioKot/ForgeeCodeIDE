@@ -7,6 +7,7 @@ const FILL = 'fill="currentColor" stroke="none"';
 
 const SHAPES = {
   close: `<g ${STROKE}><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></g>`,
+  minus: `<g ${STROKE}><path d="M3 8h10"/></g>`,
   plus: `<g ${STROKE}><path d="M8 3v10M3 8h10"/></g>`,
   check: `<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter"><path d="M3 8.5l3.2 3.2L13 5"/></g>`,
   up: `<path ${FILL} d="M8 3l5.5 8h-11z"/>`,

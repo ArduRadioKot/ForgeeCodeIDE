@@ -1,6 +1,7 @@
 const { ipcMain, dialog } = require('electron');
 const path = require('path');
 const { markIgnored } = require('./gitignore');
+const { readForEditor } = require('./file-kind');
 const fs = require('fs').promises;
 
 function safeRemoveHandler(channel) {
@@ -51,6 +52,7 @@ const FILE_CHANNELS = [
   'create-file-in-folder',
   'create-folder-in-folder',
   'rename-file',
+  'move-path',
   'delete-file',
   'search-in-files',
   'copy-file',
@@ -81,8 +83,8 @@ function registerFileIpc(getMainWindow) {
 
       if (!result.canceled && result.filePaths.length > 0) {
         const filePath = result.filePaths[0];
-        const content = await fs.readFile(filePath, 'utf8');
-        return { success: true, filePath, content };
+        const { content, kind } = await readForEditor(filePath);
+        return { success: true, filePath, content, kind };
       }
       return { success: false, error: 'No file selected' };
     } catch (error) {
@@ -126,8 +128,8 @@ function registerFileIpc(getMainWindow) {
         if (stats.isDirectory()) {
           return { success: true, isDirectory: true, path: selectedPath };
         }
-        const content = await fs.readFile(selectedPath, 'utf8');
-        return { success: true, isDirectory: false, filePath: selectedPath, content };
+        const { content, kind } = await readForEditor(selectedPath);
+        return { success: true, isDirectory: false, filePath: selectedPath, content, kind };
       }
       return { success: false, error: 'No file or folder selected' };
     } catch (error) {
@@ -151,8 +153,8 @@ function registerFileIpc(getMainWindow) {
 
   ipcMain.handle('get-file-content', async (event, filePath) => {
     try {
-      const content = await fs.readFile(filePath, 'utf8');
-      return { success: true, content };
+      const { content, kind } = await readForEditor(filePath);
+      return { success: true, content, kind };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -183,6 +185,34 @@ function registerFileIpc(getMainWindow) {
         await fs.mkdir(folderPath, { recursive: true });
         return { success: true, folderPath };
       }
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Drag and drop in the explorer: move a file or folder into another folder.
+  ipcMain.handle('move-path', async (event, src, destDir) => {
+    try {
+      const from = path.resolve(String(src || ''));
+      const dir = path.resolve(String(destDir || ''));
+      const fromStat = await fs.stat(from).catch(() => null);
+      if (!fromStat) return { success: false, error: 'Исходный файл не найден' };
+      const dirStat = await fs.stat(dir).catch(() => null);
+      if (!dirStat || !dirStat.isDirectory()) return { success: false, error: 'Папка назначения не найдена' };
+      if (path.dirname(from) === dir) return { success: false, noop: true, error: 'Уже в этой папке' };
+      const rel = path.relative(from, dir);
+      if (rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel))) return { success: false, error: 'Нельзя переместить папку в саму себя' };
+      const target = path.join(dir, path.basename(from));
+      if (await fs.access(target).then(() => true, () => false)) return { success: false, error: `В папке «${path.basename(dir)}» уже есть «${path.basename(from)}»` };
+      try {
+        await fs.rename(from, target);
+      } catch (err) {
+        if (err.code !== 'EXDEV') throw err;
+        // another disk: copy, then remove the original
+        await fs.cp(from, target, { recursive: true, errorOnExist: true });
+        await fs.rm(from, { recursive: true, force: true });
+      }
+      return { success: true, newPath: target };
     } catch (error) {
       return { success: false, error: error.message };
     }
