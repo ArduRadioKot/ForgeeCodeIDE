@@ -441,6 +441,7 @@ function registerFileIpc(getMainWindow) {
       if (!filePath || typeof filePath !== 'string') {
         return { success: false, error: 'Не указан путь файла' };
       }
+      await fs.mkdir(path.dirname(filePath), { recursive: true }); // folder may have been removed outside the editor
       await fs.writeFile(filePath, content ?? '', 'utf8');
       return { success: true, filePath };
     } catch (error) {

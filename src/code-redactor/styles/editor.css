@@ -113,10 +113,10 @@ body.is-dragging-tab .split-drop-zone, .split-drop-zone.active { display: flex; 
 .split-drop-zone.active { background: color-mix(in srgb, var(--accent-color) 22%, transparent); }
 
 /* Find bar: floating strip inside the editor island */
-.find-bar { display: none; align-items: center; gap: 4px; padding: 6px 8px; margin: 8px 12px 0; align-self: flex-end; z-index: 5; background: var(--header-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: 0 8px 24px var(--shadow-color); }
-.find-input { width: 220px; height: var(--ctl-h-sm); padding: 0 8px; font-size: 13px; }
+.find-bar { box-sizing: border-box; max-width: calc(100% - 24px); flex-wrap: wrap; display: none; align-items: center; gap: 4px; padding: 6px 8px; margin: 8px 12px 0; align-self: flex-end; z-index: 5; background: var(--header-bg); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: 0 8px 24px var(--shadow-color); }
+.find-input { flex: 1 1 150px; width: auto; min-width: 110px; height: var(--ctl-h-sm); padding: 0 8px; font-size: 13px; }
 .find-count { min-width: 44px; text-align: center; color: var(--text-muted); font-size: 12px; }
-.replace-input { width: 160px; }
+.replace-input { flex: 1 1 110px; width: auto; min-width: 90px; }
 .find-text-btn { height: 26px; padding: 0 8px; border-radius: var(--radius-md); color: var(--text-muted); font-size: 12px; }
 .find-text-btn:hover { background: var(--hover-color); color: var(--text-color); }
 .run-file-btn { color: var(--text-muted); }
@@ -245,3 +245,20 @@ body.is-dragging-tab .split-drop-zone, .split-drop-zone.active { display: flex; 
 .ghost-hint { padding: 4px 12px; border-top: 1px solid var(--border-color); color: var(--text-faint); font-size: 11px; }
 .status-complete { color: var(--link-color); }
 .status-complete[hidden] { display: none; }
+
+/* Search in file: matches are painted in their own layer, so the search field keeps the keyboard */
+.find-layer { z-index: 1; color: transparent; }
+.find-layer .fm { color: transparent; background: color-mix(in srgb, var(--accent-color) 26%, transparent); border-radius: 2px; }
+.find-layer .fm.cur { background: color-mix(in srgb, var(--accent-color) 55%, transparent); box-shadow: 0 0 0 1px var(--accent-color); }
+
+/* Selection painted by renderer/selection-layer.js; the native highlight is hidden while it is in use */
+.sel-layer { z-index: 1; color: transparent; --sel-solid: color-mix(in srgb, var(--accent-color) 36%, var(--editor-bg, #1a1d23)); --sel-gap: 0px; }
+:root[data-theme="light"] .sel-layer, body.light-theme .sel-layer { --sel-solid: color-mix(in srgb, var(--accent-color) 26%, var(--editor-bg, #fff)); }
+.sel-layer.inactive { --sel-solid: color-mix(in srgb, var(--text-muted) 26%, var(--editor-bg, #1a1d23)); }
+.sel-layer .sl { color: transparent; background: var(--sel-solid); border-radius: 2px; box-shadow: 0 var(--sel-gap) 0 var(--sel-solid), 0 calc(-1 * var(--sel-gap)) 0 var(--sel-solid); }
+.sel-layer .sl i { font-style: normal; }
+.code-editor-wrap.custom-sel #editor::selection { background: transparent; }
+
+/* Every overlay layer wraps exactly like the text when "word wrap" is on (it was only the colour layer before) */
+.code-editor-wrap:has(#editor.word-wrap) > .syntax-highlight,
+.code-editor-wrap:has(#editor-right.word-wrap) > .syntax-highlight { white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }

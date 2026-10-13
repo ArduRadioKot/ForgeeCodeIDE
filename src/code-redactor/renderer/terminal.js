@@ -424,6 +424,18 @@ export function renderTerminalTabs() {
   });
 }
 
+/** A folder was opened: every terminal starts over in it (those already there, and run-configuration tabs, are left alone). */
+export async function onFolderChanged(folder) {
+  const cwd = folder || null;
+  for (const s of sessions) {
+    if (!s.started || s.cwd === cwd || [...keyed.values()].includes(s.id)) continue; // run configurations keep their own tab and process
+    s.xterm.reset();
+    s.started = false;
+    await startSession(s, true);
+    if (s.id === state.activeTerminalId && state.terminalVisible) { fitTerminal(); s.xterm.focus(); }
+  }
+}
+
 const keyed = new Map(); // run key -> session id: a run configuration keeps its own tab
 
 /** Run a command in a terminal tab of its own. The same key reuses the tab (it is interrupted first). */
@@ -506,6 +518,7 @@ async function startSession(s, restart = false) {
   }
   if (result && result.success) {
     s.started = true;
+    s.cwd = options.cwd || null;
     const shellName = (result.shell || '').split(/[\\/]/).pop() || 'shell';
     s.meta = `${shellName} · ${result.cwd || '~'}${result.pty ? '' : ' · fallback'}`;
     s.title = shellName === 'shell' ? s.title : s.title.replace(/^Терминал/, 'Терминал');

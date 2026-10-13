@@ -8,6 +8,7 @@ const { registerGitIpc } = require('./lib/git');
 const { registerFileIpc } = require('./lib/ipc-files');
 const { registerAiIpc } = require('./lib/ipc-ai');
 const { registerKernelIpc, killAllKernels } = require('./lib/kernel');
+const { registerFolderWatchIpc } = require('./lib/folder-watch');
 const { registerProjectFilesIpc } = require('./lib/project-files');
 const { registerLiveServerIpc, stopAllLiveServers } = require('./lib/liveserver');
 const { registerAgentsIpc, killAgents } = require('./lib/agents');
@@ -174,6 +175,7 @@ function registerAllIpc() {
   registerFileIpc(getMainWindow);
   registerAiIpc();
   registerKernelIpc(getMainWindow);
+  registerFolderWatchIpc();
   registerProjectFilesIpc();
   registerLiveServerIpc(getMainWindow);
   registerAgentsIpc(getMainWindow);

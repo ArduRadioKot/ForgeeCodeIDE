@@ -498,7 +498,7 @@ export function updateTabsList() {
     const isTerm = isTerminalTab(tab);
     const isNb = isNotebookTab(tab);
     const isBr = isBrowserTab(tab);
-    tabElement.className = `tab-item${isLeft ? ' active' : ''}${isRight ? ' split-active' : ''}${isTerm ? ' terminal-tab-item' : ''}${isNb ? ' notebook-tab-item' : ''}${isBr ? ' browser-tab-item' : ''}`;
+    tabElement.className = `tab-item${isLeft ? ' active' : ''}${isRight ? ' split-active' : ''}${isTerm ? ' terminal-tab-item' : ''}${isNb ? ' notebook-tab-item' : ''}${isBr ? ' browser-tab-item' : ''}${tab.missing ? ' tab-missing' : ''}`;
     tabElement.draggable = true;
     tabElement.dataset.index = String(index);
     tabElement.dataset.kind = isTerm ? 'terminal' : (isNb ? 'notebook' : (isBr ? 'browser' : 'file'));

@@ -2,8 +2,18 @@ const { ipcMain } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 
-const WORKER = path.join(__dirname, 'kernel_worker.py');
+/** Python cannot read a script from inside app.asar: use the unpacked copy, or write one to the temp folder. */
+function workerPath() {
+  const inside = path.join(__dirname, 'kernel_worker.py');
+  if (!/app\.asar([\\/]|$)/.test(inside)) return inside;
+  const unpacked = inside.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
+  if (fs.existsSync(unpacked)) return unpacked;
+  const copy = path.join(os.tmpdir(), 'frogee-kernel_worker.py');
+  fs.writeFileSync(copy, fs.readFileSync(inside));
+  return copy;
+}
 const kernels = new Map(); // kernelId -> { proc, pythonPath, cwd, current }
 
 function emit(getMainWindow, payload) {
@@ -30,7 +40,7 @@ function startKernel(getMainWindow, { id, pythonPath, cwd }) {
 
     let proc;
     try {
-      proc = spawn(pythonPath, ['-u', WORKER], {
+      proc = spawn(pythonPath, ['-u', workerPath()], {
         cwd: cwd || os.homedir(),
         env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8', MPLBACKEND: 'Agg' },
         stdio: ['pipe', 'pipe', 'pipe']
@@ -40,7 +50,7 @@ function startKernel(getMainWindow, { id, pythonPath, cwd }) {
       return;
     }
 
-    const k = { proc, pythonPath, cwd, current: null, ready: false, python: '', buffer: '' };
+    const k = { proc, pythonPath, cwd, current: null, ready: false, python: '', buffer: '', startErr: '' };
     kernels.set(id, k);
     let settled = false;
     const settle = (res) => { if (!settled) { settled = true; clearTimeout(timer); resolve(res); } };
@@ -66,12 +76,14 @@ function startKernel(getMainWindow, { id, pythonPath, cwd }) {
     });
     proc.stderr.setEncoding('utf8');
     proc.stderr.on('data', (text) => {
+      if (!k.ready) k.startErr = (k.startErr + text).slice(-1500);
       // Interpreter-level noise (warnings, C extensions) goes to the running cell as stderr.
       emit(getMainWindow, { kernelId: id, id: k.current, type: 'stream', name: 'stderr', text });
     });
     proc.on('error', (err) => settle({ success: false, error: err.message }));
     proc.on('exit', (code, signal) => {
-      settle({ success: false, error: `Kernel завершился (${signal || code})` });
+      const tail = k.startErr.trim().split('\n').slice(-3).join('\n');
+      settle({ success: false, error: `Kernel завершился (${signal || code})${tail ? `: ${tail}` : ''}` });
       if (kernels.get(id) === k) kernels.delete(id);
       if (!k.silent) emit(getMainWindow, { kernelId: id, type: 'dead', code, signal });
     });

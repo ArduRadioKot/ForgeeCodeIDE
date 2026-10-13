@@ -232,7 +232,8 @@ async function loadPythonEnvs(workspace, saved) {
     language: 'python',
     kind: e.kind || 'python',
     version: e.version || '',
-    preferred: !!e.preferred
+    preferred: !!e.preferred,
+    workspace: !!e.workspace
   }));
   // Only a real result is remembered: an empty list is most likely a failure and must not stick.
   if (envs.length) cachedEnvsByWorkspace.set(key, envs);
@@ -409,16 +410,37 @@ async function ensureKernel(tab) {
   ensureKernelListener();
   const sess = session(tab);
   if (sess.kernel.status === 'idle' || sess.kernel.status === 'busy') return { success: true };
+  // concurrent callers (run-all, several cells) share one start: a second kernelStart would kill the first process
+  if (sess.kernel.starting) return sess.kernel.starting;
+  sess.kernel.starting = startKernelOnce(tab).finally(() => { sess.kernel.starting = null; });
+  return sess.kernel.starting;
+}
+
+async function startKernelOnce(tab) {
+  const sess = session(tab);
   const nb = ensureNotebookModel(tab);
-  const kernel = getSelectedKernel(nb);
-  if (!kernel.pythonPath) return { success: false, error: 'Выберите Python / venv в списке ядер' };
   if (!window.electronAPI?.kernelStart) return { success: false, error: 'Ядро недоступно в этой сборке' };
-  setKernelStatus(tab, 'starting');
-  kernelTabs.set(kernelIdOf(tab), tab);
-  const res = await window.electronAPI.kernelStart({ id: kernelIdOf(tab), pythonPath: kernel.pythonPath, cwd: workspaceForTab(tab) || undefined });
+  const start = (pythonPath) => {
+    setKernelStatus(tab, 'starting');
+    kernelTabs.set(kernelIdOf(tab), tab);
+    return window.electronAPI.kernelStart({ id: kernelIdOf(tab), pythonPath, cwd: workspaceForTab(tab) || undefined });
+  };
+  let kernel = getSelectedKernel(nb);
+  let res = kernel.pythonPath ? await start(kernel.pythonPath) : null;
+  if (!res?.success) {
+    // nothing selected, or the saved interpreter is gone (deleted venv, other machine): fall back to the best one found
+    invalidatePythonEnvCache();
+    const envs = await loadPythonEnvs(workspaceForTab(tab), null);
+    const alt = envs.find((e) => e.pythonPath !== kernel.pythonPath && e.preferred) || envs.find((e) => e.pythonPath !== kernel.pythonPath);
+    if (alt) {
+      setSelectedKernel(nb, alt);
+      res = await start(alt.pythonPath);
+      if (res?.success) renderNotebook(tab);
+    }
+  }
   if (!res?.success) {
     setKernelStatus(tab, 'dead');
-    return { success: false, error: res?.error || 'Не удалось запустить ядро' };
+    return { success: false, error: res?.error || 'Выберите Python / venv в списке ядер' };
   }
   sess.kernel.python = res.python || '';
   setKernelStatus(tab, 'idle');
@@ -1129,6 +1151,48 @@ function openMenu(anchor, entries) {
   setTimeout(() => document.addEventListener('mousedown', onDoc, true), 0);
 }
 
+function shortPath(p, project) {
+  let out = String(p || '');
+  if (project && out.startsWith(project + '/')) return out.slice(project.length + 1);
+  return out.replace(/^\/(Users|home)\/[^/]+/, '~');
+}
+
+/** Interpreter picker: the project's own environments first, then the rest; the active one is ticked. */
+function openKernelPicker(anchor, envs, current, onPick) {
+  document.querySelectorAll('.nb-kernel-menu').forEach((m) => m.remove());
+  const menu = document.createElement('div');
+  menu.className = 'nb-menu nb-kernel-menu';
+  const groups = [
+    ['В проекте', envs.filter((e) => e.workspace)],
+    ['Окружения', envs.filter((e) => !e.workspace && e.kind !== 'system')],
+    ['Системные', envs.filter((e) => !e.workspace && e.kind === 'system')]
+  ].filter(([, list]) => list.length);
+  const flat = [];
+  menu.innerHTML = groups.map(([title, list]) => `<div class="nb-kernel-group">${title}</div>${list.map((e) => {
+    flat.push(e);
+    const on = e.pythonPath === current.pythonPath;
+    return `<button type="button" class="nb-kernel-item${on ? ' on' : ''}" data-i="${flat.length - 1}" title="${escapeHtml(e.pythonPath)}"><b>${escapeHtml(e.display_name)}</b><small>${escapeHtml(shortPath(e.pythonPath, state.currentFolder))}</small></button>`;
+  }).join('')}`).join('');
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  const w = Math.min(420, window.innerWidth - 16);
+  menu.style.width = `${w}px`;
+  menu.style.left = `${Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8))}px`;
+  menu.style.top = `${r.bottom + 4}px`;
+  menu.style.maxHeight = `${Math.max(160, window.innerHeight - r.bottom - 16)}px`;
+  const close = () => { menu.remove(); document.removeEventListener('mousedown', onDoc, true); document.removeEventListener('keydown', onKey, true); };
+  const onDoc = (ev) => { if (!menu.contains(ev.target) && !anchor.contains(ev.target)) close(); };
+  const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+  menu.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-i]');
+    if (!b) return;
+    close();
+    const env = flat[Number(b.dataset.i)];
+    if (env && env.pythonPath !== current.pythonPath) onPick(env);
+  });
+  setTimeout(() => { document.addEventListener('mousedown', onDoc, true); document.addEventListener('keydown', onKey, true); }, 0);
+}
+
 export async function renderNotebook(tab) {
   const host = getNotebookHost();
   if (!host || !tab) return;
@@ -1147,9 +1211,9 @@ export async function renderNotebook(tab) {
 
   const toolbar = document.createElement('div');
   toolbar.className = 'nb-toolbar';
-  const kernelOptions = !envs.length
-    ? `<option value="">${workspace ? 'Python не найден — создайте .venv в проекте' : 'Откройте папку проекта, чтобы выбрать venv'}</option>`
-    : envs.map((e) => `<option value="${escapeHtml(e.pythonPath)}" title="${escapeHtml(e.pythonPath)}"${e.pythonPath === selected.pythonPath || e.id === selected.name ? ' selected' : ''}>${escapeHtml(e.detail ? `${e.display_name} — ${e.detail}` : e.display_name)}</option>`).join('');
+  const pickLabel = !envs.length
+    ? (workspace ? 'Python не найден — создайте .venv в проекте' : 'Откройте папку проекта, чтобы выбрать venv')
+    : (selected.display_name || 'Выберите ядро');
 
   toolbar.innerHTML = `
     <div class="nb-toolbar-group">
@@ -1170,7 +1234,7 @@ export async function renderNotebook(tab) {
     <div class="nb-toolbar-spacer"></div>
     <div class="nb-kernel-badge" data-status="${sess.kernel.status}"><span class="nb-dot"></span><span class="nb-kernel-text"></span></div>
     <div class="nb-kernel-wrap">
-      <select class="nb-kernel-select" title="Python / venv"${envs.length ? '' : ' disabled'}>${kernelOptions}</select>
+      <button type="button" class="nb-kernel-pick" title="${escapeHtml(selected.pythonPath || 'Python / venv')}"${envs.length ? '' : ' disabled'}><span>${escapeHtml(pickLabel)}</span><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
       <button type="button" class="nb-btn nb-btn-icon" data-nb-action="refresh-envs" title="Обновить список интерпретаторов">${ICONS.restart}</button>
     </div>`;
   host.appendChild(toolbar);
@@ -1190,13 +1254,19 @@ export async function renderNotebook(tab) {
   rerenderCells(tab, { select: sess.selectedId });
   renderSidePanel(tab);
 
-  toolbar.querySelector('.nb-kernel-select').addEventListener('change', (ev) => {
-    const env = envs.find((x) => x.pythonPath === ev.target.value);
-    if (!env) return;
-    setSelectedKernel(nb, env);
-    shutdownNotebookKernel(tab);
-    setKernelStatus(tab, 'none');
-    markModified(tab, true);
+  toolbar.querySelector('.nb-kernel-pick').addEventListener('click', (ev) => {
+    openKernelPicker(ev.currentTarget, envs, getSelectedKernel(nb), (env) => {
+      setSelectedKernel(nb, env);
+      shutdownNotebookKernel(tab);
+      sess.kernel.starting = null;
+      failPending(tab, 'Ядро заменено');
+      sess.queue.forEach((c) => { c._state = null; paintCellState(tab, c); });
+      sess.queue = [];
+      sess.counter = 0;
+      setKernelStatus(tab, 'none');
+      markModified(tab, true);
+      renderNotebook(tab);
+    });
   });
 
   toolbar.addEventListener('click', async (ev) => {

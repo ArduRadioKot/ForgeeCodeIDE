@@ -18,6 +18,7 @@ import {
   showWelcomePage,
 } from './tabs.js';
 import { openFolder, switchActivity, registerSearchGlobals } from './explorer.js';
+import { setupExternalChanges } from './external-changes.js';
 import {
   toggleChat,
   clearChatHistory,
@@ -82,6 +83,7 @@ import { setupMarkdown } from './markdown.js';
 import { setupAiReview } from './ai-review.js';
 import { setupAutocomplete } from './autocomplete.js';
 import { setupCompletion } from './completion.js';
+import { setupSelectionLayer } from './selection-layer.js';
 import { hydrateIcons } from './glyphs.js';
 import { setupAutoIndentSetting } from './smart-edit.js';
 import { setupThemeControls } from './themes.js';
@@ -344,6 +346,7 @@ export function setupEventListeners() {
   setupFindBar();
   setupPaletteButtons();
   initAutoSave();
+  setupExternalChanges();
   setupBrowserEvents();
   setupLiveServer();
   setupAgents();
@@ -359,6 +362,7 @@ export function setupEventListeners() {
   import('./run-configs.js').then((m) => m.refreshRunButton());
   setupAutocomplete();
   setupCompletion();
+  setupSelectionLayer();
   setupAutoIndentSetting();
   setupThemeControls();
   setupActivityResizer();

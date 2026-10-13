@@ -26,6 +26,14 @@
 .nb-kernel-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 2px; flex: 1 1 160px; min-width: 0; }
 .nb-kernel-badge { flex-shrink: 0; }
 .nb-toolbar-group { flex-shrink: 0; }
+.nb-kernel-pick { display: inline-flex; align-items: center; gap: 6px; min-width: 100px; flex: 0 1 300px; max-width: 300px; height: var(--ctl-h-sm); padding: 0 10px; font-size: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--input-bg, transparent); color: inherit; cursor: pointer; }
+.nb-kernel-pick span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.nb-kernel-pick:hover:not(:disabled) { border-color: var(--accent-color); }
+.nb-kernel-menu { overflow-y: auto; }
+.nb-kernel-group { padding: 8px 12px 4px; font-size: 11px; color: var(--text-muted); }
+.nb-kernel-menu .nb-kernel-item { display: flex; flex-direction: column; gap: 1px; padding: 6px 12px 6px 26px; position: relative; }
+.nb-kernel-item small { font-size: 11px; opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-kernel-item.on::before { content: '✓'; position: absolute; left: 9px; top: 6px; }
 .nb-kernel-select { min-width: 100px; flex: 0 1 300px; width: 100%; max-width: 300px; height: var(--ctl-h-sm); padding: 0 8px; font-size: 12px; cursor: pointer; }
 
 /* ── body ── */

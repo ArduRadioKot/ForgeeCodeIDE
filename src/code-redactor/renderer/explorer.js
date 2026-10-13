@@ -7,7 +7,7 @@ import { showGitPanel, refreshGitPanel } from './git-panel.js';
 import { invalidatePythonEnvCache } from './notebook.js';
 import { liveOpenPath, toggleLive } from './liveserver-ui.js';
 import { openBrowserTab } from './browser.js';
-import { runInTerminal } from './terminal.js';
+import { runInTerminal, onFolderChanged } from './terminal.js';
 import { runCurrentFile } from './palette.js';
 import { showSearchPanel } from './search-panel.js';
 import { refreshGitignoreBox, isIgnoredHidden, toggleHideIgnored } from './gitignore-ui.js';
@@ -219,7 +219,10 @@ export async function openFolder() {
 export async function loadFolderContents(folderPath) {
   try {
     state.currentFolder = folderPath;
+    // Callers often set state.currentFolder before calling this, so "did it change" is judged by each terminal's own folder.
+    onFolderChanged(folderPath).catch((err) => console.warn('[terminal] restart in folder:', err));
     invalidatePythonEnvCache();
+    window.electronAPI.watchFolder?.(folderPath).catch(() => {});
     state.expandedFolders = new Set([folderPath]);
     state.folderChildrenCache = new Map();
     const result = await window.electronAPI.listFiles(folderPath);
@@ -669,9 +672,13 @@ export async function renameFileItem(item) {
   input.type = 'text';
   input.className = 'rename-input';
   input.value = item.name;
+  fileItem.draggable = false; // otherwise selecting text with the mouse drags the file (and its path) instead
   nameSpan.replaceWith(input);
   input.focus();
-  input.select();
+  const dot = item.isDirectory ? -1 : item.name.lastIndexOf('.');
+  input.setSelectionRange(0, dot > 0 ? dot : item.name.length);
+  ['mousedown', 'dragstart', 'dblclick'].forEach((evt) => input.addEventListener(evt, (e) => e.stopPropagation()));
+  input.draggable = false;
 
   let finished = false;
   const finish = async (commit) => {
@@ -811,6 +818,8 @@ export async function handleFileItemClick(item) {
       hideWelcomePage();
       createTab(item.name, result.content, item.path);
       updateFileExplorer();
+    } else {
+      refreshExplorerTree(); // the entry is stale (file removed outside the editor)
     }
   } catch (error) {
     console.error('Ошибка открытия файла:', error);

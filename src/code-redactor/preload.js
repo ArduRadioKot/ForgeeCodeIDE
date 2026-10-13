@@ -13,6 +13,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: () => ipcRenderer.invoke('open-file'),
   openFolder: () => ipcRenderer.invoke('open-folder'),
   openFileOrFolder: () => ipcRenderer.invoke('open-file-or-folder'),
+  watchFolder: (folder) => ipcRenderer.invoke('watch-folder', folder),
+  fileStat: (filePath) => ipcRenderer.invoke('file-stat', filePath),
+  onFsChanged: (callback) => {
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on('fs-changed', handler);
+    return () => ipcRenderer.removeListener('fs-changed', handler);
+  },
   listFiles: (folderPath) => ipcRenderer.invoke('list-files', folderPath),
   getFileContent: (filePath) => ipcRenderer.invoke('get-file-content', filePath),
 

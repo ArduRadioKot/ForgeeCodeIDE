@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { getDom } from './dom.js';
-import { pathUtils } from './utils.js';
+import { pathUtils, escapeHtml } from './utils.js';
 import { saveAllConfig } from './save-hook.js';
 import {
   hideWelcomePage,
@@ -280,6 +280,8 @@ export function syncSyntaxScroll() {
   if (!syntaxEl || !dom.editor) return;
   syntaxEl.scrollTop = dom.editor.scrollTop;
   syntaxEl.scrollLeft = dom.editor.scrollLeft;
+  const findLayer = document.getElementById('find-layer');
+  if (findLayer && state.findBarVisible) { findLayer.scrollTop = dom.editor.scrollTop; findLayer.scrollLeft = dom.editor.scrollLeft; }
   if (hlWindow && !rewindowFrame) {
     // Scrolled close to the edge of the coloured part: move the window.
     const lh = parseFloat(getComputedStyle(dom.editor).lineHeight) || 22;
@@ -394,7 +396,10 @@ registerEditorApi({
 
 // --- Find in file (Ctrl+F) ---
 
+let findFrame = 0;
 export function setupFindBar() {
+  // a tab switch or an edit re-runs the search on the new text (without moving the view)
+  window.addEventListener('frogee:content', () => { if (!state.findBarVisible || findFrame) return; findFrame = requestAnimationFrame(() => { findFrame = 0; if (state.findBarVisible) updateFindMatches(false); }); });
   const findInput = document.getElementById('find-input');
   const findPrevBtn = document.getElementById('find-prev-btn');
   const findNextBtn = document.getElementById('find-next-btn');
@@ -455,10 +460,12 @@ export function replaceCurrent() {
   }
   const m = state.findMatches[state.findMatchIndex];
   if (!m) return;
+  const back = document.activeElement;
   dom.editor.focus();
   dom.editor.setSelectionRange(m.start, m.end);
   document.execCommand('insertText', false, replacement);
   updateFindMatches(true);
+  if (back && back !== dom.editor) back.focus(); // the replace field keeps the keyboard
 }
 
 export function replaceAll() {
@@ -467,10 +474,12 @@ export function replaceAll() {
   const replacement = document.getElementById('replace-input')?.value ?? '';
   const next = dom.editor.value.replace(regex, () => replacement);
   if (next === dom.editor.value) return;
+  const back = document.activeElement;
   dom.editor.focus();
   dom.editor.select();
   document.execCommand('insertText', false, next);
   updateFindMatches(false);
+  if (back && back !== dom.editor) back.focus();
 }
 
 export function openReplaceBar() {
@@ -502,22 +511,28 @@ export function openFindBar() {
 
 export function closeFindBar() {
   const findBar = document.getElementById('find-bar');
+  const current = state.findMatches[state.findMatchIndex];
   if (findBar) findBar.style.display = 'none';
   state.findBarVisible = false;
   state.findMatches = [];
   state.findMatchIndex = -1;
   updateFindCount();
+  paintFindLayer();
+  // like in other editors: closing the search leaves the current match selected in the text
   dom.editor?.focus();
+  if (current && dom.editor) dom.editor.setSelectionRange(current.start, current.end);
 }
 
 export function updateFindMatches(jumpToFirst) {
   const findInput = document.getElementById('find-input');
   const query = findInput ? findInput.value : '';
+  const keepStart = state.findMatches[state.findMatchIndex]?.start; // the match the user was on
   state.findMatches = [];
   state.findMatchIndex = -1;
 
   if (!query || !dom.editor) {
     updateFindCount();
+    paintFindLayer();
     return;
   }
 
@@ -529,6 +544,7 @@ export function updateFindMatches(jumpToFirst) {
     regex = new RegExp(escaped, flags);
   } catch {
     updateFindCount();
+    paintFindLayer();
     return;
   }
 
@@ -542,10 +558,15 @@ export function updateFindMatches(jumpToFirst) {
     const cursor = dom.editor.selectionStart;
     state.findMatchIndex = state.findMatches.findIndex(m => m.start >= cursor);
     if (state.findMatchIndex < 0) state.findMatchIndex = 0;
+    if (!jumpToFirst && keepStart !== undefined) {
+      const same = state.findMatches.findIndex((m) => m.start === keepStart);
+      if (same >= 0) state.findMatchIndex = same;
+    }
     if (jumpToFirst) selectFindMatch(state.findMatchIndex);
   }
 
   updateFindCount();
+  paintFindLayer();
 }
 
 export function updateFindCount() {
@@ -558,19 +579,55 @@ export function updateFindCount() {
   }
 }
 
-export function selectFindMatch(index) {
+/**
+ * Make match `index` the current one. The caret stays where it is (in the search field while typing): the matches are
+ * painted by their own layer, so searching never takes the keyboard away. `select: true` also selects the match in the editor.
+ */
+export function selectFindMatch(index, { select = false } = {}) {
   if (!state.findMatches.length || !dom.editor) return;
   state.findMatchIndex = ((index % state.findMatches.length) + state.findMatches.length) % state.findMatches.length;
   const match = state.findMatches[state.findMatchIndex];
-  dom.editor.focus();
-  dom.editor.setSelectionRange(match.start, match.end);
+  const ed = dom.editor;
 
-  const textBefore = dom.editor.value.substring(0, match.start);
-  const line = textBefore.split('\n').length - 1;
-  const lineHeight = parseFloat(getComputedStyle(dom.editor).lineHeight) || 24;
-  dom.editor.scrollTop = Math.max(0, line * lineHeight - dom.editor.clientHeight / 3);
+  const before = ed.value.substring(0, match.start);
+  const line = before.split('\n').length - 1;
+  const lineHeight = parseFloat(getComputedStyle(ed).lineHeight) || 24;
+  const top = line * lineHeight;
+  // scroll only when the match is out of sight
+  if (top < ed.scrollTop + lineHeight || top > ed.scrollTop + ed.clientHeight - lineHeight * 2) ed.scrollTop = Math.max(0, top - ed.clientHeight / 3);
+  if (!ed.classList.contains('word-wrap')) {
+    const col = match.start - (before.lastIndexOf('\n') + 1);
+    const ctx = (selectFindMatch.ctx ||= document.createElement('canvas').getContext('2d'));
+    const cs = getComputedStyle(ed);
+    ctx.font = `${cs.fontSize} ${cs.fontFamily}`;
+    const x = col * ctx.measureText('M').width;
+    if (x < ed.scrollLeft || x > ed.scrollLeft + ed.clientWidth - 160) ed.scrollLeft = Math.max(0, x - 120);
+  }
+  if (select) {
+    ed.focus();
+    ed.setSelectionRange(match.start, match.end);
+  }
   syncSyntaxScroll();
+  paintFindLayer();
   updateFindCount();
+}
+
+/** All matches highlighted in a layer of their own, the current one stronger. */
+export function paintFindLayer() {
+  const layer = document.getElementById('find-layer');
+  if (!layer || !dom.editor) return;
+  if (!state.findBarVisible || !state.findMatches.length || dom.editor.value.length > 600000) { layer.innerHTML = ''; return; }
+  const text = dom.editor.value;
+  let html = '';
+  let pos = 0;
+  state.findMatches.forEach((m, i) => {
+    if (m.start < pos) return;
+    html += `${escapeHtml(text.slice(pos, m.start))}<mark class="fm${i === state.findMatchIndex ? ' cur' : ''}">${escapeHtml(text.slice(m.start, m.end))}</mark>`;
+    pos = m.end;
+  });
+  layer.innerHTML = `${html}${escapeHtml(text.slice(pos))}\n`;
+  layer.scrollTop = dom.editor.scrollTop;
+  layer.scrollLeft = dom.editor.scrollLeft;
 }
 
 export function findNext() {
