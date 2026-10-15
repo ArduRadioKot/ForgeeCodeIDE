@@ -79,6 +79,7 @@ export function renderPreview() {
   const top = el.scrollTop;
   el.innerHTML = renderMarkdownHtml(text, source?.filePath);
   el.scrollTop = top;
+  window.dispatchEvent(new CustomEvent('frogee:preview', { detail: el })); // plugins decorate the preview here
 }
 
 export function isPreviewOpen() { return !!rightPreview(); }

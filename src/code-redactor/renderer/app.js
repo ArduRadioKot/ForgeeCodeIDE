@@ -19,6 +19,7 @@ import {
 } from './tabs.js';
 import { openFolder, switchActivity, registerSearchGlobals } from './explorer.js';
 import { setupExternalChanges } from './external-changes.js';
+import { setupPlugins } from './plugins.js';
 import {
   toggleChat,
   clearChatHistory,
@@ -347,6 +348,7 @@ export function setupEventListeners() {
   setupPaletteButtons();
   initAutoSave();
   setupExternalChanges();
+  setupPlugins();
   setupBrowserEvents();
   setupLiveServer();
   setupAgents();

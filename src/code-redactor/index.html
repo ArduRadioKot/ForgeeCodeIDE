@@ -28,6 +28,7 @@
       <button class="sidebar-btn" title="Запуск" id="debug-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15l12-7.5z"/></svg>
       </button>
+      <div id="plugin-slot" class="plugin-slot"></div>
       <div class="sidebar-spacer"></div>
       <button class="sidebar-btn" title="Браузер" id="browser-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 3.9 5.4 3.9 9s-1.3 6.6-3.9 9c-2.6-2.4-3.9-5.4-3.9-9S9.4 5.4 12 3z"/></svg>
@@ -358,6 +359,7 @@
         <button type="button" class="settings-nav-btn" data-settings-tab="appearance">Внешний вид</button>
         <button type="button" class="settings-nav-btn" data-settings-tab="background" hidden>Фон</button>
         <button type="button" class="settings-nav-btn" data-settings-tab="ai">AI</button>
+        <button type="button" class="settings-nav-btn" data-settings-tab="plugins">Плагины</button>
         <button type="button" class="settings-nav-btn" data-settings-tab="shortcuts">Горячие клавиши</button>
       </nav>
       <div class="settings-main">
@@ -890,6 +892,21 @@
                 </article>
               </div>
             </div>
+          </section>
+
+          <section class="settings-panel" id="settings-panel-plugins">
+            <h3 class="settings-panel-title">Плагины</h3>
+            <p class="settings-hint">Плагины — файлы .js и .css в папке Documents/FrogeeCodeIDE/plugins. «Установить…» копирует выбранные файлы туда и сразу включает их; файлы, положенные в папку вручную, включаются переключателем. Плагин выполняется внутри редактора с доступом к открытым файлам: ставьте только те, которым доверяете. Плагины FgSNotes тоже подходят.</p>
+            <div class="settings-item">
+              <span class="settings-label">Установленные плагины</span>
+              <div class="settings-control settings-control-row">
+                <button type="button" class="settings-btn" id="plugins-install-btn">Установить…</button>
+                <button type="button" class="settings-btn ghost" id="plugins-open-btn">Открыть папку</button>
+                <button type="button" class="settings-btn ghost" id="plugins-refresh-btn" title="Перечитать папку"><span class="ico-wrap" data-icon="refresh" data-size="14"></span></button>
+              </div>
+            </div>
+            <p class="settings-hint" id="plugins-status" hidden></p>
+            <div class="plugins-list" id="plugins-list"></div>
           </section>
 
           <section class="settings-panel" id="settings-panel-shortcuts">

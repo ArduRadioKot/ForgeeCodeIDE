@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: () => ipcRenderer.invoke('open-file'),
   openFolder: () => ipcRenderer.invoke('open-folder'),
   openFileOrFolder: () => ipcRenderer.invoke('open-file-or-folder'),
+  getPlugins: () => ipcRenderer.invoke('plugins-list'),
+  readPlugin: (file) => ipcRenderer.invoke('plugin-read', file),
+  installPlugins: () => ipcRenderer.invoke('plugin-install'),
+  removePlugin: (file) => ipcRenderer.invoke('plugin-remove', file),
+  openPluginsFolder: () => ipcRenderer.invoke('plugins-open'),
   watchFolder: (folder) => ipcRenderer.invoke('watch-folder', folder),
   fileStat: (filePath) => ipcRenderer.invoke('file-stat', filePath),
   onFsChanged: (callback) => {

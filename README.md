@@ -43,6 +43,10 @@ npm run build:linux   # AppImage / deb
 
 Результат появится в `src/code-redactor/dist`.
 
+## Плагины
+
+Как в FgSNotes: плагины — файлы `.js` и `.css` в `~/Documents/FrogeeCodeIDE/plugins`. Настройки → Плагины → «Установить…» копирует их туда и включает; кнопки плагинов появляются на левой панели, лишние уходят в меню «…». API и примеры (Exildraw, вставка даты) — в [plugins/](plugins/README.md).
+
 ## Настройки и темы
 
 Конфигурация хранится в `~/Documents/FrogeeCodeIDE/config`. Свои темы кладутся в `themes/`, формат описан в [src/code-redactor/themes/README.md](src/code-redactor/themes/README.md).
