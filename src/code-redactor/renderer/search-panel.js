@@ -26,8 +26,8 @@ const $ = (id) => document.getElementById(id);
 
 function buildRegex(query) {
   let src = opts.regex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  if (opts.wholeWord) src = `(?<![\\p{L}\\p{N}_])(?:${src})(?![\\p{L}\\p{N}_])`;
-  return new RegExp(src, `${opts.caseSensitive ? '' : 'i'}gu`);
+  if (opts.wholeWord) src = `(?<![A-Za-z0-9_])(?:${src})(?![A-Za-z0-9_])`;
+  return new RegExp(src, `${opts.caseSensitive ? '' : 'i'}g`);
 }
 
 function lineHtml(m) {
@@ -68,22 +68,34 @@ function searchInFile(query) {
 
 async function searchInProject(query) {
   if (!state.currentFolder) return placeholder('Откройте папку, чтобы искать по проекту');
-  if (currentId) window.electronAPI.projectSearchCancel(currentId);
+  if (!window.electronAPI?.projectSearch) {
+    return placeholder('Поиск недоступен — пересоберите / перезапустите приложение', true);
+  }
+  if (currentId) {
+    try { window.electronAPI.projectSearchCancel?.(currentId); } catch { /* ignore */ }
+  }
   const mine = ++seq;
   currentId = `s${mine}`;
-  $('search-results').classList.add('busy');
-  const res = await window.electronAPI.projectSearch({
-    id: currentId, root: state.currentFolder, query, caseSensitive: opts.caseSensitive, wholeWord: opts.wholeWord, regex: opts.regex,
-    include: opts.include, exclude: opts.exclude,
-  });
-  if (mine !== seq || res.cancelled) return;
-  $('search-results').classList.remove('busy');
-  if (!res.success) return placeholder(res.error || 'Ошибка поиска', true);
-  if (!res.results.length) { last = null; return placeholder(`Ничего не найдено (просмотрено файлов: ${res.filesScanned})`); }
-  last = res;
+  const box = $('search-results');
+  if (box) box.classList.add('busy');
+  let res;
+  try {
+    res = await window.electronAPI.projectSearch({
+      id: currentId, root: state.currentFolder, query, caseSensitive: opts.caseSensitive, wholeWord: opts.wholeWord, regex: opts.regex,
+      include: opts.include, exclude: opts.exclude,
+    });
+  } catch (err) {
+    if (mine === seq && box) box.classList.remove('busy');
+    return placeholder(err?.message || 'Ошибка поиска', true);
+  }
+  if (mine !== seq || res?.cancelled) return;
+  if (box) box.classList.remove('busy');
+  if (!res || !res.success) return placeholder(res?.error || 'Ошибка поиска', true);
+  if (!res.results?.length) { last = null; return placeholder(`Ничего не найдено (просмотрено файлов: ${res.filesScanned || 0})`); }
+  last = { ...res, query };
   excluded.clear();
   const files = res.results.length;
-  renderResults(res, `${res.totalMatches}${res.truncated ? '+' : ''} в ${files} ${plural(files, 'файле', 'файлах', 'файлах')}`);
+  renderResults(last, `${res.totalMatches}${res.truncated ? '+' : ''} в ${files} ${plural(files, 'файле', 'файлах', 'файлах')}`);
 }
 
 const plural = (n, one, few, many) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many);

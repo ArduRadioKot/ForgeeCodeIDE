@@ -1,6 +1,6 @@
 {
   "name": "FrogeeCodeIDE",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "A modern code editor with AI chat integration, built with Electron",
   "main": "main.js",
   "scripts": {
@@ -47,7 +47,14 @@
       "!dist/**/*"
     ],
     "asarUnpack": [
-      "lib/kernel_worker.py"
+      "lib/kernel_worker.py",
+      "**/kernel_worker.py"
+    ],
+    "extraResources": [
+      {
+        "from": "lib/kernel_worker.py",
+        "to": "kernel_worker.py"
+      }
     ],
     "mac": {
       "target": [

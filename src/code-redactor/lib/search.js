@@ -50,8 +50,8 @@ function globList(text) {
 
 function buildRegex({ query, caseSensitive, wholeWord, regex }) {
   let src = regex ? query : query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  if (wholeWord) src = `(?<![\\p{L}\\p{N}_])(?:${src})(?![\\p{L}\\p{N}_])`;
-  return new RegExp(src, `${caseSensitive ? '' : 'i'}gu`);
+  if (wholeWord) src = `(?<![A-Za-z0-9_])(?:${src})(?![A-Za-z0-9_])`;
+  return new RegExp(src, `${caseSensitive ? '' : 'i'}g`);
 }
 
 function isBinary(buf) {
@@ -166,9 +166,24 @@ async function replaceInFiles({ root, files, query, replacement, caseSensitive, 
 }
 
 function registerSearchIpc() {
-  ipcMain.handle('project-search', (_e, opts) => search(opts || {}));
+  for (const ch of ['project-search', 'project-search-cancel', 'project-replace']) {
+    try { ipcMain.removeHandler(ch); } catch {}
+  }
+  ipcMain.handle('project-search', async (_e, opts) => {
+    try {
+      return await search(opts || {});
+    } catch (err) {
+      return { success: false, error: err?.message || String(err), results: [], totalMatches: 0 };
+    }
+  });
   ipcMain.handle('project-search-cancel', (_e, id) => { const s = running.get(id); if (s) s.cancelled = true; return true; });
-  ipcMain.handle('project-replace', (_e, opts) => replaceInFiles(opts || {}));
+  ipcMain.handle('project-replace', async (_e, opts) => {
+    try {
+      return await replaceInFiles(opts || {});
+    } catch (err) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
   console.log('[search] IPC handlers registered');
 }
 

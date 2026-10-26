@@ -1,19 +1,62 @@
-const { ipcMain } = require('electron');
+const { ipcMain, app } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
-/** Python cannot read a script from inside app.asar: use the unpacked copy, or write one to the temp folder. */
+let resolvedWorker = null;
+
+/**
+ * Python cannot open scripts inside app.asar (Errno 20 Not a directory).
+ * Prefer a real file on disk: extraResources → asar.unpacked → copy into userData.
+ */
 function workerPath() {
-  const inside = path.join(__dirname, 'kernel_worker.py');
-  if (!/app\.asar([\\/]|$)/.test(inside)) return inside;
-  const unpacked = inside.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
-  if (fs.existsSync(unpacked)) return unpacked;
-  const copy = path.join(os.tmpdir(), 'frogee-kernel_worker.py');
-  fs.writeFileSync(copy, fs.readFileSync(inside));
-  return copy;
+  if (resolvedWorker && fs.existsSync(resolvedWorker) && !isInsideAsar(resolvedWorker)) {
+    return resolvedWorker;
+  }
+
+  const name = 'kernel_worker.py';
+  const candidates = [
+    // electron-builder extraResources
+    process.resourcesPath && path.join(process.resourcesPath, name),
+    process.resourcesPath && path.join(process.resourcesPath, 'lib', name),
+    // asarUnpack next to this module
+    path.join(String(__dirname).replace(/app\.asar([\\/])/, 'app.asar.unpacked$1'), name),
+    process.resourcesPath && path.join(process.resourcesPath, 'app.asar.unpacked', 'lib', name),
+    // development / unpackaged
+    path.join(__dirname, name),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      if (!isInsideAsar(candidate) && fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        resolvedWorker = candidate;
+        return resolvedWorker;
+      }
+    } catch { /* try next */ }
+  }
+
+  // Last resort: materialize from asar (Electron fs can read asar; Python cannot).
+  const src = path.join(__dirname, name);
+  const destDir = path.join(app.getPath('userData'), 'runtime');
+  fs.mkdirSync(destDir, { recursive: true });
+  const dest = path.join(destDir, name);
+  const body = fs.readFileSync(src);
+  // Rewrite when missing or content differs (upgrade-safe).
+  let needWrite = true;
+  try {
+    if (fs.existsSync(dest) && fs.readFileSync(dest).equals(body)) needWrite = false;
+  } catch { needWrite = true; }
+  if (needWrite) fs.writeFileSync(dest, body);
+  resolvedWorker = dest;
+  return resolvedWorker;
 }
+
+function isInsideAsar(p) {
+  // app.asar.unpacked is fine; bare app.asar/ is not
+  return /(?:^|[\\/])app\.asar[\\/]/.test(String(p || '')) && !/(?:^|[\\/])app\.asar\.unpacked[\\/]/.test(String(p || ''));
+}
+
 const kernels = new Map(); // kernelId -> { proc, pythonPath, cwd, current }
 
 function emit(getMainWindow, payload) {
@@ -38,9 +81,21 @@ function startKernel(getMainWindow, { id, pythonPath, cwd }) {
     }
     stopKernel(id);
 
+    let script;
+    try {
+      script = workerPath();
+    } catch (err) {
+      resolve({ success: false, error: `Не удалось подготовить kernel_worker.py: ${err.message}` });
+      return;
+    }
+    if (isInsideAsar(script)) {
+      resolve({ success: false, error: `kernel_worker.py всё ещё внутри asar: ${script}` });
+      return;
+    }
+
     let proc;
     try {
-      proc = spawn(pythonPath, ['-u', workerPath()], {
+      proc = spawn(pythonPath, ['-u', script], {
         cwd: cwd || os.homedir(),
         env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8', MPLBACKEND: 'Agg' },
         stdio: ['pipe', 'pipe', 'pipe']
@@ -77,7 +132,6 @@ function startKernel(getMainWindow, { id, pythonPath, cwd }) {
     proc.stderr.setEncoding('utf8');
     proc.stderr.on('data', (text) => {
       if (!k.ready) k.startErr = (k.startErr + text).slice(-1500);
-      // Interpreter-level noise (warnings, C extensions) goes to the running cell as stderr.
       emit(getMainWindow, { kernelId: id, id: k.current, type: 'stream', name: 'stderr', text });
     });
     proc.on('error', (err) => settle({ success: false, error: err.message }));
@@ -134,4 +188,4 @@ function killAllKernels() {
   for (const id of [...kernels.keys()]) stopKernel(id);
 }
 
-module.exports = { registerKernelIpc, killAllKernels };
+module.exports = { registerKernelIpc, killAllKernels, workerPath };

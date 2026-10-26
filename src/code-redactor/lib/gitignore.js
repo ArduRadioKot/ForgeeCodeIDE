@@ -37,7 +37,8 @@ function globToRegex(glob) {
 function parseRules(text, baseRel = '') {
   const rules = [];
   text.split(/\r?\n/).forEach((raw, index) => {
-    let line = raw.replace(/(?<!\\)\s+$/, '');
+    // Trim trailing spaces (keep a single escaped trailing space if present).
+    let line = raw.replace(/\\ /g, '\u0000').replace(/\s+$/, '').replace(/\u0000/g, ' ');
     if (!line || line.startsWith('#')) return;
     const negate = line.startsWith('!');
     if (negate) line = line.slice(1);
