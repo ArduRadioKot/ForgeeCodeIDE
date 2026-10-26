@@ -1,0 +1,18 @@
+{
+  "publisher": "frogeesoft",
+  "name": "exildraw",
+  "version": "1.0.0",
+  "displayName": "Exildraw для FrogeeCodeIDE",
+  "description": "Доска для набросков в духе Excalidraw: перо, линии, стрелки, фигуры, текст. Рисунок вставляется в Markdown-файл как SVG.",
+  "author": "FrogeeSoft",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE",
+  "keywords": [
+    "drawing",
+    "markdown"
+  ],
+  "plugins": [
+    "plugin.js"
+  ]
+}
