@@ -299,6 +299,18 @@ async function remove(file) {
   await drawList();
 }
 
+/** Plugins that came with an extension for FrogeeCodeIDE: switched on right after the extension is installed. */
+export async function enablePluginFiles(list = []) {
+  for (const file of list) { setEnabled(file, true); stop(file); await start(file); }
+  await drawList();
+}
+
+/** The extension is being removed: its plugins stop first. */
+export async function disablePluginFiles(list = []) {
+  for (const file of list) { setEnabled(file, false); stop(file); }
+  await drawList();
+}
+
 export async function setupPlugins() {
   const host = document.getElementById('settings-panel-plugins');
   host?.addEventListener('click', async (e) => {

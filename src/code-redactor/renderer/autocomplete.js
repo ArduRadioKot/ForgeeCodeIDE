@@ -2,6 +2,7 @@
 import { state } from './state.js';
 import { isEditorTab } from './tab-model.js';
 import { escapeHtml } from './utils.js';
+import { snippetsFor, expandSnippet } from './extensions.js';
 
 const WORDS = {
   js: 'async await break case catch class const continue default delete do else export extends false finally for function if import in instanceof let new null of return static super switch this throw true try typeof undefined var void while with yield console document window require module exports Promise setTimeout setInterval JSON Object Array Map Set Math String Number Boolean',
@@ -92,7 +93,7 @@ function show() {
     popup.addEventListener('mousedown', (e) => { const row = e.target.closest('[data-i]'); if (row) { e.preventDefault(); accept(Number(row.dataset.i)); } });
     document.body.appendChild(popup);
   }
-  popup.innerHTML = items.map((w, i) => `<div class="ac-row${i === index ? ' active' : ''}" data-i="${i}">${escapeHtml(w)}</div>`).join('');
+  popup.innerHTML = items.map((it, i) => `<div class="ac-row${i === index ? ' active' : ''}${it.snippet ? ' ac-snippet' : ''}" data-i="${i}" title="${escapeHtml(it.detail || '')}">${escapeHtml(it.label)}${it.snippet ? '<span class="ac-kind">сниппет</span>' : ''}</div>`).join('');
   popup.hidden = false;
   const { x, y } = caretXY(ta());
   const h = popup.offsetHeight;
@@ -101,12 +102,27 @@ function show() {
 }
 
 function accept(i = index) {
-  const word = items[i];
+  const item = items[i];
   const el = ta();
-  if (!word || !el) return;
+  if (!item || !el) return;
   el.focus();
+  let text = item.label;
+  let caret = null;
+  let selected = 0;
+  if (item.snippet) {
+    // a VS Code snippet: placeholders become their text, lines after the first get this line's indentation
+    const lineStart = el.value.lastIndexOf('\n', wordStart - 1) + 1;
+    const indent = /^[ \t]*/.exec(el.value.slice(lineStart, wordStart))[0];
+    const tabSize = parseInt(document.getElementById('tab-size-select')?.value || '4', 10) || 4;
+    const tab = state.currentTabs[state.activeTabIndex];
+    const out = expandSnippet(item.snippet.body, { indent, fileName: tab?.name || '', tabUnit: ' '.repeat(tabSize) });
+    text = out.text;
+    caret = wordStart + out.caret;
+    selected = out.selected;
+  }
   el.setSelectionRange(wordStart, el.selectionStart);
-  if (!document.execCommand('insertText', false, word)) { el.setRangeText(word, wordStart, el.selectionStart, 'end'); el.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (!document.execCommand('insertText', false, text)) { el.setRangeText(text, wordStart, el.selectionStart, 'end'); el.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (caret != null) el.setSelectionRange(caret, caret + selected);
   hide();
 }
 
@@ -115,14 +131,22 @@ function update(manual = false) {
   const tab = state.currentTabs[state.activeTabIndex];
   if (!el || !isEditorTab(tab) || el.selectionStart !== el.selectionEnd || el.classList.contains('word-wrap')) return hide();
   const lang = languageOf();
-  if (OFF.has(lang)) return hide();
+  const snippets = snippetsFor(lang);
+  if (OFF.has(lang) && !snippets.length) return hide();
   const caret = el.selectionStart;
-  const m = /[A-Za-z_$][\w$]*$/.exec(el.value.slice(Math.max(0, caret - 60), caret));
+  const m = /[A-Za-z_$][\w$-]*$/.exec(el.value.slice(Math.max(0, caret - 60), caret));
   if (!m || (!manual && m[0].length < 2)) return hide();
   const next = el.value[caret];
   if (next && /[\w$]/.test(next)) return hide(); // in the middle of a word
-  wordStart = caret - m[0].length;
-  items = rank(m[0], collectWords(m[0], el.value, lang));
+  const typed = m[0];
+  wordStart = caret - typed.length;
+  // snippets from installed VS Code extensions whose prefix starts with what was typed
+  const low = typed.toLowerCase();
+  const snipItems = snippets.filter((sn) => sn.prefix.toLowerCase().startsWith(low))
+    .sort((a, b) => a.prefix.length - b.prefix.length).slice(0, 6)
+    .map((sn) => ({ label: sn.prefix, detail: `${sn.description}${sn.extension ? ` (${sn.extension})` : ''}`, snippet: sn }));
+  const wordItems = OFF.has(lang) || typed.includes('-') ? [] : rank(typed, collectWords(typed, el.value, lang)).map((w) => ({ label: w }));
+  items = [...snipItems, ...wordItems.filter((w) => !snipItems.some((sn) => sn.label === w.label))].slice(0, 10);
   index = 0;
   if (!items.length) return hide();
   show();

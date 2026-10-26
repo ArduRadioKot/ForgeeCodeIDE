@@ -47,6 +47,10 @@ npm run build:linux   # AppImage / deb
 
 Как в FgSNotes: плагины — файлы `.js` и `.css` в `~/Documents/FrogeeCodeIDE/plugins`. Настройки → Плагины → «Установить…» копирует их туда и включает; кнопки плагинов появляются на левой панели, лишние уходят в меню «…». API и примеры (Exildraw, вставка даты) — в [plugins/](plugins/README.md).
 
+## Расширения
+
+Расширения для FrogeeCodeIDE — обычные папки с `extension.json`, плагинами, темами и сниппетами. Они лежат в каталоге на сайте проекта ([extensions.html](https://arduradiokot.github.io/ForgeeCodeIDE/extensions.html)) и ставятся из панели «Расширения» в один клик или из папки на диске; их плагины работают полностью. Поиск в той же панели идёт по Open VSX: из расширений VS Code берутся темы и сниппеты, их код не запускается. Формат, примеры и сборка каталога (`node scripts/build-extensions.js`) — в [extensions/](extensions/README.md).
+
 ## Настройки и темы
 
 Конфигурация хранится в `~/Documents/FrogeeCodeIDE/config`. Свои темы кладутся в `themes/`, формат описан в [src/code-redactor/themes/README.md](src/code-redactor/themes/README.md).

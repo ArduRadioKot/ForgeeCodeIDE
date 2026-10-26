@@ -292,15 +292,20 @@ function render(side) {
   if (side === 'left') updateStatus();
 }
 
+const markedRows = { left: [], right: [] }; // gutter rows marked last time, so only they are cleared
+
 function markGutter(side) {
   const gutter = sides[side].gutter();
   if (!gutter) return;
+  markedRows[side].forEach((el) => el.classList.remove('has-error', 'has-warning'));
+  markedRows[side] = [];
   const worst = new Map();
   results[side].forEach((d) => { if (worst.get(d.line) !== 'error') worst.set(d.line, d.severity); });
-  [...gutter.children].forEach((el, index) => {
-    const severity = worst.get(index + 1);
-    el.classList.toggle('has-error', severity === 'error');
-    el.classList.toggle('has-warning', severity === 'warning');
+  worst.forEach((severity, line) => {
+    const el = gutter.children[line - 1];
+    if (!el || (severity !== 'error' && severity !== 'warning')) return;
+    el.classList.add(severity === 'error' ? 'has-error' : 'has-warning');
+    markedRows[side].push(el);
   });
 }
 

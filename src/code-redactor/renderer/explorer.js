@@ -13,6 +13,7 @@ import { showSearchPanel } from './search-panel.js';
 import { refreshGitignoreBox, isIgnoredHidden, toggleHideIgnored } from './gitignore-ui.js';
 import { icon, hydrateIcons } from './glyphs.js';
 import { setupRunConfigPanel } from './run-configs.js';
+import { showExtensionsPanel } from './extensions.js';
 
 const dom = getDom();
 
@@ -21,6 +22,7 @@ const ACTIVITIES = {
   search: { btn: 'searchBtn', show: () => showSearchPanel() },
   git: { btn: 'gitBtn', show: () => showGitPanel() },
   debug: { btn: 'debugBtn', show: () => showRunPanel() },
+  extensions: { btn: 'extensionsBtn', show: () => showExtensionsPanel() },
 };
 
 function paintActivityButtons() {

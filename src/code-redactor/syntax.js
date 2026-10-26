@@ -415,8 +415,8 @@
   }
 
   function highlight(code, fileName) {
-    // Keep the trailing newline so the overlay height matches the textarea.
-    const text = code.endsWith('\n') ? code : code + '\n';
+    // A <pre> does not draw a line after a final newline, a textarea does: one extra newline keeps the heights equal.
+    const text = code + '\n';
     return highlightLang(detectLanguage(fileName), text);
   }
 

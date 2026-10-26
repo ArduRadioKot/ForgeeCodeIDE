@@ -1,0 +1,91 @@
+{
+  "version": 2,
+  "updated": "2026-10-26",
+  "extensions": [
+    {
+      "id": "frogeesoft.insert-date",
+      "publisher": "frogeesoft",
+      "name": "insert-date",
+      "displayName": "Вставить дату",
+      "description": "Кнопка на левой панели вставляет сегодняшнюю дату и время в открытый файл.",
+      "version": "1.0.0",
+      "author": "FrogeeSoft",
+      "tags": [
+        "date"
+      ],
+      "icon": "icon.png",
+      "path": "frogeesoft.insert-date/",
+      "files": [
+        "LICENSE",
+        "README.md",
+        "extension.json",
+        "icon.png",
+        "plugin.js"
+      ],
+      "size": 13545,
+      "plugins": 1,
+      "themes": 0,
+      "snippets": 0,
+      "license": "MIT",
+      "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE"
+    },
+    {
+      "id": "frogeesoft.exildraw",
+      "publisher": "frogeesoft",
+      "name": "exildraw",
+      "displayName": "Exildraw для FrogeeCodeIDE",
+      "description": "Доска для набросков в духе Excalidraw: перо, линии, стрелки, фигуры, текст. Рисунок вставляется в Markdown-файл как SVG.",
+      "version": "1.0.0",
+      "author": "FrogeeSoft",
+      "tags": [
+        "drawing",
+        "markdown"
+      ],
+      "icon": "icon.png",
+      "path": "frogeesoft.exildraw/",
+      "files": [
+        "LICENSE",
+        "README.md",
+        "extension.json",
+        "icon.png",
+        "plugin.js"
+      ],
+      "size": 31129,
+      "plugins": 1,
+      "themes": 0,
+      "snippets": 0,
+      "license": "MIT",
+      "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE"
+    },
+    {
+      "id": "frogeesoft.frogee-theme",
+      "publisher": "frogeesoft",
+      "name": "frogee-theme",
+      "displayName": "FrogeeSoft",
+      "description": "Тёмная и светлая темы в цветах FrogeeSoft: зелёно-чёрный фон и бирюзовый акцент.",
+      "version": "1.0.0",
+      "author": "FrogeeSoft",
+      "tags": [
+        "theme",
+        "dark",
+        "light"
+      ],
+      "icon": "icon.png",
+      "path": "frogeesoft.frogee-theme/",
+      "files": [
+        "LICENSE",
+        "README.md",
+        "extension.json",
+        "icon.png",
+        "themes/frogee-dark.json",
+        "themes/frogee-light.json"
+      ],
+      "size": 20482,
+      "plugins": 0,
+      "themes": 2,
+      "snippets": 0,
+      "license": "MIT",
+      "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE"
+    }
+  ]
+}

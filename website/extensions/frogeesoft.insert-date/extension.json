@@ -1,0 +1,17 @@
+{
+  "publisher": "frogeesoft",
+  "name": "insert-date",
+  "version": "1.0.0",
+  "displayName": "Вставить дату",
+  "description": "Кнопка на левой панели вставляет сегодняшнюю дату и время в открытый файл.",
+  "author": "FrogeeSoft",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE",
+  "keywords": [
+    "date"
+  ],
+  "plugins": [
+    "plugin.js"
+  ]
+}

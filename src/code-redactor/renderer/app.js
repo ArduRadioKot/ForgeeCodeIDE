@@ -20,6 +20,7 @@ import {
 import { openFolder, switchActivity, registerSearchGlobals } from './explorer.js';
 import { setupExternalChanges } from './external-changes.js';
 import { setupPlugins } from './plugins.js';
+import { setupExtensions } from './extensions.js';
 import {
   toggleChat,
   clearChatHistory,
@@ -168,6 +169,7 @@ export function setupEventListeners() {
   if (dom.gitBtn) {
     dom.gitBtn.addEventListener('click', () => switchActivity('git', { toggle: true }));
   }
+  dom.extensionsBtn?.addEventListener('click', () => switchActivity('extensions', { toggle: true }));
   if (dom.debugBtn) {
     dom.debugBtn.addEventListener('click', () => switchActivity('debug', { toggle: true }));
   }
@@ -349,6 +351,7 @@ export function setupEventListeners() {
   initAutoSave();
   setupExternalChanges();
   setupPlugins();
+  setupExtensions();
   setupBrowserEvents();
   setupLiveServer();
   setupAgents();

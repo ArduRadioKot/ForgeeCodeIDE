@@ -47,7 +47,7 @@ export function attachFlow(host, { items, active, container = host }) {
 }
 
 export function setupFlow() {
-  const activity = '#explorer-btn.active, #search-btn.active, #git-btn.active, #debug-btn.active';
+  const activity = '#explorer-btn.active, #search-btn.active, #git-btn.active, #debug-btn.active, #extensions-btn.active';
   attachFlow(document.getElementById('sidebar'), { items: '.sidebar-btn', active: activity });
   attachFlow(document.getElementById('editor-tabs'), { items: '.tab-item', active: '.tab-item.active', container: document.getElementById('editor-tabs') });
 }

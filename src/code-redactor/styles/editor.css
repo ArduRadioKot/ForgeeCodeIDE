@@ -262,3 +262,5 @@ body.is-dragging-tab .split-drop-zone, .split-drop-zone.active { display: flex; 
 /* Every overlay layer wraps exactly like the text when "word wrap" is on (it was only the colour layer before) */
 .code-editor-wrap:has(#editor.word-wrap) > .syntax-highlight,
 .code-editor-wrap:has(#editor-right.word-wrap) > .syntax-highlight { white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
+/* The textarea loses a few pixels to its horizontal scrollbar; spare room below the overlays lets them scroll as far, so at the end of a long file the colours stay on their letters. */
+.code-editor-wrap > .syntax-highlight::after { content: ''; display: block; height: 32px; }

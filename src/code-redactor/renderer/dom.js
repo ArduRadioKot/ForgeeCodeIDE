@@ -80,6 +80,7 @@ const DOM_IDS = [
   ['searchBtn', 'search-btn'],
   ['gitBtn', 'git-btn'],
   ['debugBtn', 'debug-btn'],
+  ['extensionsBtn', 'extensions-btn'],
   ['activityPanel', 'activity-panel'],
   ['appBgColor', 'app-bg-color'],
   ['sidebarBgColor', 'sidebar-bg-color'],

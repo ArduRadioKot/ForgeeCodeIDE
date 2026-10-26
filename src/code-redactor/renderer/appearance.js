@@ -19,6 +19,7 @@ export function applyEditorAppearance(shouldSave = true) {
   if (dom.fontSizeSelect) {
     const size = parseInt(dom.fontSizeSelect.value, 10) || 14;
     root.style.setProperty('--editor-font-size', size + 'px');
+    window.dispatchEvent(new Event('frogee:metrics')); // the editor re-reads its line height
     // Whole-pixel line height: fractional rows leave hairline seams in the selection and drift the gutter.
     root.style.setProperty('--editor-line-height', Math.round(size * 1.6) + 'px');
   }

@@ -36,8 +36,13 @@ async function syncTabs() {
     if (tab.missing) { tab.missing = false; changed = true; }
     if (tab.modified) continue;
     const res = await window.electronAPI.getFileContent(tab.filePath);
-    if (!res?.success || typeof res.content !== 'string' || res.content === (tab.content ?? '')) continue;
+    if (!res?.success || typeof res.content !== 'string') continue;
+    // our own save (autosave, Ctrl+S) also wakes the watcher: that is not a change from outside
+    if (res.content === (tab.content ?? '') || res.content === tab.diskContent) continue;
+    // the user may have typed while the file was being read
+    if (tab.modified || (i === state.activeTabIndex && getDom().editor?.value !== (tab.content ?? ''))) continue;
     tab.content = res.content;
+    tab.diskContent = res.content;
     if (i === state.activeTabIndex) {
       const dom = getDom();
       const { selectionStart, selectionEnd, scrollTop } = dom.editor;

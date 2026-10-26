@@ -320,3 +320,29 @@ body.resizing { user-select: none; cursor: col-resize; }
 
 .tab-item.tab-missing .tab-name { text-decoration: line-through; opacity: .65; }
 .rename-input { user-select: text; -webkit-user-select: text; }
+
+/* ───────── Extensions (Open VSX) ───────── */
+.ext-panel { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 8px 16px; display: flex; flex-direction: column; gap: 6px; }
+.ext-search { width: 100%; height: var(--ctl-h, 30px); padding: 0 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--code-bg); color: var(--text-color); font-size: 12.5px; }
+.ext-search:focus { outline: none; border-color: var(--accent-color); }
+.ext-note { margin: 0 2px 4px; color: var(--text-muted); font-size: 11.5px; line-height: 1.45; }
+.ext-row { display: flex; gap: 10px; padding: 8px 6px; border-radius: var(--radius-md); }
+.ext-row:hover { background: var(--hover-color); }
+.ext-icon { width: 36px; height: 36px; flex: none; border-radius: var(--radius-sm); object-fit: contain; }
+.ext-icon-letter { display: grid; place-items: center; background: var(--active-bg); color: var(--text-color); font-weight: 700; }
+.ext-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ext-name { font-size: 12.5px; font-weight: 600; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ext-name span { font-weight: 400; color: var(--text-muted); font-size: 11px; }
+.ext-meta { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ext-desc { font-size: 11.5px; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ext-actions { display: flex; gap: 6px; margin-top: 4px; }
+.ext-btn { white-space: nowrap; height: 24px; padding: 0 10px; border-radius: var(--radius-sm); background: var(--accent-color); color: var(--accent-text); font-size: 11.5px; font-weight: 500; }
+.ext-btn.ghost { background: transparent; border: 1px solid var(--border-color); color: var(--text-color); }
+.ext-btn:disabled { opacity: .6; }
+.ext-empty { margin: 4px 2px; color: var(--text-faint); font-size: 12px; }
+.ext-error { color: var(--danger-color); }
+.ac-row { display: flex; align-items: center; gap: 8px; }
+.ac-kind { margin-left: auto; font-size: 10.5px; color: var(--text-faint); }
+.ext-badge { margin-right: 6px; padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--accent-color) 18%, transparent); color: var(--accent-color); font-style: normal; font-size: 10px; font-weight: 600; vertical-align: 1px; }
+.ext-link { margin-left: 6px; font-size: 11px; color: var(--link-color, var(--accent-color)); text-decoration: none; }
+.ext-link:hover { text-decoration: underline; }

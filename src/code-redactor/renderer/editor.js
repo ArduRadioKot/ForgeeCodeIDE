@@ -89,6 +89,7 @@ export async function saveFile() {
       }
       
       if (result.success) {
+        tab.diskContent = content;
         tab.filePath = result.filePath;
         tab.name = pathUtils.basename(result.filePath);
         tab.modified = false;
@@ -144,11 +145,13 @@ export function handleEditorInput() {
     const currentContent = dom.editor.value;
     
     if (tab.content !== currentContent) {
-      tab.modified = true;
       tab.content = currentContent;
-      updateTabsList();
-      updateTabTitle();
-      saveAllConfig();
+      // the tab strip and title only change when the file first becomes modified, not on every key
+      if (!tab.modified) {
+        tab.modified = true;
+        updateTabsList();
+        updateTabTitle();
+      }
     }
   }
   // The same file can be open in both panes: mirror the edit into the right one.
@@ -184,20 +187,34 @@ export function handleEditorKeydown(e) {
 
 let autoSaveTimer = null;
 
+let autoSaving = false;
 async function flushAutoSave() {
-  if (!state.autoSave) return;
-  for (const tab of state.currentTabs) {
-    if (!tab || !tab.modified || !tab.filePath || tab.kind === 'terminal') continue;
-    if (isNotebookTab(tab)) syncNotebookContent(tab);
-    try {
-      const res = await window.electronAPI.writeFile(tab.filePath, tab.content ?? '');
-      if (res?.success) tab.modified = false;
-    } catch (err) {
-      console.warn('[autosave]', err);
+  if (!state.autoSave || autoSaving) return;
+  autoSaving = true;
+  let saved = false;
+  try {
+    for (const tab of state.currentTabs) {
+      if (!tab || !tab.modified || !tab.filePath || tab.kind === 'terminal') continue;
+      if (isNotebookTab(tab)) syncNotebookContent(tab);
+      const content = tab.content ?? '';
+      try {
+        const res = await window.electronAPI.writeFile(tab.filePath, content);
+        if (res?.success) {
+          tab.diskContent = content; // our own write: the folder watcher must not "reload" it
+          // typing may have gone on while the file was being written: then the tab is still modified
+          if (tab.content === content) { tab.modified = false; saved = true; }
+        }
+      } catch (err) {
+        console.warn('[autosave]', err);
+      }
     }
+  } finally {
+    autoSaving = false;
   }
-  updateTabsList();
-  updateTabTitle();
+  if (saved) {
+    updateTabsList();
+    updateTabTitle();
+  }
 }
 
 export function initAutoSave() {
@@ -220,32 +237,53 @@ let currentLineEl = null;
 
 export function updateLineNumbers() {
   const value = dom.editor.value;
+  const caret = dom.editor.selectionStart;
   let count = 1;
-  for (let i = value.indexOf('\n'); i >= 0; i = value.indexOf('\n', i + 1)) count++;
+  let current = 1;
+  for (let i = value.indexOf('\n'); i >= 0; i = value.indexOf('\n', i + 1)) {
+    count++;
+    if (i < caret) current++;
+  }
   const scrollTop = dom.editor.scrollTop;
-  const current = value.slice(0, dom.editor.selectionStart).split('\n').length;
   const box = dom.lineNumbers;
 
-  if (box.children.length !== count) {
-    // The number of lines changed: rebuild. (A key press that keeps the count only moves the "current" mark.)
+  // Numbers depend only on the position, so a changed line count adds or removes rows at the end instead of rebuilding them all.
+  const have = box.children.length;
+  if (have < count) {
     let html = '';
-    for (let n = 1; n <= count; n++) html += `<span class="line-number${n === current ? ' current' : ''}">${n}</span>`;
-    box.innerHTML = html;
-    currentLineEl = box.children[current - 1] || null;
-  } else {
-    if (currentLineEl) currentLineEl.classList.remove('current');
-    box.querySelectorAll('.line-number.current').forEach((el) => el.classList.remove('current'));
-    currentLineEl = box.children[current - 1] || null;
-    currentLineEl?.classList.add('current');
+    for (let n = have + 1; n <= count; n++) html += `<span class="line-number">${n}</span>`;
+    box.insertAdjacentHTML('beforeend', html);
+  } else if (have > count) {
+    const range = document.createRange();
+    range.setStartBefore(box.children[count]);
+    range.setEndAfter(box.lastElementChild);
+    range.deleteContents();
+  }
+  const next = box.children[current - 1] || null;
+  if (next !== currentLineEl) {
+    currentLineEl?.classList.remove('current');
+    next?.classList.add('current');
+    currentLineEl = next;
+  } else if (next && !next.classList.contains('current')) {
+    next.classList.add('current');
   }
   box.scrollTop = scrollTop;
 }
 
 // Files this long are highlighted only around the visible lines (the rest of the overlay is blank lines of the same height),
 // otherwise every key press re-colours the whole file and typing lags.
-const WINDOW_FROM_LINES = 1500;
-const WINDOW_MARGIN = 80;
+const WINDOW_FROM_LINES = 300;
+const WINDOW_MARGIN = 60;
 let hlWindow = null; // { first, last } of the lines currently coloured, or null when the whole file is
+
+// getComputedStyle forces a style pass: the line height is read once per zoom / font change, not on every key
+let lineHeightCache = 0;
+function editorLineHeight() {
+  if (!lineHeightCache && dom.editor) lineHeightCache = parseFloat(getComputedStyle(dom.editor).lineHeight) || 22;
+  return lineHeightCache || 22;
+}
+export function resetEditorMetrics() { lineHeightCache = 0; }
+window.addEventListener('frogee:metrics', resetEditorMetrics);
 
 export function updateSyntaxHighlight() {
   const syntaxEl = document.getElementById('syntax-highlight');
@@ -257,7 +295,7 @@ export function updateSyntaxHighlight() {
   for (let i = text.indexOf('\n'); i >= 0; i = text.indexOf('\n', i + 1)) lineCount++;
   hlWindow = null;
   if (lineCount > WINDOW_FROM_LINES && !dom.editor.classList.contains('word-wrap')) {
-    const lh = parseFloat(getComputedStyle(dom.editor).lineHeight) || 22;
+    const lh = editorLineHeight();
     const first = Math.max(0, Math.floor(dom.editor.scrollTop / lh) - WINDOW_MARGIN);
     const last = Math.min(lineCount, Math.ceil((dom.editor.scrollTop + dom.editor.clientHeight) / lh) + WINDOW_MARGIN);
     let from = 0;
@@ -284,7 +322,7 @@ export function syncSyntaxScroll() {
   if (findLayer && state.findBarVisible) { findLayer.scrollTop = dom.editor.scrollTop; findLayer.scrollLeft = dom.editor.scrollLeft; }
   if (hlWindow && !rewindowFrame) {
     // Scrolled close to the edge of the coloured part: move the window.
-    const lh = parseFloat(getComputedStyle(dom.editor).lineHeight) || 22;
+    const lh = editorLineHeight();
     const top = Math.floor(dom.editor.scrollTop / lh);
     const bottom = Math.ceil((dom.editor.scrollTop + dom.editor.clientHeight) / lh);
     if ((top < hlWindow.first + 15 && hlWindow.first > 0) || bottom > hlWindow.last - 15) {
@@ -300,6 +338,7 @@ export function changeEditorZoom(delta) {
 }
 
 export function applyEditorZoom(value, shouldSave = true) {
+  resetEditorMetrics();
   state.editorZoom = Math.min(2, Math.max(0.7, value));
   document.documentElement.style.setProperty('--editor-zoom', String(state.editorZoom));
   const label = Math.round(state.editorZoom * 100) + '%';

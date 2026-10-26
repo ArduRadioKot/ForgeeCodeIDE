@@ -1,0 +1,28 @@
+{
+  "publisher": "frogeesoft",
+  "name": "frogee-theme",
+  "version": "1.0.0",
+  "displayName": "FrogeeSoft",
+  "description": "Тёмная и светлая темы в цветах FrogeeSoft: зелёно-чёрный фон и бирюзовый акцент.",
+  "author": "FrogeeSoft",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE",
+  "keywords": [
+    "theme",
+    "dark",
+    "light"
+  ],
+  "themes": [
+    {
+      "label": "FrogeeSoft Dark",
+      "uiTheme": "vs-dark",
+      "path": "themes/frogee-dark.json"
+    },
+    {
+      "label": "FrogeeSoft Light",
+      "uiTheme": "vs",
+      "path": "themes/frogee-light.json"
+    }
+  ]
+}

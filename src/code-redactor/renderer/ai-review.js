@@ -139,6 +139,8 @@ function clean() {
   for (const id of [...pending.keys()]) if (!state.currentTabs.some((t) => t.id === id)) pending.delete(id);
 }
 
+let marked = []; // gutter rows carrying review marks
+
 function render() {
   clean();
   const tab = activeTab();
@@ -146,7 +148,9 @@ function render() {
   const l = layer();
   const g = gutter();
   let stat = null;
-  if (g) [...g.children].forEach((el) => { el.classList.remove('has-add', 'has-del'); el.removeAttribute('data-del'); });
+  // only the rows marked last time are cleared: walking the whole gutter on every key is slow in long files
+  marked.forEach((el) => { el.classList.remove('has-add', 'has-del'); el.removeAttribute('data-del'); if (el.title?.startsWith('Удалено строк')) el.removeAttribute('title'); });
+  marked = [];
   if (!p || !l || !ed()) {
     if (l) l.innerHTML = '';
   } else {
@@ -158,10 +162,10 @@ function render() {
     l.scrollTop = ed().scrollTop;
     l.scrollLeft = ed().scrollLeft;
     if (g) {
-      d.added.forEach((n) => g.children[n - 1]?.classList.add('has-add'));
+      d.added.forEach((n) => { const el = g.children[n - 1]; if (el) { el.classList.add('has-add'); marked.push(el); } });
       d.removed.forEach((rows, at) => {
         const el = g.children[Math.min(at, g.children.length - 1)];
-        if (el) { el.classList.add('has-del'); el.dataset.del = rows.slice(0, 6).join('\n') + (rows.length > 6 ? '\n…' : ''); el.title = `Удалено строк: ${rows.length}\n${el.dataset.del}`; }
+        if (el) { marked.push(el); el.classList.add('has-del'); el.dataset.del = rows.slice(0, 6).join('\n') + (rows.length > 6 ? '\n…' : ''); el.title = `Удалено строк: ${rows.length}\n${el.dataset.del}`; }
       });
     }
   }
