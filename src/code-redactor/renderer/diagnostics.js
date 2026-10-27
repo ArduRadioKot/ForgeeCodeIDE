@@ -247,6 +247,22 @@ async function analyze(side) {
     if (res?.precise) list = res.diagnostics;
   }
   if (token !== tokens[side]) return;
+  try {
+    const { extensionDiagnostics } = await import('./vscode-bridge.js');
+    const path = tab.filePath || '';
+    const fromExt = extensionDiagnostics().filter((d) => !d.uri || !path || d.uri.includes(path) || d.uri.endsWith(tab.name));
+    for (const d of fromExt) {
+      list.push({
+        line: d.line || 1,
+        col: d.col || 1,
+        endCol: d.endCol || (d.col || 1) + 1,
+        severity: d.severity === 'error' ? 'error' : d.severity === 'warning' ? 'warning' : 'info',
+        message: d.message || '',
+        source: d.source || 'расширение',
+      });
+    }
+  } catch { /* ignore */ }
+  if (token !== tokens[side]) return;
   results[side] = list.sort((a, b) => a.line - b.line || a.col - b.col);
   render(side);
 }
@@ -453,6 +469,7 @@ export function setupDiagnostics() {
   bindHover('left');
   bindHover('right');
   window.addEventListener('frogee:content', scheduleDiagnostics);
+  window.addEventListener('frogee:ext-diagnostics', scheduleDiagnostics);
   document.getElementById('status-problems')?.addEventListener('click', () => goToProblem(1));
   scheduleDiagnostics();
 }

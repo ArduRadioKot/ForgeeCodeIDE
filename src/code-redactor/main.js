@@ -11,6 +11,7 @@ const { registerKernelIpc, killAllKernels } = require('./lib/kernel');
 const { registerFolderWatchIpc } = require('./lib/folder-watch');
 const { registerPluginsIpc } = require('./lib/plugins');
 const { registerExtensionsIpc } = require('./lib/extensions');
+const { registerVscodeHostIpc } = require('./lib/vscode-host');
 const { registerProjectFilesIpc } = require('./lib/project-files');
 const { registerLiveServerIpc, stopAllLiveServers } = require('./lib/liveserver');
 const { registerAgentsIpc, killAgents } = require('./lib/agents');
@@ -180,6 +181,7 @@ function registerAllIpc() {
   registerFolderWatchIpc();
   registerPluginsIpc();
   registerExtensionsIpc();
+  registerVscodeHostIpc();
   registerProjectFilesIpc();
   registerLiveServerIpc(getMainWindow);
   registerAgentsIpc(getMainWindow);

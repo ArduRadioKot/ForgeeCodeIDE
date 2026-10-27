@@ -20,7 +20,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   extensionsFrogee: () => ipcRenderer.invoke('extensions-frogee'),
   extensionsRemove: (id) => ipcRenderer.invoke('extensions-remove', id),
   extensionsSnippets: () => ipcRenderer.invoke('extensions-snippets'),
+  extensionsContributions: () => ipcRenderer.invoke('extensions-contributions'),
+  extensionsSetCode: (opts) => ipcRenderer.invoke('extensions-set-code', opts),
   extensionsOpenFolder: () => ipcRenderer.invoke('extensions-open-folder'),
+  vscodeHostActivateAll: () => ipcRenderer.invoke('vscode-host-activate-all'),
+  vscodeHostActivate: (id) => ipcRenderer.invoke('vscode-host-activate', id),
+  vscodeHostDeactivate: (id) => ipcRenderer.invoke('vscode-host-deactivate', id),
+  vscodeHostList: () => ipcRenderer.invoke('vscode-host-list'),
+  vscodeHostExecute: (opts) => ipcRenderer.invoke('vscode-host-execute', opts),
+  vscodeHostSetEditor: (snap) => ipcRenderer.invoke('vscode-host-set-editor', snap),
+  vscodeHostProviders: (opts) => ipcRenderer.invoke('vscode-host-providers', opts),
+  vscodeHostDiagnostics: () => ipcRenderer.invoke('vscode-host-diagnostics'),
+  vscodeHostCommands: () => ipcRenderer.invoke('vscode-host-commands'),
+  vscodeUiReply: (msg) => ipcRenderer.send('vscode-ui-reply', msg),
+  onVscodeUi: (callback) => {
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on('vscode-ui', handler);
+    return () => ipcRenderer.removeListener('vscode-ui', handler);
+  },
   getPlugins: () => ipcRenderer.invoke('plugins-list'),
   readPlugin: (file) => ipcRenderer.invoke('plugin-read', file),
   installPlugins: () => ipcRenderer.invoke('plugin-install'),

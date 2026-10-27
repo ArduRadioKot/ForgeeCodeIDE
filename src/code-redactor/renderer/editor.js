@@ -17,7 +17,8 @@ import { toggleTerminal } from './terminal.js';
 import { registerEditorApi } from './editor-api.js';
 import { isNotebookTab, isBrowserTab, isEditorTab } from './tab-model.js';
 import { syncNotebookContent, createNotebookTab } from './notebook.js';
-import { createSmartKeydown, langFromName } from './smart-edit.js';
+import { createSmartKeydown } from './smart-edit.js';
+import { smartOptsFor } from './ext-contrib.js';
 
 const dom = getDom();
 
@@ -174,7 +175,7 @@ const smartKeydown = createSmartKeydown(() => {
   const tab = state.currentTabs[state.activeTabIndex];
   return {
     tabSize: parseInt(dom.tabSizeSelect?.value || '4', 10),
-    lang: langFromName(tab?.name || ''),
+    ...smartOptsFor(tab?.name || ''),
   };
 });
 

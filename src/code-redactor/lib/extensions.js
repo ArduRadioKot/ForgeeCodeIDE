@@ -1,9 +1,9 @@
 /**
- * VS Code extensions from Open VSX (open-vsx.org). FrogeeCodeIDE does not run extension code; it takes what an extension
- * declares in package.json and that the editor can use as is:
- *   - colour themes (contributes.themes)  -> converted into FrogeeCodeIDE themes in Documents/FrogeeCodeIDE/themes
- *   - snippets (contributes.snippets)     -> offered by the code suggestions
- * Installed extensions live in Documents/FrogeeCodeIDE/extensions/<publisher>.<name>.
+ * VS Code extensions from Open VSX (open-vsx.org).
+ * Declarative package.json contributions (themes, snippets, languages, grammars, commands) always apply.
+ * Extensions with `main` can also run via Frogee's vscode.* shim (lib/vscode-host.js) after user consent —
+ * not a copy of VS Code's extension host; webviews/LSP debug adapters are unsupported.
+ * Installed under Documents/FrogeeCodeIDE/extensions/<publisher>.<name>.
  */
 const { ipcMain, shell, dialog, BrowserWindow } = require('electron');
 const fs = require('fs');
@@ -167,6 +167,7 @@ function scopeColor(rules, scope) {
 }
 
 async function readTheme(file, depth = 0) {
+  if (/\.tmTheme$/i.test(file)) return parseTmTheme(await fsp.readFile(file, 'utf8'));
   const raw = parseJsonc(await fsp.readFile(file, 'utf8'));
   if (raw.include && depth < 4) {
     const base = await readTheme(path.resolve(path.dirname(file), raw.include), depth + 1).catch(() => null);
@@ -177,6 +178,42 @@ async function readTheme(file, depth = 0) {
     }
   }
   return raw;
+}
+
+/** Minimal plist/.tmTheme reader → { type, colors, tokenColors } for convertTheme. */
+function parseTmTheme(xml) {
+  const tokenColors = [];
+  const dictRe = /<dict>([\s\S]*?)<\/dict>/gi;
+  let m;
+  while ((m = dictRe.exec(xml))) {
+    const block = m[1];
+    if (!/<key>scope<\/key>/i.test(block) && !/<key>name<\/key>/i.test(block)) continue;
+    const scope = plistString(block, 'scope');
+    const fg = plistString(block, 'foreground') || plistNested(block, 'settings', 'foreground');
+    const bg = plistNested(block, 'settings', 'background');
+    const fontStyle = plistNested(block, 'settings', 'fontStyle');
+    if (!scope && !fg) continue;
+    const settings = {};
+    if (fg && COLOR_RE.test(fg)) settings.foreground = fg;
+    if (bg && COLOR_RE.test(bg)) settings.background = bg;
+    if (fontStyle) settings.fontStyle = fontStyle;
+    if (!Object.keys(settings).length) continue;
+    tokenColors.push({ scope: scope || undefined, settings });
+  }
+  const name = plistString(xml, 'name') || 'Theme';
+  return { name, type: /light/i.test(name) ? 'light' : 'dark', colors: {}, tokenColors };
+}
+
+function plistString(block, key) {
+  const re = new RegExp(`<key>${key}<\\/key>\\s*<string>([\\s\\S]*?)<\\/string>`, 'i');
+  const m = re.exec(block);
+  return m ? m[1].trim() : '';
+}
+
+function plistNested(block, parent, key) {
+  const re = new RegExp(`<key>${parent}<\\/key>\\s*<dict>([\\s\\S]*?)<\\/dict>`, 'i');
+  const m = re.exec(block);
+  return m ? plistString(m[1], key) : '';
 }
 
 function convertTheme(vs, { label, uiTheme, author }) {
@@ -213,15 +250,38 @@ const PLUGINS_DIR = path.join(ROOT, 'plugins');
 const PLUGIN_RE = /\.(?:js|css)$/i;
 const MAX_FILES = 500;
 
-/** What FrogeeCodeIDE takes from a VS Code package.json: colour themes and snippets (extension code never runs). */
+/** What FrogeeCodeIDE takes from a VS Code package.json. */
 function vsCodeCaps(pkg) {
   const contributes = pkg.contributes || {};
+  const themes = Array.isArray(contributes.themes)
+    ? contributes.themes.filter((t) => t?.path)
+    : [];
+  const snippets = Array.isArray(contributes.snippets)
+    ? contributes.snippets.filter((s) => s?.path)
+    : [];
+  const languages = Array.isArray(contributes.languages)
+    ? contributes.languages.filter((l) => l?.id)
+    : [];
+  const grammars = Array.isArray(contributes.grammars)
+    ? contributes.grammars.filter((g) => g?.path && /\.json$/i.test(g.path))
+    : [];
+  const commands = Array.isArray(contributes.commands)
+    ? contributes.commands.filter((c) => c?.command)
+    : [];
+  const main = typeof pkg.main === 'string' ? pkg.main : '';
+  const browser = typeof pkg.browser === 'string' ? pkg.browser : '';
   return {
-    themes: Array.isArray(contributes.themes) ? contributes.themes.filter((t) => t?.path && !/\.tmTheme$/i.test(t.path)) : [],
-    snippets: Array.isArray(contributes.snippets) ? contributes.snippets.filter((s) => s?.path) : [],
+    themes,
+    snippets,
+    languages,
+    grammars,
+    commands,
     plugins: [],
     forFrogee: false,
-    hasCode: !!(pkg.main || pkg.browser),
+    hasCode: !!(main || browser),
+    main,
+    browser,
+    activationEvents: Array.isArray(pkg.activationEvents) ? pkg.activationEvents.map(String) : [],
   };
 }
 
@@ -240,17 +300,119 @@ function frogeeManifest(raw) {
     manifest: raw,
     caps: {
       plugins: list(raw.plugins).map(String).filter((p) => PLUGIN_RE.test(p)),
-      themes: list(raw.themes).filter((t) => t?.path && !/\.tmTheme$/i.test(t.path)),
+      themes: list(raw.themes).filter((t) => t?.path),
       snippets: list(raw.snippets).filter((x) => x?.path),
+      languages: list(raw.languages).filter((l) => l?.id),
+      grammars: list(raw.grammars).filter((g) => g?.path),
+      commands: list(raw.commands).filter((c) => c?.command),
       forFrogee: true,
       hasCode: false,
     },
   };
 }
-const usable = (caps) => caps.themes.length || caps.snippets.length || caps.plugins.length;
+const usable = (caps) =>
+  caps.themes.length || caps.snippets.length || caps.plugins.length
+  || caps.languages?.length || caps.grammars?.length || caps.commands?.length
+  || caps.hasCode;
+
+/** Extract \b(word|word)\b style keywords from a TextMate JSON grammar (best-effort). */
+function keywordsFromGrammar(grammar) {
+  const found = new Set();
+  const walk = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (typeof node.match === 'string') {
+      for (const m of node.match.matchAll(/\\b\(([^)]+)\)\\b/g)) {
+        for (const part of m[1].split('|')) {
+          const w = part.replace(/\\/g, '');
+          if (/^[A-Za-z_][\w$]*$/.test(w) && w.length > 1) found.add(w);
+        }
+      }
+    }
+    for (const v of Object.values(node)) walk(v);
+  };
+  walk(grammar);
+  return [...found].slice(0, 250);
+}
 
 async function readMeta(dir) {
   try { return JSON.parse(await fsp.readFile(path.join(dir, META), 'utf8')); } catch { return null; }
+}
+
+/** Fill languages/grammars/commands/main from package.json for older installs. */
+async function enrichDeclarative(dir, meta) {
+  const needsDeclarative = !(Array.isArray(meta?.languages) && Array.isArray(meta?.grammars) && Array.isArray(meta?.commands));
+  const needsMain = meta && meta.main === undefined && meta.hasCode;
+  if (!meta || (!needsDeclarative && !needsMain && meta.main !== undefined)) {
+    return meta;
+  }
+  const pkgPath = path.join(dir, 'package.json');
+  if (!fs.existsSync(pkgPath)) {
+    return { ...meta, languages: meta.languages || [], grammars: meta.grammars || [], commands: meta.commands || [], main: meta.main || '', codeEnabled: !!meta.codeEnabled };
+  }
+  try {
+    const caps = vsCodeCaps(parseJsonc(await fsp.readFile(pkgPath, 'utf8')));
+    const languages = [];
+    for (const lang of caps.languages) {
+      const id = String(lang.id || '').trim();
+      if (!id) continue;
+      const entry = {
+        id,
+        extensions: (lang.extensions || []).map(String),
+        filenames: (lang.filenames || []).map(String),
+        aliases: (lang.aliases || []).map(String),
+        configuration: lang.configuration || null,
+        config: null,
+      };
+      if (lang.configuration) {
+        const cfgPath = insideDir(dir, lang.configuration);
+        if (cfgPath && fs.existsSync(cfgPath)) {
+          try {
+            const cfg = parseJsonc(await fsp.readFile(cfgPath, 'utf8'));
+            entry.config = {
+              lineComment: cfg.comments?.lineComment || null,
+              blockComment: Array.isArray(cfg.comments?.blockComment) ? cfg.comments.blockComment : null,
+              brackets: Array.isArray(cfg.brackets) ? cfg.brackets : null,
+              autoClosingPairs: Array.isArray(cfg.autoClosingPairs)
+                ? cfg.autoClosingPairs.map((p) => (Array.isArray(p) ? p : [p.open, p.close])).filter((p) => p[0] && p[1])
+                : null,
+            };
+          } catch { /* skip bad config */ }
+        }
+      }
+      languages.push(entry);
+    }
+    const grammars = [];
+    for (const g of caps.grammars) {
+      const file = insideDir(dir, g.path);
+      if (!file || !fs.existsSync(file)) continue;
+      const entry = { path: g.path, language: g.language || '', scopeName: g.scopeName || '', keywords: [] };
+      try { entry.keywords = keywordsFromGrammar(parseJsonc(await fsp.readFile(file, 'utf8'))); } catch { /* skip */ }
+      grammars.push(entry);
+    }
+    const commands = needsDeclarative
+      ? caps.commands.map((c) => ({
+        command: String(c.command),
+        title: String(c.title || c.command),
+        category: c.category ? String(c.category) : '',
+      }))
+      : (meta.commands || []);
+    const next = {
+      ...meta,
+      languages: needsDeclarative ? languages : (meta.languages || []),
+      grammars: needsDeclarative ? grammars : (meta.grammars || []),
+      commands,
+      main: meta.main || caps.main || '',
+      browser: meta.browser || caps.browser || '',
+      activationEvents: meta.activationEvents || caps.activationEvents || [],
+      hasCode: !!(meta.main || caps.main || meta.browser || caps.browser || meta.hasCode),
+      codeEnabled: !!meta.codeEnabled,
+    };
+    await fsp.writeFile(path.join(dir, META), JSON.stringify(next, null, 2)).catch(() => {});
+    return next;
+  } catch {
+    return { ...meta, languages: meta.languages || [], grammars: meta.grammars || [], commands: meta.commands || [], main: meta.main || '', codeEnabled: !!meta.codeEnabled };
+  }
 }
 
 async function listInstalled() {
@@ -258,8 +420,11 @@ async function listInstalled() {
   const out = [];
   for (const ent of await fsp.readdir(EXT_DIR, { withFileTypes: true })) {
     if (!ent.isDirectory()) continue;
-    const meta = await readMeta(path.join(EXT_DIR, ent.name));
-    if (meta) out.push(meta);
+    const dir = path.join(EXT_DIR, ent.name);
+    let meta = await readMeta(dir);
+    if (!meta) continue;
+    meta = await enrichDeclarative(dir, meta);
+    out.push(meta);
   }
   return out.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru'));
 }
@@ -280,15 +445,18 @@ async function removeExtension(id) {
   try { await shell.trashItem(dir); } catch { await fsp.rm(dir, { recursive: true, force: true }); }
 }
 
-/** A plugin runs with the editor's rights: ask before an extension puts code in. */
-async function confirmCode(win, displayName, files) {
+/** A plugin / VS Code main runs with editor rights: ask before enabling code. */
+async function confirmCode(win, displayName, files, { vsCode = false } = {}) {
+  const detail = vsCode
+    ? `В «${displayName}» есть код расширения VS Code (${files.join(', ')}). FrogeeCodeIDE запустит его через свой vscode.* API (не полный движок VS Code). Код увидит файлы проекта и сможет менять редактор. Webview, LSP-серверы и отладчик могут не работать. Устанавливайте только расширения, которым доверяете.`
+    : `Это расширение для FrogeeCodeIDE с плагинами (${files.join(', ')}). Плагин выполняется внутри редактора, видит открытые файлы и может работать с проектом так же, как сам редактор. Устанавливайте только расширения, которым доверяете.`;
   const answer = await dialog.showMessageBox(win, {
     type: 'warning',
-    buttons: ['Установить', 'Отмена'],
+    buttons: ['Установить и разрешить код', 'Отмена'],
     defaultId: 1,
     cancelId: 1,
     message: `Установить «${displayName}»?`,
-    detail: `Это расширение для FrogeeCodeIDE с плагинами (${files.join(', ')}). Плагин выполняется внутри редактора, видит открытые файлы и может работать с проектом так же, как сам редактор. Устанавливайте только расширения, которым доверяете.`,
+    detail,
   });
   return answer.response === 0;
 }
@@ -296,7 +464,7 @@ async function confirmCode(win, displayName, files) {
 const unsupportedVsCode = (name) => ({
   success: false,
   unsupported: true,
-  error: `«${name}» работает через код расширений VS Code. Из расширений VS Code FrogeeCodeIDE берёт только темы оформления и сниппеты.`,
+  error: `«${name}» не даёт ни данных (темы, сниппеты, языки…), ни точки входа main/browser для запуска.`,
 });
 
 /**
@@ -336,6 +504,68 @@ async function finishInstall(dir, caps, desc) {
 
   const snippets = caps.snippets.map((x) => ({ language: x.language || '', path: x.path })).filter((x) => insideDir(dir, x.path));
 
+  // Languages: extension → Frogee lang id, plus optional language-configuration.json
+  const languages = [];
+  for (const lang of caps.languages || []) {
+    const id = String(lang.id || '').trim();
+    if (!id) continue;
+    const entry = {
+      id,
+      extensions: (lang.extensions || []).map(String),
+      filenames: (lang.filenames || []).map(String),
+      aliases: (lang.aliases || []).map(String),
+      configuration: null,
+      config: null,
+    };
+    if (lang.configuration) {
+      const cfgPath = insideDir(dir, lang.configuration);
+      if (cfgPath && fs.existsSync(cfgPath)) {
+        entry.configuration = lang.configuration;
+        try {
+          const cfg = parseJsonc(await fsp.readFile(cfgPath, 'utf8'));
+          entry.config = {
+            lineComment: cfg.comments?.lineComment || null,
+            blockComment: Array.isArray(cfg.comments?.blockComment) ? cfg.comments.blockComment : null,
+            brackets: Array.isArray(cfg.brackets) ? cfg.brackets : null,
+            autoClosingPairs: Array.isArray(cfg.autoClosingPairs)
+              ? cfg.autoClosingPairs.map((p) => (Array.isArray(p) ? p : [p.open, p.close])).filter((p) => p[0] && p[1])
+              : null,
+          };
+        } catch (err) {
+          problems.push(`language-configuration ${lang.configuration}: ${err.message}`);
+        }
+      }
+    }
+    languages.push(entry);
+  }
+
+  // Grammars: keep path + extract keyword hints for the regex highlighter
+  const grammars = [];
+  for (const g of caps.grammars || []) {
+    const file = insideDir(dir, g.path);
+    if (!file || !fs.existsSync(file)) continue;
+    const entry = {
+      path: g.path,
+      language: g.language || '',
+      scopeName: g.scopeName || '',
+      keywords: [],
+    };
+    try {
+      const raw = parseJsonc(await fsp.readFile(file, 'utf8'));
+      entry.keywords = keywordsFromGrammar(raw);
+    } catch (err) {
+      problems.push(`грамматика ${g.path}: ${err.message}`);
+    }
+    grammars.push(entry);
+  }
+
+  // Commands: store all; the renderer maps known ids onto Frogee actions
+  const commands = (caps.commands || []).map((c) => ({
+    command: String(c.command),
+    title: String(c.title || c.command),
+    category: c.category ? String(c.category) : '',
+  }));
+
   let icon = /^https?:/i.test(desc.icon || '') ? desc.icon : '';
   if (!icon && desc.icon) {
     const file = insideDir(dir, desc.icon);
@@ -346,7 +576,11 @@ async function finishInstall(dir, caps, desc) {
     id: desc.id, namespace: desc.namespace, name: desc.name, displayName: desc.displayName,
     version: desc.version || '', description: desc.description || '', icon,
     themes: caps.themes.map((t) => t.label || t.id || t.path), themeFiles, themeIds,
-    snippets, pluginFiles, forFrogee: caps.forFrogee, hasCode: caps.hasCode,
+    snippets, pluginFiles, languages, grammars, commands,
+    forFrogee: caps.forFrogee, hasCode: caps.hasCode,
+    main: caps.main || '', browser: caps.browser || '',
+    activationEvents: caps.activationEvents || [],
+    codeEnabled: !!(desc.codeEnabled && caps.main),
     source: desc.source, installedAt: new Date().toISOString(),
   };
   await fsp.writeFile(path.join(dir, META), JSON.stringify(meta, null, 2));
@@ -355,7 +589,7 @@ async function finishInstall(dir, caps, desc) {
 
 // ── VS Code extensions (.vsix from Open VSX) ──
 
-async function installVsix(buf, info) {
+async function installVsix(buf, info, { win = null, codeEnabled = false } = {}) {
   if (buf.length > MAX_VSIX) throw new Error('Расширение больше 80 МБ');
   const entries = unzipEntries(buf);
   const pkgEntry = entries.find((e) => e.name === 'extension/package.json');
@@ -367,6 +601,20 @@ async function installVsix(buf, info) {
   const caps = vsCodeCaps(pkg);
   const displayName = info?.displayName || pkg.displayName || name;
   if (!usable(caps)) return unsupportedVsCode(displayName);
+
+  let allowCode = !!codeEnabled;
+  if (caps.hasCode && caps.main && !allowCode) {
+    const entry = caps.main || caps.browser || 'main';
+    if (!(await confirmCode(win, displayName, [entry], { vsCode: true }))) {
+      // Still install declarative parts if any; otherwise cancel.
+      if (!(caps.themes.length || caps.snippets.length || caps.languages.length || caps.grammars.length)) {
+        return { success: false, canceled: true };
+      }
+      allowCode = false;
+    } else {
+      allowCode = true;
+    }
+  }
 
   const id = `${namespace}.${name}`;
   const dir = path.join(EXT_DIR, id);
@@ -386,10 +634,11 @@ async function installVsix(buf, info) {
     author: info?.publishedBy?.loginName || pkg.author?.name || pkg.author || namespace,
     icon: info?.files?.icon || pkg.icon || '',
     source: 'open-vsx',
+    codeEnabled: allowCode && !!caps.main,
   });
 }
 
-async function install(namespace, name) {
+async function install(namespace, name, win = null) {
   if (!ID_RE.test(String(namespace)) || !ID_RE.test(String(name))) throw new Error('Неверное имя расширения');
   const info = await getJson(`${API}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`);
   // package.json first: an extension FrogeeCodeIDE cannot use is refused before anything is downloaded.
@@ -399,7 +648,7 @@ async function install(namespace, name) {
   if (!url) throw new Error('У расширения нет файла для скачивания');
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Скачивание не удалось (${res.status})`);
-  return installVsix(Buffer.from(await res.arrayBuffer()), info);
+  return installVsix(Buffer.from(await res.arrayBuffer()), info, { win });
 }
 
 // ── extensions for FrogeeCodeIDE (a folder with extension.json) ──
@@ -541,17 +790,50 @@ async function loadSnippets() {
   return out;
 }
 
+/** Aggregate declarative contributions from every installed extension (for the renderer). */
+async function loadContributions() {
+  const languages = [];
+  const grammars = [];
+  const commands = [];
+  for (const ext of await listInstalled()) {
+    for (const lang of ext.languages || []) {
+      languages.push({ ...lang, extension: ext.displayName, extensionId: ext.id });
+    }
+    for (const g of ext.grammars || []) {
+      grammars.push({ ...g, extension: ext.displayName, extensionId: ext.id });
+    }
+    for (const c of ext.commands || []) {
+      commands.push({ ...c, extension: ext.displayName, extensionId: ext.id });
+    }
+  }
+  return { languages, grammars, commands };
+}
+
+async function setCodeEnabled(id, enabled) {
+  if (!ID_RE.test(String(id))) throw new Error('Неизвестное расширение');
+  const dir = path.join(EXT_DIR, id);
+  const meta = await readMeta(dir);
+  if (!meta) throw new Error('Расширение не установлено');
+  if (enabled && !meta.main) throw new Error('У расширения нет main — запускать нечего');
+  meta.codeEnabled = !!enabled && !!meta.main;
+  meta.hasCode = !!(meta.main || meta.browser);
+  await fsp.writeFile(path.join(dir, META), JSON.stringify(meta, null, 2));
+  return { success: true, extension: meta };
+}
+
 function registerExtensionsIpc() {
   const handlers = {
     'extensions-search': (e, opts) => search(opts),
     'extensions-installed': () => listInstalled(),
     'extensions-install': (e, { namespace, name, source } = {}) => (source === 'frogee'
       ? installFromCatalog(`${namespace}.${name}`, BrowserWindow.fromWebContents(e.sender))
-      : install(namespace, name)),
+      : install(namespace, name, BrowserWindow.fromWebContents(e.sender))),
     'extensions-install-folder': (e) => installFromFolder(BrowserWindow.fromWebContents(e.sender)),
     'extensions-frogee': () => frogeeCatalog(),
     'extensions-remove': async (e, id) => { await removeExtension(id); return { success: true }; },
+    'extensions-set-code': (e, { id, enabled } = {}) => setCodeEnabled(id, enabled),
     'extensions-snippets': () => loadSnippets(),
+    'extensions-contributions': () => loadContributions(),
     'extensions-open-folder': async () => { await fsp.mkdir(EXT_DIR, { recursive: true }); return shell.openPath(EXT_DIR); },
   };
   for (const [ch, fn] of Object.entries(handlers)) {
@@ -562,4 +844,4 @@ function registerExtensionsIpc() {
   }
 }
 
-module.exports = { registerExtensionsIpc, convertTheme, parseJsonc, unzipEntries, installVsix, installFromCatalog, installFromFolder };
+module.exports = { registerExtensionsIpc, convertTheme, parseJsonc, unzipEntries, installVsix, installFromCatalog, installFromFolder, parseTmTheme, keywordsFromGrammar };

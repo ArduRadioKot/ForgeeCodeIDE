@@ -13,8 +13,16 @@ const LINE_COMMENT = {
 };
 
 export function langFromName(name = '') {
+  if (typeof window !== 'undefined' && window.SyntaxHighlight?.detectLanguage) {
+    const id = window.SyntaxHighlight.detectLanguage(name);
+    if (id && id !== 'plain') return id;
+  }
   const m = /\.([a-z0-9]+)$/i.exec(name);
   return m ? m[1].toLowerCase() : 'py';
+}
+
+function pairsOf(opts) {
+  return (opts && opts.pairs) || PAIRS;
 }
 
 function insertText(ta, text) {
@@ -180,18 +188,20 @@ function handleTagClose(ta) {
   return true;
 }
 
-function handleOpen(ta, key) {
+function handleOpen(ta, key, pairs) {
   const { value, selectionStart: s, selectionEnd: e } = ta;
-  const close = PAIRS[key];
+  const close = pairs[key];
+  if (!close) return false;
   if (s !== e) {
     replaceRange(ta, s, e, key + value.slice(s, e) + close, s + 1, e + 1);
     return true;
   }
   const prev = value[s - 1] || '';
   const next = value[s] || '';
+  const closers = new Set(Object.values(pairs));
   const isQuote = key === '"' || key === "'" || key === '`';
   if (isQuote && (/\w/.test(prev) || next === key)) return false;
-  if (next && !/\s/.test(next) && !CLOSERS.has(next)) return false;
+  if (next && !/\s/.test(next) && !closers.has(next) && !CLOSERS.has(next)) return false;
   replaceRange(ta, s, e, key + close, s + 1);
   return true;
 }
@@ -202,6 +212,7 @@ export function createSmartKeydown(getOptions) {
     const ta = e.currentTarget || e.target;
     if (!ta || e.isComposing) return false;
     const opts = getOptions() || {};
+    const pairs = pairsOf(opts);
     const mod = e.metaKey || e.ctrlKey;
     const { value, selectionStart: s, selectionEnd: end } = ta;
     let handled = false;
@@ -232,14 +243,14 @@ export function createSmartKeydown(getOptions) {
       handled = handleEnter(ta, opts);
     } else if (e.key === '>' && !mod && !e.altKey && TAG_LANGS.has(opts.lang) && opts.autoPair !== false) {
       handled = handleTagClose(ta);
-    } else if (!mod && !e.altKey && CLOSERS.has(e.key) && s === end && value[s] === e.key) {
+    } else if (!mod && !e.altKey && (CLOSERS.has(e.key) || Object.values(pairs).includes(e.key)) && s === end && value[s] === e.key) {
       ta.setSelectionRange(s + 1, s + 1);
       handled = true;
-    } else if (!mod && !e.altKey && PAIRS[e.key] && opts.autoPair !== false) {
-      handled = handleOpen(ta, e.key);
+    } else if (!mod && !e.altKey && pairs[e.key] && opts.autoPair !== false) {
+      handled = handleOpen(ta, e.key, pairs);
     } else if (e.key === 'Backspace' && s === end && s > 0 && !mod && !e.altKey) {
       const a = value[s - 1];
-      if (PAIRS[a] && PAIRS[a] === value[s]) {
+      if (pairs[a] && pairs[a] === value[s]) {
         replaceRange(ta, s - 1, s + 1, '', s - 1);
         handled = true;
       }

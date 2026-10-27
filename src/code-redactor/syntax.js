@@ -376,13 +376,20 @@
     '.gitignore': 'ini', '.gitattributes': 'ini', '.npmrc': 'ini', '.editorconfig': 'ini', rakefile: 'rb', gemfile: 'rb', 'cmakelists.txt': 'makefile',
   };
 
+  // Extra mappings / languages contributed by VS Code extensions (declarative only).
+  const EXTRA_EXT = Object.create(null);
+  const EXTRA_NAMES = Object.create(null);
+  const EXTRA_LANG_IDS = new Set();
+
   function detectLanguage(fileName) {
     if (!fileName) return 'plain';
     const base = String(fileName).split(/[\\/]/).pop().toLowerCase();
+    if (EXTRA_NAMES[base]) return EXTRA_NAMES[base];
     if (NAMES[base]) return NAMES[base];
     if (/^dockerfile(\.|$)/.test(base)) return 'dockerfile';
     if (!base.includes('.')) return 'plain';
-    return EXT[base.split('.').pop()] || 'plain';
+    const ext = base.split('.').pop();
+    return EXTRA_EXT[ext] || EXT[ext] || 'plain';
   }
 
   const LABELS = {
@@ -396,6 +403,60 @@
     svg: 'html', vue: 'html', jsonc: 'json', golang: 'go', rust: 'rs', csharp: 'cs', 'c++': 'cpp', 'c#': 'cs', kotlin: 'kt', ruby: 'rb', powershell: 'ps1',
     docker: 'dockerfile', make: 'makefile', markdown: 'md',
   };
+
+  function commentRules(lineComment, blockComment) {
+    const list = [];
+    const line = lineComment || '//';
+    if (line === '#') list.push(P.hashLine);
+    else if (line === '--') list.push(P.dashLine);
+    else if (line === ';') list.push(P.semiLine);
+    else list.push(P.cLine);
+    if (blockComment !== false) list.push(P.block);
+    return list;
+  }
+
+  /** Register a language from an extension (file associations + optional keyword list). Built-ins win. */
+  function registerExtensionLang(spec) {
+    const id = String(spec?.id || '').toLowerCase().replace(/[^a-z0-9_+.-]/g, '');
+    if (!id || id === 'plain') return;
+    for (const raw of spec.extensions || []) {
+      const e = String(raw).replace(/^\./, '').toLowerCase();
+      if (e && !EXT[e] && !EXTRA_EXT[e]) EXTRA_EXT[e] = id;
+    }
+    for (const raw of spec.filenames || []) {
+      const n = String(raw).toLowerCase();
+      if (n && !NAMES[n] && !EXTRA_NAMES[n]) EXTRA_NAMES[n] = id;
+    }
+    for (const a of spec.aliases || []) {
+      const key = String(a).toLowerCase();
+      if (key && !ALIASES[key]) ALIASES[key] = id;
+    }
+    if (spec.label && !LABELS[id]) LABELS[id] = String(spec.label);
+    const kws = Array.isArray(spec.keywords) ? spec.keywords.filter((w) => /^[A-Za-z_][\w$]*$/.test(w)) : [];
+    if (!LANGS[id] && kws.length) {
+      LANGS[id] = lang({
+        comments: commentRules(spec.lineComment, spec.blockComment),
+        strings: [P.dq, P.sq],
+        keywords: kws.join(' '),
+        post: [['function', P.method]],
+      });
+      EXTRA_LANG_IDS.add(id);
+    } else if (!LANGS[id] && (spec.lineComment || spec.extensions?.length)) {
+      // language-configuration only: still get comments/strings for unknown file types
+      LANGS[id] = lang({
+        comments: commentRules(spec.lineComment, spec.blockComment),
+        strings: [P.dq, P.sq],
+      });
+      EXTRA_LANG_IDS.add(id);
+    }
+  }
+
+  function clearExtensionLangs() {
+    for (const id of EXTRA_LANG_IDS) delete LANGS[id];
+    EXTRA_LANG_IDS.clear();
+    for (const k of Object.keys(EXTRA_EXT)) delete EXTRA_EXT[k];
+    for (const k of Object.keys(EXTRA_NAMES)) delete EXTRA_NAMES[k];
+  }
 
   function highlightLang(lang, code) {
     if (code.length > 400000) return esc(code);
@@ -422,6 +483,7 @@
 
   global.SyntaxHighlight = {
     highlight, highlightByName, detectLanguage,
+    registerExtensionLang, clearExtensionLangs,
     label: (lang) => LABELS[lang] || String(lang).toUpperCase(),
     languages: Object.keys(LABELS),
   };

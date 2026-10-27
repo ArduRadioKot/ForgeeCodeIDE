@@ -1,7 +1,7 @@
 /**
  * The "Расширения" side panel: search Open VSX, install and remove VS Code extensions.
- * From an extension the editor takes its colour themes (they join the theme list) and snippets (they join the suggestions);
- * extension code is never run.
+ * From VS Code packages Frogee takes declarative data only (themes, snippets, languages,
+ * language-configuration, JSON grammar keywords, mappable commands). Extension JS never runs.
  */
 import { state } from './state.js';
 import { getDom } from './dom.js';
@@ -9,6 +9,8 @@ import { escapeHtml } from './utils.js';
 import { toast } from './image-view.js';
 import { loadCustomThemes } from './themes.js';
 import { enablePluginFiles, disablePluginFiles } from './plugins.js';
+import { loadContributions } from './ext-contrib.js';
+import { activateExtensionRuntime, deactivateExtensionRuntime } from './vscode-bridge.js';
 
 const dom = getDom();
 let installed = [];
@@ -149,10 +151,19 @@ function row(ext, isInstalled) {
     if (ext.pluginFiles?.length) parts.push(`плагины: ${ext.pluginFiles.length}`);
     if (ext.themeIds?.length) parts.push(`темы: ${ext.themeIds.length}`);
     if (ext.snippets?.length) parts.push(`сниппеты: ${ext.snippets.length}`);
+    if (ext.languages?.length) parts.push(`языки: ${ext.languages.length}`);
+    if (ext.grammars?.length) parts.push(`грамматики: ${ext.grammars.length}`);
+    if (ext.commands?.length) parts.push(`команды: ${ext.commands.length}`);
+    if (ext.main) parts.push(ext.codeEnabled ? 'код: включён' : 'код: выкл.');
   }
   const newer = isInstalled ? frogeeList.find((x) => x.id === id && newerVersion(x.version, ext.version)) : null;
+  const codeBtn = isInstalled && ext.main
+    ? (ext.codeEnabled
+      ? `<button type="button" class="ext-btn ghost" data-code-off="${escapeHtml(id)}" ${working ? 'disabled' : ''}>Остановить код</button>`
+      : `<button type="button" class="ext-btn" data-code-on="${escapeHtml(id)}" ${working ? 'disabled' : ''}>Запустить код</button>`)
+    : '';
   const action = isInstalled
-    ? `${newer ? `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>Обновить до ${escapeHtml(newer.version)}</button>` : ''}${ext.themeIds?.length ? `<button type="button" class="ext-btn" data-apply="${escapeHtml(id)}">Применить тему</button>` : ''}<button type="button" class="ext-btn ghost" data-remove="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${working ? 'Удаление…' : 'Удалить'}</button>`
+    ? `${newer ? `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>Обновить до ${escapeHtml(newer.version)}</button>` : ''}${ext.themeIds?.length ? `<button type="button" class="ext-btn" data-apply="${escapeHtml(id)}">Применить тему</button>` : ''}${codeBtn}<button type="button" class="ext-btn ghost" data-remove="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${working ? 'Удаление…' : 'Удалить'}</button>`
     : `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${working ? 'Установка…' : 'Установить'}</button>`;
   return `<div class="ext-row" data-id="${escapeHtml(id)}">
     ${iconHtml(ext)}
@@ -222,15 +233,22 @@ async function afterInstall(res) {
   if (res?.canceled) return;
   if (!res?.success) { toast(res?.error || 'Не удалось установить расширение'); return; }
   const got = res.extension;
-  await Promise.all([refreshInstalled(), loadCustomThemes(), loadSnippets()]);
+  await Promise.all([refreshInstalled(), loadCustomThemes(), loadSnippets(), loadContributions()]);
   if (got.pluginFiles?.length) await enablePluginFiles(got.pluginFiles);
   const what = [
     got.pluginFiles?.length ? `плагинов: ${got.pluginFiles.length}` : '',
     got.themeIds?.length ? `тем: ${got.themeIds.length}` : '',
     got.snippets?.length ? `наборов сниппетов: ${got.snippets.length}` : '',
+    got.languages?.length ? `языков: ${got.languages.length}` : '',
+    got.grammars?.length ? `грамматик: ${got.grammars.length}` : '',
+    got.commands?.length ? `команд: ${got.commands.length}` : '',
+    got.codeEnabled ? 'код запущен' : (got.main ? 'код выкл.' : ''),
   ].filter(Boolean).join(', ');
-  const codeNote = got.hasCode && !got.forFrogee ? '. Код расширения VS Code не запускается.' : '';
-  toast(`«${got.displayName}» установлено (${what})${codeNote}`);
+  toast(`«${got.displayName}» установлено (${what || 'данные подключены'})`);
+  if (got.codeEnabled) {
+    const act = await activateExtensionRuntime(got.id);
+    if (act?.ok === false) toast(`Код «${got.displayName}»: ${act.error}`);
+  }
   if (res.problems?.length) console.warn('[extensions]', res.problems);
 }
 
@@ -244,6 +262,33 @@ async function onClick(e) {
     return;
   }
   if (b.dataset.apply) { applyTheme(installed.find((x) => x.id === b.dataset.apply)); return; }
+  if (b.dataset.codeOn || b.dataset.codeOff) {
+    const id = b.dataset.codeOn || b.dataset.codeOff;
+    const on = !!b.dataset.codeOn;
+    if (busy.has(id)) return;
+    busy.add(id);
+    render();
+    try {
+      if (on) {
+        const ok = window.confirm(`Запустить код расширения «${installed.find((x) => x.id === id)?.displayName || id}»?\n\nКод выполняется с правами редактора через vscode.* API Frogee (не полный VS Code).`);
+        if (!ok) return;
+        const res = await window.electronAPI.extensionsSetCode({ id, enabled: true });
+        if (!res?.success) { toast(res?.error || 'Не удалось включить код'); return; }
+        await refreshInstalled();
+        const act = await activateExtensionRuntime(id);
+        toast(act?.ok === false ? `Ошибка: ${act.error}` : 'Код расширения запущен');
+      } else {
+        await deactivateExtensionRuntime(id);
+        await window.electronAPI.extensionsSetCode({ id, enabled: false });
+        await refreshInstalled();
+        toast('Код расширения остановлен');
+      }
+    } finally {
+      busy.delete(id);
+      render();
+    }
+    return;
+  }
   const id = b.dataset.install || b.dataset.remove;
   if (!id || busy.has(id)) return;
   busy.add(id);
@@ -258,10 +303,11 @@ async function onClick(e) {
       const ext = installed.find((x) => x.id === id);
       const select = document.getElementById('theme-select');
       const usesTheme = ext?.themeIds?.some((t) => select?.value === `custom:${t}`);
+      if (ext?.codeEnabled) await deactivateExtensionRuntime(id);
       await disablePluginFiles(ext?.pluginFiles || []);
       const res = await window.electronAPI.extensionsRemove(id);
       if (!res?.success) { toast(res?.error || 'Не удалось удалить расширение'); return; }
-      await Promise.all([refreshInstalled(), loadCustomThemes(), loadSnippets()]);
+      await Promise.all([refreshInstalled(), loadCustomThemes(), loadSnippets(), loadContributions()]);
       if (usesTheme && select) { select.value = 'dark'; select.dispatchEvent(new Event('change')); }
       toast(`«${ext?.displayName || id}» удалено`);
     }
@@ -277,8 +323,8 @@ export async function showExtensionsPanel() {
       <div class="activity-buttons"><button class="activity-btn" id="ext-from-folder" title="Установить из папки (с extension.json)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6M9 13h6"/></svg></button><button class="activity-btn" id="ext-open-folder" title="Открыть папку установленных расширений"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-8 8M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg></button></div>
     </div>
     <div class="ext-panel" id="ext-panel">
-      <input type="search" class="ext-search" id="ext-search" placeholder="Поиск в Open VSX: темы и сниппеты VS Code" spellcheck="false" value="${escapeHtml(lastQuery || '')}">
-      <p class="ext-note">Расширения для FrogeeCodeIDE берутся из каталога на сайте или из папки и работают полностью. Поиск ниже идёт по Open VSX: из расширений VS Code берутся темы оформления и сниппеты, их код не запускается.</p>
+      <input type="search" class="ext-search" id="ext-search" placeholder="Поиск в Open VSX: темы, сниппеты, языки…" spellcheck="false" value="${escapeHtml(lastQuery || '')}">
+      <p class="ext-note">Open VSX: темы, сниппеты, языки; код (<code>main</code>) — через vscode.* API Frogee: команды, правки, диагностика, completion/hover/format, findFiles, terminal, простые webview. Не полный VS Code (нет LSP-сервера и debug). Кнопка «Запустить код» у установленного расширения.</p>
       <div class="run-title" id="ext-installed-title" hidden>Установленные</div>
       <div id="ext-installed"></div>
       <div class="run-title" id="ext-frogee-title">Для FrogeeCodeIDE <a class="ext-link" href="https://arduradiokot.github.io/ForgeeCodeIDE/extensions.html" target="_blank" rel="noopener">каталог на сайте</a></div>
@@ -310,6 +356,7 @@ export async function showExtensionsPanel() {
 
 export function setupExtensions() {
   loadSnippets();
+  loadContributions();
 }
 
 state.extensions = { snippetsFor, expandSnippet };

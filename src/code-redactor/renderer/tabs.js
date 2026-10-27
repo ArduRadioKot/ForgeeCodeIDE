@@ -1,5 +1,6 @@
 import { state } from './state.js';
-import { createSmartKeydown, langFromName } from './smart-edit.js';
+import { createSmartKeydown } from './smart-edit.js';
+import { smartOptsFor } from './ext-contrib.js';
 import { getDom } from './dom.js';
 import { escapeHtml } from './utils.js';
 import { saveAllConfig } from './save-hook.js';
@@ -935,7 +936,7 @@ export function setupSplitUi() {
   if (editorRight) {
     const smartRight = createSmartKeydown(() => ({
       tabSize: parseInt(dom.tabSizeSelect?.value || '4', 10),
-      lang: langFromName(state.currentTabs[state.rightTabIndex]?.name || ''),
+      ...smartOptsFor(state.currentTabs[state.rightTabIndex]?.name || ''),
     }));
     editorRight.addEventListener('keydown', (e) => smartRight(e));
     editorRight.addEventListener('focus', () => setFocusedPane('right'));

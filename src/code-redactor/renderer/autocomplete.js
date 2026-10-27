@@ -150,6 +150,16 @@ function update(manual = false) {
   index = 0;
   if (!items.length) return hide();
   show();
+  // Merge completion items from running VS Code extensions (async, non-blocking)
+  import('./vscode-bridge.js').then(async ({ extensionCompletions }) => {
+    const extra = await extensionCompletions(typed);
+    if (!extra.length || ta()?.selectionStart !== caret) return;
+    const known = new Set(items.map((i) => i.label));
+    const add = extra.filter((x) => !known.has(x.label));
+    if (!add.length) return;
+    items = [...items.slice(0, 6), ...add].slice(0, 12);
+    if (popup && !popup.hidden) show();
+  }).catch(() => {});
 }
 
 export function setupAutocomplete() {

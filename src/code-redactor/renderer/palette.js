@@ -23,6 +23,8 @@ import { toggleGlass, attachGlassTo } from './glass.js';
 import { problemItems, goToProblem } from './diagnostics.js';
 import { configCommands } from './run-configs.js';
 import { toggleMarkdownPreview, formatTable, insertTable } from './markdown.js';
+import { extensionPaletteCommands } from './ext-contrib.js';
+import { runtimePaletteCommands } from './vscode-bridge.js';
 
 const dom = getDom();
 let overlay = null;
@@ -193,13 +195,42 @@ export function toggleTheme() {
   saveAllConfig();
 }
 
+function paletteRunners() {
+  return {
+    newFile: createNewFile,
+    open: openFileOrFolder,
+    save: saveFile,
+    saveAs: saveFileAs,
+    closeTab: () => state.activeTabIndex >= 0 && closeTab(state.activeTabIndex),
+    quickOpen: openQuickOpen,
+    commands: openCommandPalette,
+    gotoLine: openGoToLine,
+    search: () => switchActivity('search'),
+    find: openFindBar,
+    replace: openReplaceBar,
+    format: formatDocument,
+    nextProblem: () => goToProblem(1),
+    terminal: toggleTerminal,
+    explorer: () => switchActivity('explorer'),
+    git: () => switchActivity('git'),
+    sidebar: toggleSidebarPanel,
+    settings: () => { if (dom.settingsModal) dom.settingsModal.style.display = 'flex'; },
+    zen: toggleZen,
+    mdPreview: () => toggleMarkdownPreview(),
+  };
+}
+
 function buildCommands() {
   const extra = configCommands().map((c) => ({ label: c.label, run: c.run, key: c.key, detail: c.detail }));
+  const fromExt = extensionPaletteCommands(paletteRunners());
+  const fromRuntime = runtimePaletteCommands();
   const tab = activeTab();
   const nb = tab && isNotebookTab(tab);
   const cmd = (label, run, key = '', group = '') => ({ label, run, key, detail: group });
   const list = [
     ...extra,
+    ...fromExt,
+    ...fromRuntime,
     cmd('Файл: новый файл', createNewFile, 'Ctrl+N'),
     cmd('Файл: новый ноутбук', createNewNotebook),
     cmd('Файл: открыть…', openFileOrFolder, 'Ctrl+O'),
@@ -388,9 +419,13 @@ function transformSelection(fn, wholeIfEmpty = false) {
   ed.setSelectionRange(s, s + out.length);
 }
 
-export function formatDocument() {
+export async function formatDocument() {
   const tab = activeTab();
   if (!isEditorTab(tab) || !dom.editor) return;
+  try {
+    const { extensionFormatDocument } = await import('./vscode-bridge.js');
+    if (await extensionFormatDocument()) return;
+  } catch { /* fall through */ }
   const text = dom.editor.value;
   if (/\.json$/i.test(tab.name || '')) {
     try {
