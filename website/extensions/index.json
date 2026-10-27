@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-10-26",
+  "updated": "2026-10-27",
   "extensions": [
     {
       "id": "frogeesoft.insert-date",
@@ -86,6 +86,36 @@
       "snippets": 0,
       "license": "MIT",
       "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE"
+    },
+    {
+      "id": "frogeesoft.processing-mobile",
+      "publisher": "frogeesoft",
+      "name": "processing-mobile",
+      "displayName": "Processing Mobile",
+      "description": "Эмулятор Processing для .pde, экспорт Android-проекта, сборка APK и запуск через ADB.",
+      "version": "1.0.0",
+      "author": "FrogeeSoft",
+      "tags": [
+        "processing",
+        "pde",
+        "android",
+        "emulator"
+      ],
+      "icon": "icon.png",
+      "path": "frogeesoft.processing-mobile/",
+      "files": [
+        "LICENSE",
+        "README.md",
+        "extension.json",
+        "icon.png",
+        "plugin.js"
+      ],
+      "size": 232209,
+      "plugins": 1,
+      "themes": 0,
+      "snippets": 0,
+      "license": "GPL-2.0-only",
+      "repository": "https://github.com/ArduRadioKot/Processing-Studio"
     }
   ]
 }

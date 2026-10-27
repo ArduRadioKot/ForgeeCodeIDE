@@ -64,3 +64,4 @@ exildraw/
 - `exildraw/` — доска для набросков, рисунок вставляется в Markdown-файл как SVG.
 - `insert-date/` — кнопка вставляет текущую дату и время.
 - `frogee-theme/` — темы FrogeeSoft Dark и Light в цветах дизайн-кита.
+- `processing-mobile/` — эмулятор скетчей `.pde`, экспорт Android-проекта, сборка APK и запуск через ADB.
