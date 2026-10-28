@@ -7,7 +7,7 @@
   "author": "FrogeeSoft",
   "license": "GPL-2.0-only",
   "icon": "icon.png",
-  "repository": "https://github.com/ArduRadioKot/Processing-Studio",
+  "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE",
   "keywords": ["processing", "pde", "android", "emulator"],
   "plugins": ["plugin.js"]
 }

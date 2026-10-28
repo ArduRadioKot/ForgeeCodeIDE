@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-10-27",
+  "updated": "2026-10-28",
   "extensions": [
     {
       "id": "frogeesoft.insert-date",
@@ -110,12 +110,12 @@
         "icon.png",
         "plugin.js"
       ],
-      "size": 232209,
+      "size": 232205,
       "plugins": 1,
       "themes": 0,
       "snippets": 0,
       "license": "GPL-2.0-only",
-      "repository": "https://github.com/ArduRadioKot/Processing-Studio"
+      "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE"
     }
   ]
 }
