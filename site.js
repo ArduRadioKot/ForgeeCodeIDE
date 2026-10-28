@@ -77,8 +77,12 @@ if (catalog) {
   fetch('extensions/index.json').then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status)))).then((data) => {
     const list = data.extensions || [];
     const limit = Number(catalog.dataset.limit) || list.length;
+    const featured = catalog.dataset.featured;
+    const shown = featured
+      ? [...list].sort((a, b) => Number(b.id === featured) - Number(a.id === featured))
+      : list;
     catalog.replaceChildren();
-    for (const x of list.slice(0, limit)) {
+    for (const x of shown.slice(0, limit)) {
       const card = el('article', 'info-card ext-card');
       const head = el('div', 'ext-head');
       const icon = el('img', 'ext-icon');
@@ -90,10 +94,17 @@ if (catalog) {
       if (x.plugins) tags.append(el('li', null, `${x.plugins} ${plural(x.plugins, 'плагин', 'плагина', 'плагинов')}`));
       if (x.themes) tags.append(el('li', null, `${x.themes} ${plural(x.themes, 'тема', 'темы', 'тем')}`));
       if (x.snippets) tags.append(el('li', null, `${x.snippets} ${plural(x.snippets, 'набор сниппетов', 'набора сниппетов', 'наборов сниппетов')}`));
-      // installing happens in the editor; the card links to the extension's files
+      const actions = el('div', 'ext-actions');
+      if (x.files?.includes('plugin.js')) {
+        const download = el('a', 'button button-primary', 'Скачать плагин');
+        download.href = `extensions/${x.path}plugin.js`;
+        download.download = `${x.name}.js`;
+        actions.append(download);
+      }
       const src = el('a', 'button button-secondary', 'Исходники');
       src.href = /^https:\/\/github\.com\//.test(x.repository || '') ? `${x.repository}/tree/main/extensions/${encodeURIComponent(x.name)}` : `extensions/${x.path}README.md`;
-      card.append(head, el('p', 'ext-desc', x.description), tags, src);
+      actions.append(src);
+      card.append(head, el('p', 'ext-desc', x.description), tags, actions);
       catalog.append(card);
     }
     if (!list.length) catalog.append(el('p', 'ext-empty', 'В каталоге пока пусто.'));

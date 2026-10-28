@@ -71,7 +71,7 @@ pre.code { margin: 0; padding: 28px 30px; border-radius: var(--radius); backgrou
 .ext-desc { color: var(--muted); }
 .ext-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .ext-tags li { padding: 4px 12px; border-radius: 999px; background: var(--surface-2); color: var(--text); font-size: .85rem; font-weight: 500; }
-.ext-card .button { margin-top: auto; align-self: flex-start; }
+.ext-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
 .ext-empty { color: var(--muted); }
 .ext-more, .make-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
