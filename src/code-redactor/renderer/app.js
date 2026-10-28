@@ -90,6 +90,8 @@ import { setupSelectionLayer } from './selection-layer.js';
 import { hydrateIcons } from './glyphs.js';
 import { setupAutoIndentSetting } from './smart-edit.js';
 import { setupThemeControls } from './themes.js';
+import { setupUpdater } from './updater.js';
+import { setupI18n } from './i18n.js';
 import { reopenClosedTab } from './tabs.js';
 import { isBrowserTab } from './tab-model.js';
 
@@ -324,10 +326,12 @@ export function setupEventListeners() {
     });
   }
 
+  setupI18n();
   wireAppearanceControls();
   setupTabsBarDrop();
   setupSplitUi();
   setupSettingsTabs();
+  setupUpdater();
   setupChatStreamListener();
   registerSearchGlobals();
   window.addEventListener('resize', () => updateUiAutoScale());

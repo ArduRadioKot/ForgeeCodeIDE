@@ -88,7 +88,7 @@ export async function refreshGitPanel() {
       return;
     }
     if (!status.isRepo) {
-      message(root, `<p><strong>${escapeHtml(pathUtils.basename(state.currentFolder))}</strong> — не репозиторий git</p>
+      message(root, `<p><strong>${escapeHtml(pathUtils.basename(state.currentFolder))}</strong> - не репозиторий git</p>
         <p class="git-hint">Можно инициализировать репозиторий здесь или работать без git.</p>
         <button class="git-btn primary" id="git-init-btn">Создать репозиторий</button>`);
       document.getElementById('git-init-btn')?.addEventListener('click', async () => {
@@ -118,7 +118,7 @@ function renderRepo(root, status) {
       <svg class="git-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 6.5 3.5 3.5 3.5-3.5"/></svg>
     </button>
     <div class="git-section">
-      <textarea id="git-commit-msg" class="git-commit-input" rows="3" placeholder="Сообщение коммита (Ctrl+Enter — закоммитить)"></textarea>
+      <textarea id="git-commit-msg" class="git-commit-input" rows="3" placeholder="Сообщение коммита (Ctrl+Enter - закоммитить)"></textarea>
       <div class="git-actions">
         <button class="git-btn primary" id="git-commit-btn" ${staged.length ? '' : 'disabled'}>Закоммитить${staged.length ? ` (${staged.length})` : ''}</button>
         <button class="git-btn" id="git-pull-btn" title="git pull --ff-only">Pull${status.behind ? ` ${icon('down', 9)}${status.behind}` : ''}</button>
@@ -256,7 +256,7 @@ function askBranchName() {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'palette-overlay';
-    overlay.innerHTML = '<div class="palette"><input class="palette-input" type="text" placeholder="Имя новой ветки" spellcheck="false"><div class="palette-foot">Enter — создать · Esc — отмена</div></div>';
+    overlay.innerHTML = '<div class="palette"><input class="palette-input" type="text" placeholder="Имя новой ветки" spellcheck="false"><div class="palette-foot">Enter - создать · Esc - отмена</div></div>';
     document.body.appendChild(overlay);
     const input = overlay.querySelector('input');
     const done = (value) => { overlay.remove(); resolve(value); };

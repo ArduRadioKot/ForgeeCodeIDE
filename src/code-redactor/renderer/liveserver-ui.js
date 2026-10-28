@@ -14,7 +14,7 @@ function paintChip(flash = false) {
   el.classList.toggle('active', !!live);
   el.classList.toggle('flash', flash);
   if (live) el.innerHTML = `${icon('dot', 10)} :${Number(live.port)}${live.clients ? ` · ${Number(live.clients)}` : ''}`; else el.textContent = 'Go Live';
-  el.title = live ? `Live Server: ${live.url}\nКлик — остановить` : 'Запустить Live Server для проекта';
+  el.title = live ? `Live Server: ${live.url}\nКлик - остановить` : 'Запустить Live Server для проекта';
   if (flash) setTimeout(() => el.classList.remove('flash'), 400);
 }
 

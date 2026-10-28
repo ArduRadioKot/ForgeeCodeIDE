@@ -152,7 +152,7 @@ export async function refreshModelSelectForProvider() {
     state.bionicStatus = info;
     if (provider !== state.currentAiProvider) return;
     const models = (info?.models || []).map((m) => [m.id, `${m.name || m.id}${m.params ? ` · ${m.params}` : ''}`]);
-    fillSelect(models.length ? [...models, ...(info.running ? [] : [['__settings', 'Сервер выключен — настройки…']])] : [['', info?.lmsPath ? 'Нет моделей' : 'Bionic / LM Studio не найден', true], ['__settings', 'Открыть настройки…']], keep);
+    fillSelect(models.length ? [...models, ...(info.running ? [] : [['__settings', 'Сервер выключен - настройки…']])] : [['', info?.lmsPath ? 'Нет моделей' : 'Bionic / LM Studio не найден', true], ['__settings', 'Открыть настройки…']], keep);
     return;
   }
 
@@ -211,7 +211,7 @@ export function updateOpenCodeStatus(status) {
 export function updateOpenRouterModelSelect() {
   if (!dom.aiModelSelect || state.currentAiProvider !== 'openrouter') return;
   const models = (state.openRouterModels || []).map((m) => [m.id, m.name || m.id]).sort((x, y) => x[1].localeCompare(y[1]));
-  if (!models.length) { fillSelect([['', 'Нет списка моделей — сохраните ключ в настройках', true], ['__settings', 'Открыть настройки…']], ''); return; }
+  if (!models.length) { fillSelect([['', 'Нет списка моделей - сохраните ключ в настройках', true], ['__settings', 'Открыть настройки…']], ''); return; }
   fillSelect(models, state.currentAiModel || state.modelByProvider?.openrouter);
 }
 
@@ -595,7 +595,7 @@ function renderHistoryList() {
 
 /** Open file + selection as a system prompt for providers that have no file access of their own. */
 function buildSystemPrompt() {
-  let prompt = 'Ты — ассистент программиста в редакторе кода FrogeeCodeIDE. Отвечай на русском, кратко и по делу. Код пиши в блоках markdown с указанием языка. Файлы пользователя передаются между тегами <файл>; если файла нет в запросе, не выдумывай его содержимое. Не используй эмодзи. Отвечай только на последний вопрос; прикреплённые ранее файлы к нему не относятся, если о них не спрашивают.';
+  let prompt = 'Ты - ассистент программиста в редакторе кода FrogeeCodeIDE. Отвечай на русском, кратко и по делу. Код пиши в блоках markdown с указанием языка. Файлы пользователя передаются между тегами <файл>; если файла нет в запросе, не выдумывай его содержимое. Не используй эмодзи. Отвечай только на последний вопрос; прикреплённые ранее файлы к нему не относятся, если о них не спрашивают.';
   const tab = state.currentTabs[state.activeTabIndex];
   if (!state.attachContext || !isEditorTab(tab) || !dom.editor) return prompt;
   const text = dom.editor.value || '';
@@ -697,14 +697,14 @@ async function runChat() {
     let response;
     const agent = AGENT_BY_PROVIDER[provider];
     if (agent) {
-      if (!state.currentFolder) throw new Error('Откройте папку проекта — агент работает в её контексте');
+      if (!state.currentFolder) throw new Error('Откройте папку проекта - агент работает в её контексте');
       response = await window.electronAPI.agentSend({
         agent, prompt: question.content + agentContext(question.files), cwd: state.currentFolder, model: state.currentAiModel || '',
         mode: state.agentAccess, sessionId: state.agentSessions[agent] || undefined, bin: state.agentPaths?.[agent] || undefined,
       });
       if (response?.sessionId) state.agentSessions[agent] = response.sessionId;
     } else if (provider === 'opencode') {
-      if (!state.currentFolder) throw new Error('Откройте папку проекта — OpenCode работает в контексте workspace');
+      if (!state.currentFolder) throw new Error('Откройте папку проекта - OpenCode работает в контексте workspace');
       if (!state.currentAiModel) throw new Error('Выберите модель OpenCode');
       response = await window.electronAPI.sendMessage(question.content + filesBlock(question.files), state.currentAiModel, {
         provider, directory: state.currentFolder, baseUrl: state.opencodeBaseUrl || document.getElementById('opencode-url')?.value || 'http://127.0.0.1:4096',

@@ -504,7 +504,7 @@ export function fitTerminal() {
 
 async function startSession(s, restart = false) {
   if (!window.electronAPI?.terminalStart) {
-    s.xterm.writeln('[терминал] API недоступен — перезапустите приложение');
+    s.xterm.writeln('[терминал] API недоступен - перезапустите приложение');
     return;
   }
   if (s.id === state.activeTerminalId) fitTerminal();
@@ -556,7 +556,7 @@ export function setupTerminalResize() {
 }
 
 export async function toggleTerminal() {
-  // Если терминал уже как вкладка — просто активировать / скрыть
+  // Если терминал уже как вкладка - просто активировать / скрыть
   const termIdx = findTerminalTabIndex();
   if (state.terminalInEditor && termIdx >= 0) {
     if (state.activeTabIndex === termIdx) {

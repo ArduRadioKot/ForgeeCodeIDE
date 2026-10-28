@@ -849,7 +849,7 @@ function runAndAdvance(tab, id, { insertBelow = false } = {}) {
   }
 }
 
-const EMPTY_MD = '*Двойной щелчок — редактировать текст*';
+const EMPTY_MD = '*Двойной щелчок - редактировать текст*';
 
 // ───────────────────────── DOM builders ─────────────────────────
 
@@ -1212,7 +1212,7 @@ export async function renderNotebook(tab) {
   const toolbar = document.createElement('div');
   toolbar.className = 'nb-toolbar';
   const pickLabel = !envs.length
-    ? (workspace ? 'Python не найден — создайте .venv в проекте' : 'Откройте папку проекта, чтобы выбрать venv')
+    ? (workspace ? 'Python не найден - создайте .venv в проекте' : 'Откройте папку проекта, чтобы выбрать venv')
     : (selected.display_name || 'Выберите ядро');
 
   toolbar.innerHTML = `

@@ -25,6 +25,7 @@ import { configCommands } from './run-configs.js';
 import { toggleMarkdownPreview, formatTable, insertTable } from './markdown.js';
 import { extensionPaletteCommands } from './ext-contrib.js';
 import { runtimePaletteCommands } from './vscode-bridge.js';
+import { t } from './i18n.js';
 
 const dom = getDom();
 let overlay = null;
@@ -331,7 +332,7 @@ function buildCommands() {
   return list.map((c, i) => ({ ...c, order: i }));
 }
 
-function askInput(placeholder, initial, callback, foot = 'Enter — применить · Esc — отмена') {
+function askInput(placeholder, initial, callback, foot = t('palette.apply')) {
   open('input', placeholder, [], foot);
   onSubmit = callback;
   input.value = initial || '';
@@ -483,7 +484,7 @@ function agentPrompt(instruction) {
 }
 
 export function openCommandPalette() {
-  open('commands', 'Введите команду…', buildCommands(), 'Стрелки — выбор · Enter — выполнить · Esc — закрыть');
+  open('commands', t('palette.commands'), buildCommands(), t('palette.commandsFoot'));
 }
 
 async function loadFiles() {
@@ -509,12 +510,12 @@ export async function openQuickOpen() {
     order: i,
     run: () => openSearchFile(f.path),
   }));
-  open('files', state.currentFolder ? 'Имя файла или :номер строки' : 'Откройте папку, чтобы искать файлы · :номер строки', [...openTabs, ...fromDisk], 'Enter открыть · «:42» — перейти к строке');
+  open('files', state.currentFolder ? t('palette.files') : t('palette.filesEmpty'), [...openTabs, ...fromDisk], t('palette.filesFoot'));
 }
 
 export function openProblems() {
   const items = problemItems();
-  open('problems', items.length ? 'Проблемы в файле…' : 'Проблем не найдено', items, 'Enter — перейти к месту · F8 — следующая проблема');
+  open('problems', items.length ? t('palette.problems') : t('palette.problemsEmpty'), items, t('palette.problemsFoot'));
 }
 
 export function openGoToLine() {

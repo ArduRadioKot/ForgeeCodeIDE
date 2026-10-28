@@ -6,14 +6,14 @@
 <title>Расширения FrogeeCodeIDE</title>
 <meta name="description" content="Каталог расширений для FrogeeCodeIDE: плагины, темы и сниппеты. Устанавливаются из редактора в один клик.">
 <link rel="icon" href="img/icon.png">
-<script>try{var t=localStorage.getItem('frogee-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}document.documentElement.classList.add('js')</script>
+<script>try{var t=localStorage.getItem('frogee-theme');if(t)document.documentElement.dataset.theme=t;var l=localStorage.getItem('frogee-lang');if(l==='en'||l==='ru')document.documentElement.lang=l}catch(e){}document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="kit.css">
 <link rel="stylesheet" href="site.css">
 </head>
-<body id="top">
-<a class="skip-link" href="#main">К содержимому</a>
+<body id="top" data-page="extensions">
+<a class="skip-link" href="#main" data-i18n="skip">К содержимому</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <symbol id="i-spark" viewBox="0 0 32 32"><path class="f" d="M16 3c1.2 7.2 5.8 11.8 13 13-7.2 1.2-11.8 5.8-13 13-1.2-7.200-5.800-11.800-13-13 7.200-1.200 11.800-5.800 13-13z"/><path class="s" d="M16 3c1.2 7.2 5.8 11.8 13 13-7.2 1.2-11.8 5.8-13 13-1.2-7.2-5.8-11.8-13-13 7.2-1.2 11.8-5.8 13-13z"/></symbol>
 <symbol id="i-glass" viewBox="0 0 32 32"><rect class="f" x="9" y="9" width="19" height="19" rx="5"/><rect class="s" x="4" y="4" width="19" height="19" rx="5"/><path class="s" d="M9 12.500a3.500 3.500 0 0 1 3.500-3.500"/></symbol>
@@ -43,51 +43,55 @@
 
 <header class="site-header" data-header>
 <div class="header-inner">
-<a class="brand" href="index.html" aria-label="FrogeeCodeIDE, на главную"><img class="fg-brand-icon" src="img/icon.png" width="256" height="256" alt=""><span class="brand-text">FrogeeCode<span class="fg-brand-separator">IDE</span></span></a>
+<a class="brand" href="index.html" data-i18n-aria="brand.main" aria-label="FrogeeCodeIDE, на главную"><img class="fg-brand-icon" src="img/icon.png" width="256" height="256" alt=""><span class="brand-text">FrogeeCode<span class="fg-brand-separator">IDE</span></span></a>
 <div class="header-end">
-<nav class="site-nav" aria-label="Основная навигация"><a href="index.html#tour">Обзор</a><a href="index.html#features">Возможности</a><a href="extensions.html">Расширения</a><a href="index.html#faq">Вопросы</a><a href="index.html#download">Скачать</a></nav>
+<nav class="site-nav" data-i18n-aria="nav.main" aria-label="Основная навигация"><a href="index.html#tour" data-i18n="nav.overview">Обзор</a><a href="index.html#features" data-i18n="nav.features">Возможности</a><a href="extensions.html" data-i18n="nav.extensions">Расширения</a><a href="index.html#faq" data-i18n="nav.faq">Вопросы</a><a href="index.html#download" data-i18n="nav.download">Скачать</a></nav>
 <div class="header-actions">
-<button class="theme-toggle" type="button" id="theme" aria-label="Переключить тему">
+<div class="lang-toggle" role="group" data-i18n-aria="lang.toggle" aria-label="Language / Язык">
+<button type="button" data-lang-btn="ru" aria-pressed="true">RU</button>
+<button type="button" data-lang-btn="en" aria-pressed="false">EN</button>
+</div>
+<button class="theme-toggle" type="button" id="theme" data-i18n-aria="theme.toggle" aria-label="Переключить тему">
 <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.930 4.930l1.420 1.420M17.660 17.660l1.410 1.410M2 12h2M20 12h2M4.930 19.070l1.420-1.420M17.660 6.340l1.410-1.410"/></svg>
 <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.790A9 9 0 1 1 11.210 3 7 7 0 0 0 21 12.790Z"/></svg>
 </button>
-<button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Открыть меню" aria-controls="mobile-menu"><span></span><span></span></button>
+<button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" data-i18n-aria="nav.openMenu" aria-label="Открыть меню" aria-controls="mobile-menu"><span></span><span></span></button>
 </div>
 </div>
 </div>
 </header>
-<nav class="fg-mobile-menu" id="mobile-menu" data-mobile-menu aria-label="Меню" aria-hidden="true" inert>
-<a href="index.html#tour">Обзор</a><a href="index.html#features">Возможности</a><a href="extensions.html">Расширения</a><a href="index.html#faq">Вопросы</a><a href="index.html#download">Скачать</a>
+<nav class="fg-mobile-menu" id="mobile-menu" data-mobile-menu data-i18n-aria="nav.menu" aria-label="Меню" aria-hidden="true" inert>
+<a href="index.html#tour" data-i18n="nav.overview">Обзор</a><a href="index.html#features" data-i18n="nav.features">Возможности</a><a href="extensions.html" data-i18n="nav.extensions">Расширения</a><a href="index.html#faq" data-i18n="nav.faq">Вопросы</a><a href="index.html#download" data-i18n="nav.download">Скачать</a>
 <a class="mobile-menu-contact" href="mailto:frogeesoft.team@gmail.com">frogeesoft.team@gmail.com</a>
 </nav>
 
 <main id="main">
 <section class="hero hero-compact">
 <div class="wrap hero-inner">
-<h1>Расширения <span>для FrogeeCodeIDE</span></h1>
-<p class="hero-lead">Плагины, темы и сниппеты. Ставятся из редактора в один клик: панель «Расширения» берёт их прямо из этого каталога.</p>
+<h1 data-i18n-html="extPage.title">Расширения <span>для FrogeeCodeIDE</span></h1>
+<p class="hero-lead" data-i18n="extPage.lead">Плагины, темы и сниппеты. Ставятся из редактора в один клик: панель «Расширения» берёт их прямо из этого каталога.</p>
 <p class="hero-fine" data-catalog-count>&nbsp;</p>
 </div>
 </section>
 
 <section class="section" id="catalog">
-<div class="ext-grid" data-catalog><p class="ext-empty">Загружаю каталог…</p></div>
+<div class="ext-grid" data-catalog><p class="ext-empty" data-i18n="ext.loading">Загружаю каталог…</p></div>
 </section>
 
 <section class="section" id="install">
-<div class="section-head reveal"><h2>Как <em>установить</em></h2><p>Нужна версия FrogeeCodeIDE с панелью «Расширения» на левой панели.</p></div>
+<div class="section-head reveal"><h2 data-i18n-html="install.head">Как <em>установить</em></h2><p data-i18n="install.lead">Нужна версия FrogeeCodeIDE с панелью «Расширения» на левой панели.</p></div>
 <ol class="steps">
-<li class="info-card reveal"><h3>Откройте «Расширения»</h3><p>Кнопка с квадратиками на левой панели редактора.</p></li>
-<li class="info-card reveal"><h3>Нажмите «Установить»</h3><p>В разделе «Для FrogeeCodeIDE» лежит этот каталог. Редактор скачает расширение и сразу включит его.</p></li>
-<li class="info-card reveal"><h3>Или поставьте из папки</h3><p>Своё расширение или скачанное с GitHub ставится кнопкой с плюсом в заголовке панели: выберите папку с extension.json.</p></li>
+<li class="info-card reveal"><h3 data-i18n="install.s1h">Откройте «Расширения»</h3><p data-i18n="install.s1p">Кнопка с квадратиками на левой панели редактора.</p></li>
+<li class="info-card reveal"><h3 data-i18n="install.s2h">Нажмите «Установить»</h3><p data-i18n="install.s2p">В разделе «Для FrogeeCodeIDE» лежит этот каталог. Редактор скачает расширение и сразу включит его.</p></li>
+<li class="info-card reveal"><h3 data-i18n="install.s3h">Или поставьте из папки</h3><p data-i18n="install.s3p">Своё расширение или скачанное с GitHub ставится кнопкой с плюсом в заголовке панели: выберите папку с extension.json.</p></li>
 </ol>
 </section>
 
 <section class="section" id="make">
 <div class="plugins-grid">
-<div class="reveal"><h2>Своё <em>расширение</em></h2>
-<p class="plugins-lead">Расширение — это обычная папка: extension.json, плагины .js и .css, темы и сниппеты в формате VS Code, иконка. Положите её в extensions/ репозитория, и скрипт добавит её в каталог. После пул-реквеста расширение появится здесь и в редакторе.</p>
-<div class="make-actions"><a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/tree/main/extensions">Формат и пример</a><a class="button button-secondary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/tree/main/plugins">API плагинов</a></div></div>
+<div class="reveal"><h2 data-i18n-html="make.head">Своё <em>расширение</em></h2>
+<p class="plugins-lead" data-i18n="make.lead">Расширение - это обычная папка: extension.json, плагины .js и .css, темы и сниппеты в формате VS Code, иконка. Положите её в extensions/ репозитория, и скрипт добавит её в каталог. После пул-реквеста расширение появится здесь и в редакторе.</p>
+<div class="make-actions"><a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/tree/main/extensions" data-i18n="make.format">Формат и пример</a><a class="button button-secondary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/tree/main/plugins" data-i18n="make.api">API плагинов</a></div></div>
 <pre class="code reveal" aria-label="extension.json">{
   <span class="ts">"publisher"</span>: <span class="ts">"frogeesoft"</span>,
   <span class="ts">"name"</span>: <span class="ts">"exildraw"</span>,
@@ -105,11 +109,12 @@ node scripts/build-extensions.js</pre>
 
 <footer class="footer">
 <div class="footer-row">
-<a class="footer-name" href="#top" aria-label="FrogeeCodeIDE, наверх">FROGEE<em>CODE</em></a>
-<nav aria-label="Ссылки"><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE">GitHub</a><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE#readme">Документация</a><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases">Релизы</a><a href="https://t.me/SIT_team">Telegram</a><a href="mailto:frogeesoft.team@gmail.com">Почта</a><a class="frogee" href="https://sit-edu.ru/index.html" aria-label="FrogeeSoft"><img class="on-light" src="img/brand/logo-light.png" width="309" height="85" alt=""><img class="on-dark" src="img/brand/logo-dark.png" width="309" height="85" alt=""></a></nav>
+<a class="footer-name" href="#top" data-i18n-aria="brand.home" aria-label="FrogeeCodeIDE, наверх">FROGEE<em>CODE</em></a>
+<nav data-i18n-aria="footer.links" aria-label="Ссылки"><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE">GitHub</a><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE#readme" data-i18n="footer.docs">Документация</a><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases" data-i18n="footer.releases">Релизы</a><a href="https://t.me/SIT_team">Telegram</a><a href="mailto:frogeesoft.team@gmail.com" data-i18n="footer.mail">Почта</a><a class="frogee" href="https://sit-edu.ru/index.html" aria-label="FrogeeSoft"><img class="on-light" src="img/brand/logo-light.png" width="309" height="85" alt=""><img class="on-dark" src="img/brand/logo-dark.png" width="309" height="85" alt=""></a></nav>
 </div>
-<p class="legal">© <span data-year>2026</span> FrogeeSoft. Открытый код, лицензия MIT.</p>
+<p class="legal" data-i18n-html="footer.legal">© <span data-year>2026</span> FrogeeSoft. Открытый код, лицензия MIT.</p>
 </footer>
+<script src="i18n.js"></script>
 <script src="site.js"></script>
 </body>
 </html>

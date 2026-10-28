@@ -53,6 +53,15 @@
 .settings-hint { margin-top: 14px; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
 .settings-hint code { padding: 1px 5px; border-radius: var(--radius-xs); background: var(--code-bg); font: 11px var(--mono-font); }
 
+.about-app { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 24px 0; }
+.about-app img { border-radius: 18px; }
+.about-app h3 { margin: 4px 0 0; font-size: 20px; }
+.about-app p { margin: 0; color: var(--text-muted); }
+.about-app #about-version { color: var(--text-color); }
+.about-app #about-update-notes { max-width: 560px; white-space: pre-wrap; line-height: 1.5; }
+.about-app #about-update-notes[hidden] { display: none; }
+.about-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
 .status-indicator { padding: 1px 8px; border-radius: var(--radius-sm); background: var(--code-bg); color: var(--text-muted); font-size: 12px; }
 /* Active = accent, everything else = quiet grey. */
 .status-indicator.connected { background: var(--accent-soft); color: var(--link-color); }

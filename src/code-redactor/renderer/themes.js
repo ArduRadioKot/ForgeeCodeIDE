@@ -60,7 +60,7 @@ export async function loadCustomThemes() {
     error = err?.message || String(err);
     state.customThemes = await loadBundledFallback();
   }
-  showThemesStatus(error ? `Папка тем недоступна (${error}). Полностью перезапустите приложение (выйдите и запустите снова) — встроенная тема Dracula доступна и сейчас.` : '');
+  showThemesStatus(error ? `Папка тем недоступна (${error}). Полностью перезапустите приложение (выйдите и запустите снова) - встроенная тема Dracula доступна и сейчас.` : '');
   fillThemeSelect();
   return state.customThemes;
 }

@@ -114,7 +114,7 @@ export async function showRunPanel() {
       </div>
       <div class="run-section">
         <div class="run-title">Текущий файл</div>
-        <button class="run-item" id="run-current-btn"><span class="run-play">${icon('play', 11)}</span><span class="run-name" id="run-current-name">—</span><kbd>F5</kbd></button>
+        <button class="run-item" id="run-current-btn"><span class="run-play">${icon('play', 11)}</span><span class="run-name" id="run-current-name">-</span><kbd>F5</kbd></button>
       </div>
       <div class="run-section" id="run-scripts" hidden>
         <div class="run-title">Скрипты package.json</div>

@@ -42,7 +42,7 @@ function fillSelect(select, fonts, value) {
   select.innerHTML = '';
   const add = (v, label) => { const o = document.createElement('option'); o.value = v; o.textContent = label; select.appendChild(o); };
   add('', 'По умолчанию');
-  fonts.forEach((name) => add(name, isInstalled(name) ? name : `${name} — не найден`));
+  fonts.forEach((name) => add(name, isInstalled(name) ? name : `${name} - не найден`));
   add(CUSTOM, 'Другой…');
   select.value = value && !fonts.includes(value) ? CUSTOM : (value || '');
 }

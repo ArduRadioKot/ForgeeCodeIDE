@@ -23,6 +23,7 @@ const { registerSearchIpc } = require('./lib/search');
 const { registerGitignoreIpc } = require('./lib/gitignore');
 const { registerContextFilesIpc } = require('./lib/context-files');
 const { registerCompletionIpc } = require('./lib/completion');
+const { registerUpdaterIpc } = require('./lib/updater');
 
 // `npm start` and the installed app share the name, so they would share one profile. A second process on the same profile
 // waits for the first one's storage lock: every start took ~4 s (the page blocks on its first localStorage read).
@@ -74,7 +75,7 @@ function buildMacMenu() {
   const item = (label, id, accelerator) => ({ label, click: send(id), ...(accelerator ? { accelerator, registerAccelerator: false } : {}) });
   const sep = { type: 'separator' };
   return Menu.buildFromTemplate([
-    { label: app.getName(), submenu: [{ role: 'about', label: 'О программе ' + app.getName() }, sep, item('Настройки…', 'settings', 'Cmd+,'), sep, { role: 'hide', label: 'Скрыть' }, { role: 'hideOthers', label: 'Скрыть остальные' }, { role: 'unhide', label: 'Показать все' }, sep, { role: 'quit', label: 'Выйти' }] },
+    { label: app.getName(), submenu: [item('О программе ' + app.getName(), 'about'), item('Проверить обновления…', 'check-updates'), sep, item('Настройки…', 'settings', 'Cmd+,'), sep, { role: 'hide', label: 'Скрыть' }, { role: 'hideOthers', label: 'Скрыть остальные' }, { role: 'unhide', label: 'Показать все' }, sep, { role: 'quit', label: 'Выйти' }] },
     { label: 'Файл', submenu: [
       { label: 'Новое окно', click: () => createWindow(true), accelerator: 'Shift+Cmd+N', registerAccelerator: false },
       item('Новый файл', 'new-file', 'Cmd+N'), item('Новый ноутбук', 'new-notebook'), sep,
@@ -193,6 +194,7 @@ function registerAllIpc() {
   registerGitignoreIpc();
   registerContextFilesIpc(getMainWindow);
   registerCompletionIpc();
+  registerUpdaterIpc({ app, ipcMain, BrowserWindow, shell });
 }
 
 // Terminal + git must be available as soon as the app is ready

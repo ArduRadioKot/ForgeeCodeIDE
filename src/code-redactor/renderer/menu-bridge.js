@@ -12,6 +12,7 @@ import { toggleChat } from './chat.js';
 import { openBrowserTab } from './browser.js';
 import { toggleLive } from './liveserver-ui.js';
 import { toggleGlass } from './glass.js';
+import { openAbout, checkForUpdates } from './updater.js';
 
 const openSettings = () => {
   const modal = document.getElementById('modal-settings');
@@ -27,6 +28,8 @@ const browserSide = () => {
 
 const COMMANDS = {
   settings: openSettings,
+  about: openAbout,
+  'check-updates': () => { openAbout(); checkForUpdates(); },
   'new-file': createNewFile,
   'new-notebook': createNewNotebook,
   open: openFileOrFolder,

@@ -146,7 +146,7 @@ async function handleUi(msg) {
       }
       case 'output':
         console.info(`[ext:${payload?.name || 'output'}]`, payload?.text || '');
-        toast(`Вывод «${payload?.name || 'output'}» — см. DevTools`);
+        toast(`Вывод «${payload?.name || 'output'}» - см. DevTools`);
         return reply(id, true);
       case 'status-bar': {
         const host = ensureStatusHost();

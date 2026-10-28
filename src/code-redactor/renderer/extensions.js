@@ -324,7 +324,7 @@ export async function showExtensionsPanel() {
     </div>
     <div class="ext-panel" id="ext-panel">
       <input type="search" class="ext-search" id="ext-search" placeholder="Поиск в Open VSX: темы, сниппеты, языки…" spellcheck="false" value="${escapeHtml(lastQuery || '')}">
-      <p class="ext-note">Open VSX: темы, сниппеты, языки; код (<code>main</code>) — через vscode.* API Frogee: команды, правки, диагностика, completion/hover/format, findFiles, terminal, простые webview. Не полный VS Code (нет LSP-сервера и debug). Кнопка «Запустить код» у установленного расширения.</p>
+      <p class="ext-note">Open VSX: темы, сниппеты, языки; код (<code>main</code>) - через vscode.* API Frogee: команды, правки, диагностика, completion/hover/format, findFiles, terminal, простые webview. Не полный VS Code (нет LSP-сервера и debug). Кнопка «Запустить код» у установленного расширения.</p>
       <div class="run-title" id="ext-installed-title" hidden>Установленные</div>
       <div id="ext-installed"></div>
       <div class="run-title" id="ext-frogee-title">Для FrogeeCodeIDE <a class="ext-link" href="https://arduradiokot.github.io/ForgeeCodeIDE/extensions.html" target="_blank" rel="noopener">каталог на сайте</a></div>

@@ -1,6 +1,45 @@
 /* FrogeeCodeIDE: page parts on top of the FrogeeSoft design kit (kit.css). Tokens, header, buttons, cards, FAQ,
    contact band and footer come from the kit; only what the kit has no class for lives here. */
 
+/* Avoid a flash of the wrong language while i18n.js applies translations. */
+html.js:not([data-i18n-ready]) body { visibility: hidden; }
+
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 46px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.lang-toggle button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 .78rem/1 Inter, system-ui, sans-serif;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: color .2s, background .2s;
+}
+.lang-toggle button:hover { color: var(--text); }
+.lang-toggle button.is-active,
+.lang-toggle button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+@media (max-width: 820px) {
+  .lang-toggle { height: 42px; }
+  .lang-toggle button { min-width: 32px; height: 32px; padding: 0 8px; font-size: .72rem; }
+}
+
 .icon { width: 20px; height: 20px; flex: none; }
 .s { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .f { fill: currentColor; fill-opacity: .08; stroke: none; }

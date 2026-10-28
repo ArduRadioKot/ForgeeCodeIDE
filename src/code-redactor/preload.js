@@ -75,6 +75,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteModel: (model) => ipcRenderer.invoke('delete-model', model),
 
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+  currentVersion: () => ipcRenderer.invoke('updates-current'),
+  checkUpdates: () => ipcRenderer.invoke('updates-check'),
+  downloadUpdate: () => ipcRenderer.invoke('updates-download'),
+  installUpdate: () => ipcRenderer.invoke('updates-install'),
+  onUpdateProgress: (callback) => {
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on('updates-progress', handler);
+    return () => ipcRenderer.removeListener('updates-progress', handler);
+  },
 
   opencodeHealth: (baseUrl) => ipcRenderer.invoke('opencode-health', baseUrl),
   opencodeModels: (payload) => ipcRenderer.invoke('opencode-models', payload),

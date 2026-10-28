@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark" data-liquid-glass="off">
+<html lang="ru" data-theme="dark" data-liquid-glass="off" data-ui-lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -16,33 +16,33 @@
     <!-- Боковая панель в стиле VS Code -->
     <nav id="sidebar" class="panel-bubble">
       <img class="sidebar-logo" src="images/icon.png" alt="FrogeeCodeIDE">
-      <button class="sidebar-btn active" title="Проект" id="explorer-btn">
+      <button class="sidebar-btn active" title="Проект" data-i18n-title="sidebar.explorer" id="explorer-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       </button>
-      <button class="sidebar-btn" title="Поиск" id="search-btn">
+      <button class="sidebar-btn" title="Поиск" data-i18n-title="sidebar.search" id="search-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
       </button>
-      <button class="sidebar-btn" title="Git" id="git-btn">
+      <button class="sidebar-btn" title="Git" data-i18n-title="sidebar.git" id="git-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M6 8.2v7.6M18 11.2c0 3-3 3.8-9.8 4.4"/></svg>
       </button>
-      <button class="sidebar-btn" title="Запуск" id="debug-btn">
+      <button class="sidebar-btn" title="Запуск" data-i18n-title="sidebar.run" id="debug-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15l12-7.5z"/></svg>
       </button>
-      <button class="sidebar-btn" title="Расширения" id="extensions-btn">
+      <button class="sidebar-btn" title="Расширения" data-i18n-title="sidebar.extensions" id="extensions-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h5.5V15H15v5.5H4z"/><path d="M4 15h5.5v5.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.6"/></svg>
       </button>
       <div id="plugin-slot" class="plugin-slot"></div>
       <div class="sidebar-spacer"></div>
-      <button class="sidebar-btn" title="Браузер" id="browser-btn">
+      <button class="sidebar-btn" title="Браузер" data-i18n-title="sidebar.browser" id="browser-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.4 3.9 5.4 3.9 9s-1.3 6.6-3.9 9c-2.6-2.4-3.9-5.4-3.9-9S9.4 5.4 12 3z"/></svg>
       </button>
-      <button class="sidebar-btn" title="AI-чат" id="chat-btn">
+      <button class="sidebar-btn" title="AI-чат" data-i18n-title="sidebar.chat" id="chat-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8.5 9h7M8.5 12.5h4.5"/></svg>
       </button>
-      <button class="sidebar-btn" title="Терминал" id="terminal-btn">
+      <button class="sidebar-btn" title="Терминал" data-i18n-title="sidebar.terminal" id="terminal-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="m7.5 10 3 2.5-3 2.5M13 15h3.5"/></svg>
       </button>
-      <button class="sidebar-btn" title="Настройки" id="open-settings-btn">
+      <button class="sidebar-btn" title="Настройки" data-i18n-title="sidebar.settings" id="open-settings-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </nav>
@@ -52,14 +52,14 @@
     <!-- Панель активности (Activity Bar) -->
     <div id="activity-panel" class="activity-panel panel-bubble">
       <div class="activity-header">
-        <h3>Проводник</h3>
+        <h3 data-i18n="activity.explorer">Проводник</h3>
         <div class="activity-buttons">
-          <button class="activity-btn" title="Открыть папку" id="open-folder-btn">
+          <button class="activity-btn" title="Открыть папку" data-i18n-title="activity.openFolder" id="open-folder-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
             </svg>
           </button>
-          <button class="activity-btn" title="Новый файл" id="new-file-btn">
+          <button class="activity-btn" title="Новый файл" data-i18n-title="activity.newFile" id="new-file-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
               <polyline points="14,2 14,8 20,8"/>
@@ -71,13 +71,13 @@
       </div>
       <div id="file-explorer" class="file-explorer">
         <div class="file-explorer-placeholder">
-          <p>Папка не открыта</p>
-          <p>Нажмите «Открыть» на стартовой странице</p>
+          <p data-i18n="explorer.empty">Папка не открыта</p>
+          <p data-i18n="explorer.emptyHint">Нажмите «Открыть» на стартовой странице</p>
         </div>
       </div>
     </div>
 
-    <div id="activity-resizer" class="panel-resizer" title="Потяните, чтобы изменить ширину"></div>
+    <div id="activity-resizer" class="panel-resizer" title="Потяните, чтобы изменить ширину" data-i18n-title="resizer.width"></div>
 
     <!-- Основная область редактора -->
     <div id="editor-main" class="panel-bubble">
@@ -88,12 +88,12 @@
             <img src="images/icon.png" alt="FrogeeCodeIDE Logo" class="logo-image">
           </div>
           <h1 class="welcome-title">FrogeeCodeIDE</h1>
-          <p class="welcome-subtitle">Редактор нового поколения</p>
+          <p class="welcome-subtitle" data-i18n="welcome.subtitle">Редактор нового поколения</p>
         </div>
         
         <div class="welcome-content">
           <div class="welcome-section">
-            <h2 class="section-title">Начало</h2>
+            <h2 class="section-title" data-i18n="welcome.start">Начало</h2>
             <div class="action-list">
               <div class="action-item" id="new-file-action">
                 <div class="action-icon">
@@ -103,8 +103,8 @@
                   </svg>
                 </div>
                 <div class="action-text">
-                  <div class="action-title">Новый файл…</div>
-                  <div class="action-description">Создать пустой файл</div>
+                  <div class="action-title" data-i18n="welcome.newFile">Новый файл…</div>
+                  <div class="action-description" data-i18n="welcome.newFileDesc">Создать пустой файл</div>
                 </div>
               </div>
               
@@ -115,8 +115,8 @@
                   </svg>
                 </div>
                 <div class="action-text">
-                  <div class="action-title">Открыть…</div>
-                  <div class="action-description">Открыть файл или папку</div>
+                  <div class="action-title" data-i18n="welcome.open">Открыть…</div>
+                  <div class="action-description" data-i18n="welcome.openDesc">Открыть файл или папку</div>
                 </div>
               </div>
               
@@ -238,7 +238,7 @@
     </div>
 
     <!-- Панель чата (скрыта по умолчанию) -->
-    <div id="chat-resizer" class="chat-resizer" style="display:none;" title="Потяните, чтобы изменить ширину. Двойной щелчок — по умолчанию."></div>
+    <div id="chat-resizer" class="chat-resizer" style="display:none;" title="Потяните, чтобы изменить ширину. Двойной щелчок - по умолчанию." data-i18n-title="chat.resizer"></div>
     <div id="chat-panel" class="chat-panel panel-bubble" style="display:none;">
       <div class="chat-header">
         <div class="chat-header-left">
@@ -334,17 +334,44 @@
     </div>
     </div><!-- /workspace -->
   </div>
+  <div id="update-banner" class="update-banner panel-bubble" hidden role="status">
+    <span id="update-banner-text"></span>
+    <button type="button" class="settings-btn" id="update-banner-action" data-i18n="about.update">Обновить</button>
+    <button type="button" class="settings-btn ghost" id="update-banner-details" data-i18n="about.details">Подробнее</button>
+    <button type="button" class="update-banner-close" id="update-banner-close" aria-label="Скрыть уведомление" data-i18n-aria="about.hide">×</button>
+  </div>
+  <div id="modal-update" class="modal-overlay" style="display:none;" hidden>
+    <div class="modal-window update-modal" data-glass="dialog" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
+      <div class="settings-main-header" style="padding: 14px 16px 0;">
+        <h2 id="update-modal-title" data-i18n="update.modalTitle">Доступно обновление</h2>
+        <button type="button" id="update-modal-close" class="icon-btn" title="Закрыть" data-i18n-title="settings.close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 12px 16px 16px;">
+        <p id="update-modal-body" data-i18n="update.modalBody">Найдена новая версия FrogeeCodeIDE {v}. Обновить сейчас?</p>
+        <p id="update-modal-notes-label" class="settings-hint" hidden data-i18n="update.modalNotes">Что нового</p>
+        <pre id="update-modal-notes" class="update-modal-notes" hidden></pre>
+        <div class="ai-row" style="margin-top: 14px; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="settings-btn ghost" id="update-modal-later" data-i18n="update.modalLater">Позже</button>
+          <button type="button" class="settings-btn" id="update-modal-now" data-i18n="update.modalNow">Обновить</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="status-bar" class="status-bar panel-bubble">
     <div class="status-left">
       <span id="status-file">Welcome</span>
       <span id="status-cursor">Ln 1, Col 1</span>
       <span id="status-words" hidden></span>
-      <span id="status-complete" class="status-complete" hidden>ИИ думает…</span>
-      <button type="button" id="status-problems" class="status-chip problems" hidden title="Проблемы в файле"></button>
+      <span id="status-complete" class="status-complete" hidden data-i18n="status.aiThinking">ИИ думает…</span>
+      <button type="button" id="status-problems" class="status-chip problems" hidden title="Проблемы в файле" data-i18n-title="status.problems"></button>
     </div>
     <div class="status-right">
       <button type="button" id="status-live-btn" class="status-chip" title="Live Server">Go Live</button>
-      <button type="button" id="status-terminal-btn" class="status-chip" title="Терминал">Терминал</button>
+      <button type="button" id="status-terminal-btn" class="status-chip" title="Терминал" data-i18n-title="status.terminal" data-i18n="status.terminal">Терминал</button>
       <span id="status-zoom">100%</span>
       <span id="status-encoding">UTF-8</span>
       <span id="status-lang">Plain Text</span>
@@ -357,18 +384,19 @@
   <div id="modal-settings" class="modal-overlay" style="display:none;">
     <div class="modal-window settings-window" data-glass="dialog">
       <nav class="settings-nav" id="settings-nav">
-        <div class="settings-nav-header">Настройки</div>
-        <button type="button" class="settings-nav-btn active" data-settings-tab="editor">Редактор</button>
-        <button type="button" class="settings-nav-btn" data-settings-tab="appearance">Внешний вид</button>
-        <button type="button" class="settings-nav-btn" data-settings-tab="background" hidden>Фон</button>
-        <button type="button" class="settings-nav-btn" data-settings-tab="ai">AI</button>
-        <button type="button" class="settings-nav-btn" data-settings-tab="plugins">Плагины</button>
-        <button type="button" class="settings-nav-btn" data-settings-tab="shortcuts">Горячие клавиши</button>
+        <div class="settings-nav-header" data-i18n="settings.title">Настройки</div>
+        <button type="button" class="settings-nav-btn active" data-settings-tab="editor" data-i18n="settings.editor">Редактор</button>
+        <button type="button" class="settings-nav-btn" data-settings-tab="appearance" data-i18n="settings.appearance">Внешний вид</button>
+        <button type="button" class="settings-nav-btn" data-settings-tab="background" hidden data-i18n="settings.background">Фон</button>
+        <button type="button" class="settings-nav-btn" data-settings-tab="ai" data-i18n="settings.ai">AI</button>
+        <button type="button" class="settings-nav-btn" data-settings-tab="plugins" data-i18n="settings.plugins">Плагины</button>
+        <button type="button" class="settings-nav-btn" data-settings-tab="shortcuts" data-i18n="settings.shortcuts">Горячие клавиши</button>
+        <button type="button" class="settings-nav-btn" data-settings-tab="about" data-i18n="settings.about">О программе</button>
       </nav>
       <div class="settings-main">
         <div class="settings-main-header">
-          <h2 id="settings-main-title">Редактор</h2>
-          <button id="close-settings" class="icon-btn" title="Закрыть">
+          <h2 id="settings-main-title" data-i18n="settings.editor">Редактор</h2>
+          <button id="close-settings" class="icon-btn" title="Закрыть" data-i18n-title="settings.close">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -377,9 +405,18 @@
         </div>
         <div class="modal-body settings-body">
           <section class="settings-panel active" id="settings-panel-editor">
-            <h3 class="settings-panel-title">Редактор</h3>
+            <h3 class="settings-panel-title" data-i18n="settings.editor">Редактор</h3>
             <div class="settings-item">
-              <label class="settings-label" for="font-size-select">Размер шрифта</label>
+              <label class="settings-label" for="ui-lang-select"><span data-i18n="settings.language">Язык интерфейса</span><span class="settings-sub" data-i18n="settings.languageSub">Русский или English. Применяется сразу.</span></label>
+              <div class="settings-control">
+                <select id="ui-lang-select" class="settings-select">
+                  <option value="ru">Русский</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-item">
+              <label class="settings-label" for="font-size-select" data-i18n="settings.fontSize">Размер шрифта</label>
               <div class="settings-control">
                 <select id="font-size-select" class="settings-select">
                   <option value="12">12px</option>
@@ -395,24 +432,24 @@
               </div>
             </div>
             <div class="settings-item">
-              <label class="settings-label" for="tab-size-select">Табуляция</label>
+              <label class="settings-label" for="tab-size-select" data-i18n="settings.tabSize">Табуляция</label>
               <div class="settings-control">
                 <select id="tab-size-select" class="settings-select">
-                  <option value="2">2 пробела</option>
-                  <option value="4" selected>4 пробела</option>
-                  <option value="8">8 пробелов</option>
+                  <option value="2" data-i18n="settings.tab2">2 пробела</option>
+                  <option value="4" selected data-i18n="settings.tab4">4 пробела</option>
+                  <option value="8" data-i18n="settings.tab8">8 пробелов</option>
                 </select>
               </div>
             </div>
             <div class="settings-item">
-              <label class="settings-label" for="editor-font-select">Шрифт редактора</label>
+              <label class="settings-label" for="editor-font-select" data-i18n="settings.editorFont">Шрифт редактора</label>
               <div class="settings-control settings-control-row">
-                <input type="text" id="editor-font-custom" class="settings-input" placeholder="Название шрифта" spellcheck="false" hidden>
+                <input type="text" id="editor-font-custom" class="settings-input" placeholder="Название шрифта" data-i18n-placeholder="settings.fontName" spellcheck="false" hidden>
                 <select id="editor-font-select" class="settings-select"></select>
               </div>
             </div>
             <div class="settings-item">
-              <label class="settings-label" for="font-ligatures">Лигатуры в коде</label>
+              <label class="settings-label" for="font-ligatures" data-i18n="settings.ligatures">Лигатуры в коде</label>
               <div class="settings-control">
                 <label class="settings-checkbox-label">
                   <input type="checkbox" id="font-ligatures" class="settings-checkbox">
@@ -421,7 +458,7 @@
               </div>
             </div>
             <div class="settings-item">
-              <label class="settings-label" for="autosave-checkbox">Автосохранение</label>
+              <label class="settings-label" for="autosave-checkbox" data-i18n="settings.autosave">Автосохранение</label>
               <div class="settings-control">
                 <label class="settings-checkbox-label">
                   <input type="checkbox" id="autosave-checkbox" class="settings-checkbox">
@@ -430,7 +467,7 @@
               </div>
             </div>
             <div class="settings-item">
-              <label class="settings-label" for="auto-indent-checkbox">Автоотступ при Enter<span class="settings-sub">Новая строка повторяет отступ предыдущей, в Markdown продолжается список</span></label>
+              <label class="settings-label" for="auto-indent-checkbox"><span data-i18n="settings.autoIndent">Автоотступ при Enter</span><span class="settings-sub" data-i18n="settings.autoIndentSub">Новая строка повторяет отступ предыдущей, в Markdown продолжается список</span></label>
               <div class="settings-control">
                 <label class="settings-checkbox-label">
                   <input type="checkbox" id="auto-indent-checkbox" class="settings-checkbox">
@@ -439,7 +476,7 @@
               </div>
             </div>
             <div class="settings-item">
-              <label class="settings-label" for="ai-complete-enabled">Подсказки ИИ в редакторе<span class="settings-sub">Серое продолжение после курсора. Tab — принять, Alt+\ — спросить сразу</span></label>
+              <label class="settings-label" for="ai-complete-enabled"><span data-i18n="settings.aiComplete">Подсказки ИИ в редакторе</span><span class="settings-sub" data-i18n="settings.aiCompleteSub">Серое продолжение после курсора. Tab - принять, Alt+\ - спросить сразу</span></label>
               <div class="settings-control">
                 <label class="settings-checkbox-label">
                   <input type="checkbox" id="ai-complete-enabled" class="settings-checkbox">
@@ -899,12 +936,12 @@
 
           <section class="settings-panel" id="settings-panel-plugins">
             <h3 class="settings-panel-title">Плагины</h3>
-            <p class="settings-hint">Плагины — файлы .js и .css в папке Documents/FrogeeCodeIDE/plugins. «Установить…» копирует выбранные файлы туда и сразу включает их; файлы, положенные в папку вручную, включаются переключателем. Плагин выполняется внутри редактора с доступом к открытым файлам: ставьте только те, которым доверяете. Плагины FgSNotes тоже подходят.</p>
+            <p class="settings-hint" data-i18n="plugins.hint">Плагины - файлы .js и .css в папке Documents/FrogeeCodeIDE/plugins. «Установить…» копирует выбранные файлы туда и сразу включает их; файлы, положенные в папку вручную, включаются переключателем. Плагин выполняется внутри редактора с доступом к открытым файлам: ставьте только те, которым доверяете. Плагины FgSNotes тоже подходят.</p>
             <div class="settings-item">
-              <span class="settings-label">Установленные плагины</span>
+              <span class="settings-label" data-i18n="plugins.installed">Установленные плагины</span>
               <div class="settings-control settings-control-row">
-                <button type="button" class="settings-btn" id="plugins-install-btn">Установить…</button>
-                <button type="button" class="settings-btn ghost" id="plugins-open-btn">Открыть папку</button>
+                <button type="button" class="settings-btn" id="plugins-install-btn" data-i18n="plugins.install">Установить…</button>
+                <button type="button" class="settings-btn ghost" id="plugins-open-btn" data-i18n="plugins.openFolder">Открыть папку</button>
                 <button type="button" class="settings-btn ghost" id="plugins-refresh-btn" title="Перечитать папку"><span class="ico-wrap" data-icon="refresh" data-size="14"></span></button>
               </div>
             </div>
@@ -941,9 +978,23 @@
               <div class="shortcut-row"><span>Сбросить масштаб</span><kbd>Ctrl/Cmd+0</kbd></div>
             </div>
           </section>
+          <section class="settings-panel" id="settings-panel-about">
+            <div class="about-app">
+              <img src="images/icon.png" width="72" height="72" alt="">
+              <h3>FrogeeCodeIDE</h3>
+              <p data-i18n="about.tagline">Лёгкая IDE с локальным ИИ</p>
+              <p id="about-version">Версия…</p>
+              <p id="about-update-status" role="status"></p>
+              <p id="about-update-notes" hidden></p>
+              <div class="about-actions">
+                <button type="button" class="settings-btn" id="about-update-button" data-i18n="about.check">Проверить обновления</button>
+                <button type="button" class="settings-btn ghost" id="about-release-button" data-i18n="about.releases">Открыть страницу релизов</button>
+              </div>
+            </div>
+          </section>
         </div>
         <div class="modal-footer">
-          <button id="close-settings-btn" class="modal-ok-btn">Готово</button>
+          <button id="close-settings-btn" class="modal-ok-btn" data-i18n="about.done">Готово</button>
         </div>
       </div>
     </div>
@@ -959,4 +1010,4 @@
   <script src="liquid-glass/liquid-glass.js"></script>
   <script type="module" src="renderer/app.js"></script>
 </body>
-</html> 
+</html>

@@ -112,7 +112,7 @@ export function openRunConfigDialog(existing) {
         <label class="rc-field"><span>Команда</span><input type="text" data-f="command" placeholder="Что выполнить в терминале" spellcheck="false">
           <small>Можно использовать: <code>\${file}</code> текущий файл, <code>\${fileDir}</code> его папка, <code>\${fileName}</code>, <code>\${fileBase}</code> имя без расширения, <code>\${project}</code> папка проекта</small></label>
         <div class="rc-presets">${PRESETS.map(([l, c], i) => `<button type="button" data-preset="${i}" title="${escapeHtml(c)}">${escapeHtml(l)}</button>`).join('')}</div>
-        <label class="rc-field"><span>Рабочая папка</span><input type="text" data-f="cwd" placeholder="Пусто — папка проекта; можно относительный путь" spellcheck="false"></label>
+        <label class="rc-field"><span>Рабочая папка</span><input type="text" data-f="cwd" placeholder="Пусто - папка проекта; можно относительный путь" spellcheck="false"></label>
         <label class="rc-field"><span>Переменные окружения</span><textarea data-f="env" rows="3" placeholder="PORT=3000&#10;NODE_ENV=development" spellcheck="false"></textarea></label>
         <label class="rc-check"><input type="checkbox" data-f="separate"><span>Запускать в отдельной вкладке терминала (повторный запуск использует её же)</span></label>
       </div>

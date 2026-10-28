@@ -68,7 +68,7 @@ export function showWelcomePage() {
   if (host) host.style.display = 'none';
   applyNotebookSurface(false);
   applyBrowserSurface(false);
-  // Если терминал был во вкладке — вернуть в dock
+  // Если терминал был во вкладке - вернуть в dock
   if (state.terminalInEditor) {
     state.terminalInEditor = false;
     applyTerminalPlacement();
@@ -154,7 +154,7 @@ export function createTab(name, content = '', filePath = null) {
   if (content === null || (filePath && isBinaryPath(filePath))) {
     const shown = name || (filePath || '').split(/[\\/]/).pop();
     const ext = (/\.([A-Za-z0-9]+)$/.exec(shown) || [])[1];
-    toast(isBinaryPath(shown) ? `«${shown}» — бинарный файл${ext ? ` (.${ext})` : ''}, в редакторе он не открывается` : `«${shown}» не открыт: файл бинарный или слишком большой`);
+    toast(isBinaryPath(shown) ? `«${shown}» - бинарный файл${ext ? ` (.${ext})` : ''}, в редакторе он не открывается` : `«${shown}» не открыт: файл бинарный или слишком большой`);
     return;
   }
   if (filePath) {
@@ -172,7 +172,7 @@ export function createTab(name, content = '', filePath = null) {
       return;
     }
   }
-  // Если сейчас открыт терминал как вкладка — сначала вернуть редактор
+  // Если сейчас открыт терминал как вкладка - сначала вернуть редактор
   if (state.terminalInEditor) {
     state.terminalInEditor = false;
     applyTerminalPlacement();
@@ -277,7 +277,7 @@ export function switchToTab(index) {
     return;
   }
 
-  // Файловая вкладка — убрать терминал из области редактора (оставить в dock если был visible)
+  // Файловая вкладка - убрать терминал из области редактора (оставить в dock если был visible)
   if (state.terminalInEditor) {
     state.terminalInEditor = false;
     const stillHasTermTab = findTerminalTabIndex() >= 0;
@@ -691,7 +691,7 @@ export function openTabInSplit(index) {
     state.currentTabs[state.activeTabIndex].content = dom.editor.value;
   }
 
-  // Если перетаскивают активную вкладку — левая остаётся ею, справа открываем её же
+  // Если перетаскивают активную вкладку - левая остаётся ею, справа открываем её же
   // (как в VS Code: одна вкладка может быть в двух панелях)
   state.rightTabIndex = index;
   if (state.activeTabIndex < 0) {
@@ -914,7 +914,7 @@ export function setupSplitDropTargets() {
   if (left) {
     left.ondragover = (e) => {
       if (!isTabDragEvent(e)) return;
-      // слева — только preventDefault чтобы не блокировать, split не открываем
+      // слева - только preventDefault чтобы не блокировать, split не открываем
     };
   }
 }

@@ -337,7 +337,9 @@ function updateStatus() {
   if (chip.hidden) return;
   chip.className = `status-chip problems${errors ? ' has-errors' : warnings ? ' has-warnings' : ''}`;
   chip.textContent = `${errors ? `ошибок: ${errors}` : ''}${errors && warnings ? ' · ' : ''}${warnings ? `предупреждений: ${warnings}` : ''}`;
-  chip.title = 'Проблемы в файле. Нажмите или F8 — перейти к следующей';
+  chip.title = (typeof window !== 'undefined' && window.__frogeeT)
+    ? window.__frogeeT('diag.problemsTitle')
+    : 'Problems in file. Click or press F8 for the next one';
 }
 
 // ───────────────────────── hover hints ─────────────────────────

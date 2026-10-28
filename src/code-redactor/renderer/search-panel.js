@@ -69,7 +69,7 @@ function searchInFile(query) {
 async function searchInProject(query) {
   if (!state.currentFolder) return placeholder('Откройте папку, чтобы искать по проекту');
   if (!window.electronAPI?.projectSearch) {
-    return placeholder('Поиск недоступен — пересоберите / перезапустите приложение', true);
+    return placeholder('Поиск недоступен - пересоберите / перезапустите приложение', true);
   }
   if (currentId) {
     try { window.electronAPI.projectSearchCancel?.(currentId); } catch { /* ignore */ }

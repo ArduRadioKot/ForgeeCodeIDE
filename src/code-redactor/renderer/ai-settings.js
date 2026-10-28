@@ -35,7 +35,7 @@ function renderModels(info) {
   const box = $('ollama-models');
   if (!box) return;
   if (!info.running) {
-    box.innerHTML = `<div class="ai-empty">${info.installed ? 'Ollama не запущена — нажмите «Запустить».' : 'Ollama не найдена. Скачайте её на ollama.com/download и вернитесь сюда.'}</div>`;
+    box.innerHTML = `<div class="ai-empty">${info.installed ? 'Ollama не запущена - нажмите «Запустить».' : 'Ollama не найдена. Скачайте её на ollama.com/download и вернитесь сюда.'}</div>`;
     return;
   }
   if (!info.models.length) {

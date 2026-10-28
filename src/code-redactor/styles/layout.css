@@ -6,6 +6,19 @@
 }
 
 .workspace { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--gap); overflow: hidden; }
+.update-banner { flex-shrink: 0; margin: 0 var(--gap); padding: 7px 10px 7px 14px; display: flex; align-items: center; gap: 8px; color: var(--text-color); font-size: 12px; }
+.update-banner[hidden] { display: none; }
+.update-banner > span { flex: 1; min-width: 0; }
+.update-banner-close { width: 26px; height: 26px; border-radius: var(--radius-md); color: var(--text-muted); font-size: 20px; line-height: 1; }
+.update-banner-close:hover { background: var(--hover-color); color: var(--text-color); }
+
+.update-modal { width: min(480px, 100%); max-height: min(520px, 90vh); background: var(--card-bg); border-radius: var(--radius-xl); box-shadow: 0 24px 64px var(--shadow-color); overflow: hidden; }
+.update-modal-notes {
+  max-height: 180px; overflow: auto; margin: 6px 0 0; padding: 10px 12px;
+  border: 1px solid var(--border-color); border-radius: var(--radius-md);
+  background: var(--code-bg); color: var(--text-muted); font-size: 12px; white-space: pre-wrap; font-family: inherit;
+}
+.update-modal-notes[hidden], #update-modal-notes-label[hidden] { display: none; }
 .workspace-main { flex: 1; min-height: 0; display: flex; gap: var(--gap); overflow: hidden; }
 
 .panel-bubble {

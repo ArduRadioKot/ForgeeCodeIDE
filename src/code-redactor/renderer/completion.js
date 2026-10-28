@@ -86,7 +86,10 @@ function render() {
   if (!rest.trim()) { c.hidden = true; return; }
   const tab = state.currentTabs[state.activeTabIndex];
   const code = window.SyntaxHighlight ? window.SyntaxHighlight.highlight(rest, tab?.name || '') : escapeHtml(rest);
-  c.innerHTML = `<pre>${code}</pre><div class="ghost-hint">Tab — принять · Cmd/Ctrl+→ — слово · Esc — убрать</div>`;
+  const hint = (typeof window !== 'undefined' && window.__frogeeT)
+    ? window.__frogeeT('complete.hint')
+    : 'Tab - accept · Cmd/Ctrl+→ - word · Esc - dismiss';
+  c.innerHTML = `<pre>${code}</pre><div class="ghost-hint">${hint}</div>`;
   c.hidden = false;
   if (el.classList.contains('word-wrap')) {
     const r = el.getBoundingClientRect();
