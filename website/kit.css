@@ -169,7 +169,7 @@ details p { padding: 0 24px 24px; color: var(--muted); max-width: 62ch; }
 .js .reveal.is-in { opacity: 1; transform: none; }
 
 /* Responsive: the header collapses to search, theme and menu buttons. */
-@media (max-width: 1280px) {
+@media (max-width: 1100px) {
   .site-nav { display: none; }
   .menu-toggle, .header-search-mobile { display: grid; }
 }

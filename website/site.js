@@ -25,7 +25,7 @@ function setMenu(open) {
 }
 menuButton.addEventListener('click', () => setMenu(menuButton.getAttribute('aria-expanded') !== 'true'));
 menu.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
-addEventListener('resize', () => { if (innerWidth > 1280) setMenu(false); });
+addEventListener('resize', () => { if (innerWidth > 1100) setMenu(false); });
 
 // tour tabs
 const tabs = [...document.querySelectorAll('.tabs [role=tab]')];
