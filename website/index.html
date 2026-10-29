@@ -45,7 +45,7 @@
 <div class="header-inner">
 <a class="brand" href="#top" data-i18n-aria="brand.home" aria-label="FrogeeCodeIDE, наверх"><img class="fg-brand-icon" src="img/icon.png" width="256" height="256" alt=""><span class="brand-text">FrogeeCode<span class="fg-brand-separator">IDE</span></span></a>
 <div class="header-end">
-<nav class="site-nav" data-i18n-aria="nav.main" aria-label="Основная навигация"><a href="#tour" data-i18n="nav.overview">Обзор</a><a href="#features" data-i18n="nav.features">Возможности</a><a href="extensions.html" data-i18n="nav.extensions">Расширения</a><a href="#faq" data-i18n="nav.faq">Вопросы</a><a href="#download" data-i18n="nav.download">Скачать</a></nav>
+<nav class="site-nav" data-i18n-aria="nav.main" aria-label="Основная навигация"><a href="#tour" data-i18n="nav.overview">Обзор</a><a href="#features" data-i18n="nav.features">Возможности</a><a href="extensions.html" data-i18n="nav.extensions">Расширения</a><a href="#company-projects" data-i18n="nav.companies">Для компаний</a><a href="#faq" data-i18n="nav.faq">Вопросы</a><a href="#download" data-i18n="nav.download">Скачать</a></nav>
 <div class="header-actions">
 <div class="lang-toggle" role="group" data-i18n-aria="lang.toggle" aria-label="Language / Язык">
 <button type="button" data-lang-btn="ru" aria-pressed="true">RU</button>
@@ -61,7 +61,7 @@
 </div>
 </header>
 <nav class="fg-mobile-menu" id="mobile-menu" data-mobile-menu data-i18n-aria="nav.menu" aria-label="Меню" aria-hidden="true" inert>
-<a href="#tour" data-i18n="nav.overview">Обзор</a><a href="#features" data-i18n="nav.features">Возможности</a><a href="extensions.html" data-i18n="nav.extensions">Расширения</a><a href="#faq" data-i18n="nav.faq">Вопросы</a><a href="#download" data-i18n="nav.download">Скачать</a>
+<a href="#tour" data-i18n="nav.overview">Обзор</a><a href="#features" data-i18n="nav.features">Возможности</a><a href="extensions.html" data-i18n="nav.extensions">Расширения</a><a href="#company-projects" data-i18n="nav.companies">Для компаний</a><a href="#faq" data-i18n="nav.faq">Вопросы</a><a href="#download" data-i18n="nav.download">Скачать</a>
 <a class="mobile-menu-contact" href="mailto:frogeesoft.team@gmail.com">frogeesoft.team@gmail.com</a>
 </nav>
 
@@ -129,6 +129,22 @@ frogee.<span class="tf">addButton</span>({
   run: (editor) =&gt; editor.<span class="tf">insert</span>(
     <span class="tk">new</span> <span class="tf">Date</span>().<span class="tf">toLocaleDateString</span>()),
 });</pre>
+</div>
+</section>
+
+<section class="section company-projects" id="company-projects" aria-labelledby="company-title">
+<div class="company-panel reveal">
+<div class="company-intro">
+<div><p class="company-eyebrow" data-i18n="company.eyebrow">FrogeeSoft / проекты</p>
+<h2 id="company-title" data-i18n-html="company.head">Проекты <em>для компаний</em></h2>
+</div><div class="company-intro-copy"><p class="company-lead" data-i18n="company.lead">Примеры задач для компаний и проектов с их поддержкой. В открытых репозиториях можно посмотреть код и технические детали.</p>
+<a class="button button-primary" href="mailto:frogeesoft.team@gmail.com" data-i18n="company.cta">Обсудить свой проект</a></div>
+</div>
+<div class="company-cases">
+<article class="company-case"><p class="company-case-label" data-i18n="company.yandex.label">Яндекс</p><h3 data-i18n="company.yandex.head">Топология</h3><p data-i18n="company.yandex.desc">Работа с топологией для задач Яндекса.</p></article>
+<article class="company-case"><p class="company-case-label" data-i18n="company.geoscan.label">При поддержке «Геоскан»</p><h3 data-i18n="company.geoscan.head">МОПС</h3><p data-i18n="company.geoscan.desc">Обследование сооружений с помощью БПЛА: ортофото фасада и поиск трещин на снимках.</p><a href="https://github.com/ArduRadioKot/Geoscan_MOPS" target="_blank" rel="noopener noreferrer" data-i18n="company.source">Код проекта ↗</a></article>
+<article class="company-case"><p class="company-case-label" data-i18n="company.yakovlev.label">При поддержке ПАО «Яковлев»</p><h3 data-i18n="company.yakovlev.head">Визуальная навигация дрона</h3><p data-i18n="company.yakovlev.desc">Коррекция курса и посадки по цветовой метке. Алгоритм отрабатывается в симуляторе Gazebo SITL.</p><a href="https://github.com/nikitosrus01/UAC_2026" target="_blank" rel="noopener noreferrer" data-i18n="company.source">Код проекта ↗</a></article>
+</div>
 </div>
 </section>
 
