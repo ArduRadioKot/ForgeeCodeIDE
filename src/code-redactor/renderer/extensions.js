@@ -11,6 +11,7 @@ import { loadCustomThemes } from './themes.js';
 import { enablePluginFiles, disablePluginFiles } from './plugins.js';
 import { loadContributions } from './ext-contrib.js';
 import { activateExtensionRuntime, deactivateExtensionRuntime } from './vscode-bridge.js';
+import { icon } from './glyphs.js';
 
 const dom = getDom();
 let installed = [];
@@ -320,7 +321,7 @@ async function onClick(e) {
 export async function showExtensionsPanel() {
   dom.activityPanel.innerHTML = `
     <div class="activity-header"><h3>Расширения</h3>
-      <div class="activity-buttons"><button class="activity-btn" id="ext-from-folder" title="Установить из папки (с extension.json)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6M9 13h6"/></svg></button><button class="activity-btn" id="ext-open-folder" title="Открыть папку установленных расширений"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-8 8M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg></button></div>
+      <div class="activity-buttons"><button class="activity-btn" id="ext-from-folder" title="Установить из папки (с extension.json)">${icon('folderAdd', 16)}</button><button class="activity-btn" id="ext-open-folder" title="Открыть папку установленных расширений">${icon('folderOpen', 16)}</button></div>
     </div>
     <div class="ext-panel" id="ext-panel">
       <input type="search" class="ext-search" id="ext-search" placeholder="Поиск в Open VSX: темы, сниппеты, языки…" spellcheck="false" value="${escapeHtml(lastQuery || '')}">
