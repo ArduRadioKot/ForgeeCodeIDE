@@ -83,7 +83,8 @@ body:not(.menu-open) .site-header:not(.is-scrolled) { --text: #f1f5ef; --muted: 
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .theme-toggle, .menu-toggle, .header-search-mobile { position: relative; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); color: var(--text); cursor: pointer; transition: transform .2s, border-color .2s; }
 .theme-toggle:hover, .menu-toggle:hover, .header-search-mobile:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--text) 40%, transparent); }
-.theme-toggle svg, .header-search-mobile svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle .theme-symbol { font-size: 22px; line-height: 1; font-family: Georgia, serif; }
+.header-search-mobile svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .theme-toggle .moon { display: none; }
 [data-theme="light"] .theme-toggle .sun { display: none; }
 [data-theme="light"] .theme-toggle .moon { display: block; }

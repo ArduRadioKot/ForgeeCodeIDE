@@ -1,7 +1,6 @@
 /* FrogeeCodeIDE: page parts on top of the FrogeeSoft design kit (kit.css). Tokens, header, buttons, cards, FAQ,
    contact band and footer come from the kit; only what the kit has no class for lives here. */
 
-.icon { width: 20px; height: 20px; flex: none; }
 .s { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .f { fill: currentColor; fill-opacity: .08; stroke: none; }
 
