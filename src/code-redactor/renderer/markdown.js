@@ -6,6 +6,7 @@ import { isEditorTab, isPreviewTab } from './tab-model.js';
 import { escapeHtml, sanitizeHtml } from './utils.js';
 import { openTabInSplit, closeTab, updateTabsList } from './tabs-api.js';
 import { autoIndentEnabled } from './smart-edit.js';
+import { getLang, onLangChange } from './i18n.js';
 
 const DELAY = 120;
 let timer = 0;
@@ -60,8 +61,9 @@ function updateStats() {
   const text = ed().value;
   const sel = ed().selectionEnd > ed().selectionStart ? ed().value.slice(ed().selectionStart, ed().selectionEnd) : null;
   const s = stats(sel ?? text);
-  el.textContent = `${s.words} сл.${sel ? ' (выд.)' : ` · ~${s.minutes} мин`}`;
+  el.textContent = getLang() === 'en' ? `${s.words} words${sel ? ' (selected)' : ` · ~${s.minutes} min`}` : `${s.words} сл.${sel ? ' (выд.)' : ` · ~${s.minutes} мин`}`;
 }
+onLangChange(updateStats);
 
 function rightPreview() {
   const tab = state.splitView ? state.currentTabs[state.rightTabIndex] : null;
@@ -93,7 +95,7 @@ export function toggleMarkdownPreview(force) {
   if (shown && force !== true) { closeTab(index); setTimeout(updateStats, 0); return; }
   if (force === false) return;
   if (index >= 0) { openTabInSplit(index); return; }
-  state.currentTabs.push({ id: Date.now() + Math.random(), kind: 'preview', name: `Просмотр ${source.name}`, content: '', sourceId: source.id, modified: false });
+  state.currentTabs.push({ id: Date.now() + Math.random(), kind: 'preview', name: `${getLang() === 'en' ? 'Preview' : 'Просмотр'} ${source.name}`, content: '', sourceId: source.id, modified: false });
   openTabInSplit(state.currentTabs.length - 1);
   setTimeout(updateStats, 0);
 }
@@ -106,7 +108,7 @@ function schedule() {
   // The preview follows whichever Markdown file is in front.
   if (isMarkdownTab(active) && active.id !== preview.sourceId && !state.currentTabs.some((t) => isPreviewTab(t) && t.sourceId === active.id)) {
     preview.sourceId = active.id;
-    preview.name = `Просмотр ${active.name}`;
+    preview.name = `${getLang() === 'en' ? 'Preview' : 'Просмотр'} ${active.name}`;
     updateTabsList();
   }
   clearTimeout(timer);
@@ -139,9 +141,9 @@ function wrapSelection(mark, placeholder = '') {
 function insertLink() {
   const t = ed();
   const { selectionStart: a, selectionEnd: b, value } = t;
-  const picked = value.slice(a, b) || 'текст';
+  const picked = value.slice(a, b) || (getLang() === 'en' ? 'text' : 'текст');
   const url = /^(https?:\/\/|www\.)/i.test(picked) ? picked : 'https://';
-  const text = url === picked ? 'текст' : picked;
+  const text = url === picked ? (getLang() === 'en' ? 'text' : 'текст') : picked;
   const out = `[${text}](${url})`;
   const urlStart = a + text.length + 3;
   replaceRange(t, a, b, out, urlStart, urlStart + url.length);
@@ -179,7 +181,7 @@ function insertBlock(text, selectFrom = 0, selectLen = 0) {
 }
 
 export function insertTable() {
-  const head = '| Колонка 1 | Колонка 2 | Колонка 3 |\n| --- | --- | --- |\n|  |  |  |\n';
+  const head = getLang() === 'en' ? '| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n|  |  |  |\n' : '| Колонка 1 | Колонка 2 | Колонка 3 |\n| --- | --- | --- |\n|  |  |  |\n';
   insertBlock(head, 2, 9);
 }
 
@@ -211,10 +213,10 @@ export function formatTable() {
 }
 
 export const mdActions = {
-  bold: () => wrapSelection('**', 'жирный'),
-  italic: () => wrapSelection('*', 'курсив'),
-  strike: () => wrapSelection('~~', 'зачёркнутый'),
-  code: () => wrapSelection('`', 'код'),
+  bold: () => wrapSelection('**', getLang() === 'en' ? 'bold' : 'жирный'),
+  italic: () => wrapSelection('*', getLang() === 'en' ? 'italic' : 'курсив'),
+  strike: () => wrapSelection('~~', getLang() === 'en' ? 'strikethrough' : 'зачёркнутый'),
+  code: () => wrapSelection('`', getLang() === 'en' ? 'code' : 'код'),
   link: insertLink,
   h1: () => mapLines((l) => prefixes.h(l, 1)),
   h2: () => mapLines((l) => prefixes.h(l, 2)),
@@ -226,7 +228,7 @@ export const mdActions = {
   codeblock: () => { const t = ed(); const picked = t.value.slice(t.selectionStart, t.selectionEnd); insertBlock('```\n' + picked + '\n```\n', 4, picked.length); },
   table: insertTable,
   hr: () => insertBlock('---\n'),
-  image: () => { const t = ed(); const out = '![описание](путь/к/картинке.png)'; replaceRange(t, t.selectionStart, t.selectionEnd, out, t.selectionStart + 2, t.selectionStart + 10); },
+  image: () => { const t = ed(); const out = getLang() === 'en' ? '![description](path/to/image.png)' : '![описание](путь/к/картинке.png)'; replaceRange(t, t.selectionStart, t.selectionEnd, out, t.selectionStart + 2, t.selectionStart + (getLang() === 'en' ? 11 : 10)); },
 };
 
 /** Enter continues the current list item, or ends the list when the item is empty. */

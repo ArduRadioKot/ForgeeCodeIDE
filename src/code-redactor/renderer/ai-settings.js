@@ -3,9 +3,10 @@ import { state } from './state.js';
 import { saveAllConfig } from './save-hook.js';
 import { escapeHtml } from './utils.js';
 import { refreshModelSelectForProvider } from './chat.js';
+import { getLang } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
-const gb = (bytes) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} ГБ` : `${Math.max(1, Math.round(bytes / 1e6))} МБ`);
+const gb = (bytes) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} ${getLang() === 'en' ? 'GB' : 'ГБ'}` : `${Math.max(1, Math.round(bytes / 1e6))} ${getLang() === 'en' ? 'MB' : 'МБ'}`);
 const downloads = new Map(); // name -> row element
 let progressBound = false;
 
@@ -61,7 +62,7 @@ export async function refreshOllama() {
   state.ollamaStatus = info;
   if (info.running) {
     setPill(pill, `Работает · ${info.version}`, 'connected');
-    $('ollama-sub').textContent = `${info.models.length} ${info.models.length === 1 ? 'модель' : 'моделей'} установлено`;
+    $('ollama-sub').textContent = getLang() === 'en' ? `${info.models.length} ${info.models.length === 1 ? 'model' : 'models'} installed` : `${info.models.length} ${info.models.length === 1 ? 'модель' : 'моделей'} установлено`;
   } else {
     setPill(pill, info.installed ? 'Остановлена' : 'Не установлена', 'not-configured');
     $('ollama-sub').textContent = 'Локальные модели на этом компьютере';
@@ -348,7 +349,7 @@ export function setupAiSettings() {
     const res = await window.electronAPI.ollamaStart();
     e.currentTarget.disabled = false;
     e.currentTarget.textContent = 'Запустить';
-    if (!res.success) alert(res.error || 'Не удалось запустить Ollama');
+    if (!res.success) alert(res.error || (getLang() === 'en' ? 'Could not start Ollama' : 'Не удалось запустить Ollama'));
     await refreshOllama();
     refreshModelSelectForProvider().catch(() => {});
   });
@@ -361,9 +362,9 @@ export function setupAiSettings() {
     if (!btn || !row) return;
     const name = row.dataset.model;
     if (btn.dataset.act === 'use') await useModel('ollama', name);
-    else if (btn.dataset.act === 'delete' && confirm(`Удалить модель «${name}» с диска?`)) {
+    else if (btn.dataset.act === 'delete' && confirm(getLang() === 'en' ? `Delete model “${name}” from disk?` : `Удалить модель «${name}» с диска?`)) {
       const res = await window.electronAPI.ollamaDelete(name);
-      if (!res.success) alert(res.error || 'Не удалось удалить модель');
+      if (!res.success) alert(res.error || (getLang() === 'en' ? 'Could not delete model' : 'Не удалось удалить модель'));
       if (state.currentAiProvider === 'ollama' && state.currentAiModel === name) state.currentAiModel = '';
       await refreshOllama();
       refreshModelSelectForProvider().catch(() => {});
@@ -375,7 +376,7 @@ export function setupAiSettings() {
     e.currentTarget.disabled = true;
     e.currentTarget.textContent = running ? 'Остановка…' : 'Запуск…';
     const res = await window.electronAPI.bionicServer({ action: running ? 'stop' : 'start' });
-    if (!res.success) alert(res.error || 'Не удалось выполнить команду');
+    if (!res.success) alert(res.error || (getLang() === 'en' ? 'Could not run command' : 'Не удалось выполнить команду'));
     await refreshBionic();
     refreshModelSelectForProvider().catch(() => {});
   });

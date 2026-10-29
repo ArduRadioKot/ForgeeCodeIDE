@@ -15,6 +15,7 @@ import { state } from './state.js';
 import { escapeHtml } from './utils.js';
 import { toast } from './image-view.js';
 import { isEditorTab } from './tab-model.js';
+import { getLang, onLangChange } from './i18n.js';
 
 const ENABLED = 'frogee.plugins.enabled';
 const running = new Map(); // file -> { cleanups, preview, change, tab, error }
@@ -276,17 +277,18 @@ async function drawList() {
       <div class="plugin-row-main">
         <div class="plugin-row-name">${escapeHtml(info.name)}${info.version ? ` <span>${escapeHtml(info.version)}</span>` : ''}</div>
         <div class="plugin-row-desc">${escapeHtml(info.description || file)}</div>
-        ${err ? `<div class="plugin-row-error">Ошибка: ${escapeHtml(err)}</div>` : ''}
+        ${err ? `<div class="plugin-row-error">${getLang() === 'en' ? 'Error' : 'Ошибка'}: ${escapeHtml(err)}</div>` : ''}
       </div>
       <button type="button" class="settings-btn ghost" data-act="remove">${armed === file ? 'Точно удалить?' : 'Удалить'}</button>
-      <label class="plugin-switch" title="${on[file] ? 'Выключить' : 'Включить'}"><input type="checkbox" data-act="toggle" ${on[file] ? 'checked' : ''} aria-label="Включить плагин ${escapeHtml(info.name)}"><span aria-hidden="true"></span></label>
+      <label class="plugin-switch" title="${on[file] ? 'Выключить' : 'Включить'}"><input type="checkbox" data-act="toggle" ${on[file] ? 'checked' : ''} aria-label="${getLang() === 'en' ? 'Enable plugin' : 'Включить плагин'} ${escapeHtml(info.name)}"><span aria-hidden="true"></span></label>
     </div>`;
   }));
   host.innerHTML = rows.join('') || '<p class="settings-hint">Плагинов пока нет. Нажмите «Установить…» и выберите файл .js или .css.</p>';
 }
+onLangChange(() => { if (document.getElementById('plugins-list')) drawList(); });
 
 async function install() {
-  const res = await window.electronAPI.installPlugins();
+  const res = await window.electronAPI.installPlugins(getLang());
   for (const file of res?.installed || []) { setEnabled(file, true); stop(file); await start(file); }
   if (res?.error) alert(res.error);
   await drawList();

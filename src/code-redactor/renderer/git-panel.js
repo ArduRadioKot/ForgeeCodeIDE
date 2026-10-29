@@ -3,10 +3,17 @@ import { getDom } from './dom.js';
 import { pathUtils, escapeHtml } from './utils.js';
 import { hideWelcomePage, createTab } from './tabs.js';
 import { icon } from './glyphs.js';
+import { getLang, onLangChange, uiText } from './i18n.js';
 
 const dom = getDom();
 function ago(unixSeconds) {
   const sec = Math.max(0, Date.now() / 1000 - Number(unixSeconds));
+  if (getLang() === 'en') {
+    for (const [size, unit] of [[31536000, 'year'], [2592000, 'month'], [86400, 'day'], [3600, 'hour'], [60, 'minute']]) {
+      if (sec >= size) { const n = Math.floor(sec / size); return `${n} ${unit}${n === 1 ? '' : 's'} ago`; }
+    }
+    return 'just now';
+  }
   const units = [[31536000, ['год', 'года', 'лет']], [2592000, ['месяц', 'месяца', 'месяцев']], [86400, ['день', 'дня', 'дней']], [3600, ['час', 'часа', 'часов']], [60, ['минуту', 'минуты', 'минут']]];
   for (const [size, forms] of units) {
     if (sec >= size) {
@@ -88,7 +95,7 @@ export async function refreshGitPanel() {
       return;
     }
     if (!status.isRepo) {
-      message(root, `<p><strong>${escapeHtml(pathUtils.basename(state.currentFolder))}</strong> - не репозиторий git</p>
+      message(root, `<p><strong>${escapeHtml(pathUtils.basename(state.currentFolder))}</strong> ${getLang() === 'en' ? '- not a Git repository' : '- не репозиторий git'}</p>
         <p class="git-hint">Можно инициализировать репозиторий здесь или работать без git.</p>
         <button class="git-btn primary" id="git-init-btn">Создать репозиторий</button>`);
       document.getElementById('git-init-btn')?.addEventListener('click', async () => {
@@ -120,17 +127,17 @@ function renderRepo(root, status) {
     <div class="git-section">
       <textarea id="git-commit-msg" class="git-commit-input" rows="3" placeholder="Сообщение коммита (Ctrl+Enter - закоммитить)"></textarea>
       <div class="git-actions">
-        <button class="git-btn primary" id="git-commit-btn" ${staged.length ? '' : 'disabled'}>Закоммитить${staged.length ? ` (${staged.length})` : ''}</button>
+        <button class="git-btn primary" id="git-commit-btn" ${staged.length ? '' : 'disabled'}>${uiText('Закоммитить')}${staged.length ? ` (${staged.length})` : ''}</button>
         <button class="git-btn" id="git-pull-btn" title="git pull --ff-only">Pull${status.behind ? ` ${icon('down', 9)}${status.behind}` : ''}</button>
         <button class="git-btn" id="git-push-btn">Push${status.ahead ? ` ${icon('up', 9)}${status.ahead}` : ''}</button>
       </div>
     </div>
     <div class="git-section">
-      <div class="git-section-title"><span>Подготовлено (${staged.length})</span><button class="git-link" id="git-unstage-all" ${staged.length ? '' : 'hidden'}>Убрать все</button></div>
+      <div class="git-section-title"><span>${getLang() === 'en' ? 'Staged' : 'Подготовлено'} (${staged.length})</span><button class="git-link" id="git-unstage-all" ${staged.length ? '' : 'hidden'}>Убрать все</button></div>
       <div class="git-file-list" id="git-staged-list"></div>
     </div>
     <div class="git-section">
-      <div class="git-section-title"><span>Изменения (${changes.length})</span><button class="git-link" id="git-stage-all" ${changes.length ? '' : 'hidden'}>Добавить все</button></div>
+      <div class="git-section-title"><span>${getLang() === 'en' ? 'Changes' : 'Изменения'} (${changes.length})</span><button class="git-link" id="git-stage-all" ${changes.length ? '' : 'hidden'}>Добавить все</button></div>
       <div class="git-file-list" id="git-changes-list"></div>
     </div>
     <div class="git-section">
@@ -175,7 +182,10 @@ function renderRepo(root, status) {
     el.querySelector('[data-act="discard"]')?.addEventListener('click', async (e) => {
       e.stopPropagation();
       const untracked = file.status === 'untracked';
-      if (!confirm(`${untracked ? 'Удалить новый файл' : 'Отменить изменения в'} «${file.path}»? Это нельзя отменить.`)) return;
+      const question = getLang() === 'en'
+        ? `${untracked ? 'Delete new file' : 'Discard changes in'} “${file.path}”? This cannot be undone.`
+        : `${untracked ? 'Удалить новый файл' : 'Отменить изменения в'} «${file.path}»? Это нельзя отменить.`;
+      if (!confirm(question)) return;
       const res = await window.electronAPI.gitDiscard(cwd, file.path, untracked);
       if (!res.success) show(res.error, false);
       refreshGitPanel();
@@ -268,3 +278,5 @@ function askBranchName() {
     input.focus();
   });
 }
+
+onLangChange(() => { if (document.getElementById('git-panel-root')) refreshGitPanel(); });

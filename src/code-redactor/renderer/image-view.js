@@ -2,6 +2,7 @@
 import { state } from './state.js';
 import { escapeHtml } from './utils.js';
 import { icon } from './glyphs.js';
+import { getLang } from './i18n.js';
 
 export const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'avif']);
 const BINARY_EXT = new Set('whl egg pyc pyo pyd so dylib dll exe bin o a lib obj class jar war wasm zip tar gz tgz bz2 xz zst 7z rar dmg pkg iso img deb rpm apk ipa db sqlite sqlite3 npy npz pkl pickle parquet h5 hdf5 feather pdf doc docx xls xlsx xlsm ppt pptx odt ods psd ai sketch tif tiff heic icns mp3 mp4 m4a mov avi mkv wav flac ogg webm woff woff2 ttf otf eot'.split(' '));
@@ -83,7 +84,7 @@ export function renderImage(tab) {
     info.textContent = `${tab.name} · ${img.naturalWidth}×${img.naturalHeight}`;
     apply();
   });
-  img.addEventListener('error', () => { info.textContent = `${tab.name} · не удалось загрузить изображение`; });
+  img.addEventListener('error', () => { info.textContent = `${tab.name} · ${getLang() === 'en' ? 'could not load image' : 'не удалось загрузить изображение'}`; });
   img.src = `${fileUrl(tab.filePath)}?v=${Date.now()}`;
 
   h.querySelector('.img-toolbar').addEventListener('click', (e) => {

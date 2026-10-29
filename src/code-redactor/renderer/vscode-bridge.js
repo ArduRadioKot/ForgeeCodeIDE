@@ -7,6 +7,7 @@ import { getDom } from './dom.js';
 import { toast } from './image-view.js';
 import { isEditorTab } from './tab-model.js';
 import { saveFile, saveFileAs } from './editor.js';
+import { getLang } from './i18n.js';
 
 const dom = getDom();
 const statusNodes = new Map();
@@ -77,7 +78,7 @@ async function handleUi(msg) {
       }
       case 'input-box': {
         const value = window.prompt(
-          [payload?.prompt, payload?.placeHolder].filter(Boolean).join('\n') || 'Ввод',
+          [payload?.prompt, payload?.placeHolder].filter(Boolean).join('\n') || (getLang() === 'en' ? 'Input' : 'Ввод'),
           payload?.value || '',
         );
         return reply(id, value === null ? undefined : value);
@@ -87,7 +88,7 @@ async function handleUi(msg) {
         if (!items.length) return reply(id, undefined);
         const labels = items.map((i) => i.label || String(i));
         const choice = window.prompt(
-          `${payload?.placeholder || 'Выберите:'}\n${labels.map((l, i) => `${i + 1}. ${l}`).join('\n')}`,
+          `${payload?.placeholder || (getLang() === 'en' ? 'Choose:' : 'Выберите:')}\n${labels.map((l, i) => `${i + 1}. ${l}`).join('\n')}`,
           '1',
         );
         if (choice == null) return reply(id, undefined);
@@ -146,7 +147,7 @@ async function handleUi(msg) {
       }
       case 'output':
         console.info(`[ext:${payload?.name || 'output'}]`, payload?.text || '');
-        toast(`Вывод «${payload?.name || 'output'}» - см. DevTools`);
+        toast(getLang() === 'en' ? `Output “${payload?.name || 'output'}” - see DevTools` : `Вывод «${payload?.name || 'output'}» - см. DevTools`);
         return reply(id, true);
       case 'status-bar': {
         const host = ensureStatusHost();
@@ -303,7 +304,7 @@ export async function refreshRuntimeCommands() {
 export function runtimePaletteCommands() {
   return runtimeCommands.map((c) => ({
     label: c.title,
-    detail: c.extension ? `расширение · ${c.extension}` : 'расширение',
+    detail: c.extension ? `${getLang() === 'en' ? 'extension' : 'расширение'} · ${c.extension}` : (getLang() === 'en' ? 'extension' : 'расширение'),
     run: () => window.electronAPI.vscodeHostExecute?.({ command: c.command }),
   }));
 }
@@ -316,7 +317,7 @@ export async function extensionCompletions(prefix) {
     return res
       .filter((c) => !low || c.label.toLowerCase().startsWith(low) || c.insertText?.toLowerCase?.().startsWith(low))
       .slice(0, 8)
-      .map((c) => ({ label: c.insertText || c.label, detail: c.detail || c.documentation || 'расширение' }));
+      .map((c) => ({ label: c.insertText || c.label, detail: c.detail || c.documentation || (getLang() === 'en' ? 'extension' : 'расширение') }));
   } catch {
     return [];
   }

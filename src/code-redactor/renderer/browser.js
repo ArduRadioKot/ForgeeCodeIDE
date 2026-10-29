@@ -6,6 +6,7 @@ import { state } from './state.js';
 import { escapeHtml } from './utils.js';
 import { saveAllConfig } from './save-hook.js';
 import { isBrowserTab } from './tab-model.js';
+import { getLang } from './i18n.js';
 import { updateTabsList, updateTabTitle, switchToTab, hideWelcomePage, openTabInSplit, setSplitView, setFocusedPane, isBrowserSplit } from './tabs-api.js';
 import { isEditorTab, isNotebookTab } from './tab-model.js';
 
@@ -34,7 +35,7 @@ export function getBrowserHost() {
 }
 
 export function createBrowserTab(url = 'about:blank', name = '') {
-  return { id: Date.now() + Math.random(), kind: 'browser', name: name || 'Новая вкладка', url, content: url, filePath: null, modified: false };
+  return { id: Date.now() + Math.random(), kind: 'browser', name: name || (getLang() === 'en' ? 'New tab' : 'Новая вкладка'), url, content: url, filePath: null, modified: false };
 }
 
 export function normalizeUrl(input) {
@@ -68,7 +69,7 @@ function buildView(tab) {
     <div class="browser-bar">
       <button type="button" class="browser-btn" data-act="back" title="Назад (Alt+Влево)" disabled>${ICON.back}</button>
       <button type="button" class="browser-btn" data-act="forward" title="Вперёд (Alt+Вправо)" disabled>${ICON.forward}</button>
-      <button type="button" class="browser-btn" data-act="reload" title="Обновить">${ICON.reload}</button>
+      <button type="button" class="browser-btn" data-act="reload" title="Перезагрузить">${ICON.reload}</button>
       <input class="browser-url" type="text" spellcheck="false" placeholder="Адрес сайта, порт (5500) или поисковый запрос" />
       <select class="browser-device" title="Размер окна">${Object.entries(DEVICES).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join('')}</select>
       <button type="button" class="browser-btn" data-act="console" title="Консоль страницы">${ICON.console}<span class="browser-badge" hidden></span></button>
@@ -99,7 +100,7 @@ function buildView(tab) {
   const setLoading = (on) => {
     el.classList.toggle('loading', on);
     el.querySelector('[data-act="reload"]').innerHTML = on ? ICON.stop : ICON.reload;
-    el.querySelector('[data-act="reload"]').title = on ? 'Остановить' : 'Обновить';
+    el.querySelector('[data-act="reload"]').title = on ? 'Остановить' : 'Перезагрузить';
   };
   const setUrl = (url) => {
     if (!url || url === 'about:blank') return;
@@ -142,7 +143,7 @@ function buildView(tab) {
   wv.addEventListener('did-navigate', (e) => { setUrl(e.url); syncNav(); });
   wv.addEventListener('did-navigate-in-page', (e) => { if (e.isMainFrame) { setUrl(e.url); syncNav(); } });
   wv.addEventListener('page-title-updated', (e) => {
-    tab.name = (e.title || tab.url || 'Браузер').slice(0, 40);
+    tab.name = (e.title || tab.url || (getLang() === 'en' ? 'Browser' : 'Браузер')).slice(0, 40);
     updateTabsList();
     updateTabTitle();
   });

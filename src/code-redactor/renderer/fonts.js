@@ -2,6 +2,7 @@
 import { state } from './state.js';
 import { saveAllConfig } from './save-hook.js';
 import { applyTerminalFont } from './terminal.js';
+import { getLang, onLangChange, t } from './i18n.js';
 
 const MONO = ['JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', 'IBM Plex Mono', 'Hack', 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New'];
 const UI = ['Inter', 'SF Pro Text', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'IBM Plex Sans', 'Noto Sans', 'Source Sans 3', 'Verdana'];
@@ -41,9 +42,9 @@ export function applyFonts() {
 function fillSelect(select, fonts, value) {
   select.innerHTML = '';
   const add = (v, label) => { const o = document.createElement('option'); o.value = v; o.textContent = label; select.appendChild(o); };
-  add('', 'По умолчанию');
-  fonts.forEach((name) => add(name, isInstalled(name) ? name : `${name} - не найден`));
-  add(CUSTOM, 'Другой…');
+  add('', getLang() === 'en' ? 'Default' : 'По умолчанию');
+  fonts.forEach((name) => add(name, isInstalled(name) ? name : t('font.missing', { name })));
+  add(CUSTOM, getLang() === 'en' ? 'Other…' : 'Другой…');
   select.value = value && !fonts.includes(value) ? CUSTOM : (value || '');
 }
 
@@ -61,6 +62,7 @@ export function syncFontControls() {
   const lig = document.getElementById('font-ligatures');
   if (lig) lig.checked = state.fontLigatures;
 }
+onLangChange(syncFontControls);
 
 export function setupFonts() {
   const bind = (id, key) => {

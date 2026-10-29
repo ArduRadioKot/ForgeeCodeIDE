@@ -3,6 +3,7 @@
  * installed extensions. Extension JS never runs — only package.json data.
  */
 import { langFromName } from './smart-edit.js';
+import { getLang } from './i18n.js';
 
 const VS_TO_FROGEE = {
   javascript: 'js', javascriptreact: 'jsx', typescript: 'ts', typescriptreact: 'tsx',
@@ -148,7 +149,7 @@ export function extensionPaletteCommands(runners) {
     const title = c.category ? `${c.category}: ${c.title}` : c.title;
     out.push({
       label: title,
-      detail: c.extension ? `расширение · ${c.extension}` : 'расширение',
+      detail: c.extension ? `${getLang() === 'en' ? 'extension' : 'расширение'} · ${c.extension}` : (getLang() === 'en' ? 'extension' : 'расширение'),
       run: runners[key],
     });
   }

@@ -25,7 +25,7 @@ import { configCommands } from './run-configs.js';
 import { toggleMarkdownPreview, formatTable, insertTable } from './markdown.js';
 import { extensionPaletteCommands } from './ext-contrib.js';
 import { runtimePaletteCommands } from './vscode-bridge.js';
-import { t } from './i18n.js';
+import { t, uiText } from './i18n.js';
 
 const dom = getDom();
 let overlay = null;
@@ -114,13 +114,13 @@ let onSubmit = null;
 function refresh() {
   const raw = input.value;
   if (mode === 'input') {
-    shown = [{ label: raw ? `Применить: ${raw}` : 'Введите значение', run: () => raw && onSubmit?.(raw) }];
+    shown = [{ label: raw ? `${uiText('Применить')}: ${raw}` : uiText('Введите значение'), run: () => raw && onSubmit?.(raw) }];
     paint();
     return;
   }
   if (mode === 'files' && raw.startsWith(':')) {
     const n = parseInt(raw.slice(1), 10);
-    shown = [{ label: Number.isFinite(n) ? `Перейти к строке ${n}` : 'Введите номер строки', run: () => Number.isFinite(n) && goToEditorLine(n) }];
+    shown = [{ label: Number.isFinite(n) ? `${uiText('Перейти к строке')} ${n}` : uiText('Введите номер строки'), run: () => Number.isFinite(n) && goToEditorLine(n) }];
     paint();
     return;
   }
@@ -227,7 +227,7 @@ function buildCommands() {
   const fromRuntime = runtimePaletteCommands();
   const tab = activeTab();
   const nb = tab && isNotebookTab(tab);
-  const cmd = (label, run, key = '', group = '') => ({ label, run, key, detail: group });
+  const cmd = (label, run, key = '', group = '') => ({ label: uiText(label), run, key: uiText(key), detail: uiText(group) });
   const list = [
     ...extra,
     ...fromExt,
@@ -476,7 +476,7 @@ export function toggleZen() {
 function agentPrompt(instruction) {
   const provider = dom.aiProviderSelect?.value || 'ollama';
   const ed = dom.editor;
-  let text = instruction;
+  let text = uiText(instruction);
   if (provider !== 'claude-code' && provider !== 'codex' && ed && ed.selectionEnd > ed.selectionStart) {
     text += `\n\n\`\`\`\n${ed.value.slice(ed.selectionStart, ed.selectionEnd).slice(0, 6000)}\n\`\`\``;
   }
@@ -519,7 +519,7 @@ export function openProblems() {
 }
 
 export function openGoToLine() {
-  open('files', 'Номер строки', [], 'Введите номер строки и нажмите Enter');
+  open('files', uiText('Номер строки'), [], uiText('Введите номер строки и нажмите Enter'));
   input.value = ':';
   refresh();
 }

@@ -37,34 +37,35 @@ function registerPluginsIpc() {
   });
 
   // Pick files, confirm (a plugin is a program with the editor's rights), copy them into the plugins folder.
-  ipcMain.handle('plugin-install', async (e) => {
+  ipcMain.handle('plugin-install', async (e, lang) => {
+    const en = lang === 'en';
     const win = BrowserWindow.fromWebContents(e.sender);
     const picked = await dialog.showOpenDialog(win, {
-      title: 'Установить плагин',
+      title: en ? 'Install plugin' : 'Установить плагин',
       properties: ['openFile', 'multiSelections'],
-      filters: [{ name: 'Плагины FrogeeCodeIDE (.js, .css)', extensions: ['js', 'css'] }],
+      filters: [{ name: en ? 'FrogeeCodeIDE plugins (.js, .css)' : 'Плагины FrogeeCodeIDE (.js, .css)', extensions: ['js', 'css'] }],
     });
     if (picked.canceled || !picked.filePaths.length) return { canceled: true, installed: [] };
     const files = picked.filePaths.filter((file) => NAME_RE.test(path.basename(file)));
-    if (!files.length) return { canceled: false, installed: [], error: 'Нужны файлы .js или .css' };
+    if (!files.length) return { canceled: false, installed: [], error: en ? 'Choose .js or .css files' : 'Нужны файлы .js или .css' };
     const answer = await dialog.showMessageBox(win, {
       type: 'warning',
-      buttons: ['Установить', 'Отмена'],
+      buttons: en ? ['Install', 'Cancel'] : ['Установить', 'Отмена'],
       defaultId: 1,
       cancelId: 1,
-      message: files.length === 1 ? `Установить плагин «${path.basename(files[0])}»?` : `Установить плагины (${files.length})?`,
-      detail: 'Плагин — это программа: он выполняется внутри FrogeeCodeIDE, видит открытые файлы и может работать с проектом так же, как сам редактор. Устанавливайте только те плагины, которым доверяете.\n\nФайлы будут скопированы в папку Documents/FrogeeCodeIDE/plugins.',
+      message: files.length === 1 ? (en ? `Install plugin “${path.basename(files[0])}”?` : `Установить плагин «${path.basename(files[0])}»?`) : (en ? `Install plugins (${files.length})?` : `Установить плагины (${files.length})?`),
+      detail: en ? 'A plugin runs inside FrogeeCodeIDE and can access open files and your project. Install only plugins you trust.\n\nThe files will be copied to Documents/FrogeeCodeIDE/plugins.' : 'Плагин — это программа: он выполняется внутри FrogeeCodeIDE, видит открытые файлы и может работать с проектом так же, как сам редактор. Устанавливайте только те плагины, которым доверяете.\n\nФайлы будут скопированы в папку Documents/FrogeeCodeIDE/plugins.',
     });
     if (answer.response !== 0) return { canceled: true, installed: [] };
     const installed = [];
     const skipped = [];
     for (const file of files) {
       const name = path.basename(file);
-      if (fs.statSync(file).size > MAX_SIZE) { skipped.push(`${name}: больше 2 МБ`); continue; }
+      if (fs.statSync(file).size > MAX_SIZE) { skipped.push(`${name}: ${en ? 'over 2 MB' : 'больше 2 МБ'}`); continue; }
       fs.copyFileSync(file, path.join(pluginsDir(), name));
       installed.push(name);
     }
-    return { canceled: false, installed, error: skipped.length ? `Не установлены: ${skipped.join('; ')}` : '' };
+    return { canceled: false, installed, error: skipped.length ? `${en ? 'Not installed' : 'Не установлены'}: ${skipped.join('; ')}` : '' };
   });
 
   // Removing moves the file to the Trash, so it can be brought back.

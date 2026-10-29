@@ -91,7 +91,7 @@ import { hydrateIcons } from './glyphs.js';
 import { setupAutoIndentSetting } from './smart-edit.js';
 import { setupThemeControls } from './themes.js';
 import { setupUpdater } from './updater.js';
-import { setupI18n } from './i18n.js';
+import { getLang, setupI18n } from './i18n.js';
 import { reopenClosedTab } from './tabs.js';
 import { isBrowserTab } from './tab-model.js';
 
@@ -229,7 +229,7 @@ export function setupEventListeners() {
         saveAllConfig();
       } else {
         updateOpenCodeStatus('error');
-        alert(health.error || 'OpenCode недоступен. Запустите: opencode serve');
+        alert(health.error || (getLang() === 'en' ? 'OpenCode is unavailable. Run: opencode serve' : 'OpenCode недоступен. Запустите: opencode serve'));
       }
     });
   }

@@ -35,6 +35,7 @@ import {
   createNotebookTab,
 } from './notebook.js';
 import { icon } from './glyphs.js';
+import { getLang, uiText } from './i18n.js';
 
 const dom = getDom();
 
@@ -134,7 +135,7 @@ export function restoreTab(name, content = '', filePath = null, kind = 'file') {
   state.currentTabs.push({
     id: Date.now() + Math.random(),
     kind: 'file',
-    name: name || 'Новый файл',
+    name: name || uiText('Новый файл'),
     content: content || '',
     filePath: filePath || null,
     modified: false
@@ -202,11 +203,11 @@ export function showTab(index) {
 }
 
 export function createNewTab() {
-  createTab('Новый файл');
+  createTab(uiText('Новый файл'));
 }
 
 export function createNewFile() {
-  createTab('Новый файл');
+  createTab(uiText('Новый файл'));
 }
 
 export function switchToTab(index) {
@@ -452,7 +453,7 @@ export function closeTab(index) {
   }
 
   if (tab.modified) {
-    if (!confirm(`Файл "${tab.name}" не сохранен. Закрыть?`)) {
+    if (!confirm(getLang() === 'en' ? `File "${tab.name}" is not saved. Close it?` : `Файл "${tab.name}" не сохранен. Закрыть?`)) {
       return;
     }
   }

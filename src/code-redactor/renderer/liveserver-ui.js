@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { isEditorTab } from './tab-model.js';
 import { openBrowserTab } from './browser.js';
 import { icon } from './glyphs.js';
+import { uiText } from './i18n.js';
 
 const dirname = (p) => p.replace(/[\\/][^\\/]*$/, '') || '/';
 const chip = () => document.getElementById('status-live-btn');
@@ -33,13 +34,13 @@ function urlFor(live, filePath) {
 
 export async function startLive(root) {
   if (!root) {
-    alert('Откройте папку проекта или HTML-файл, чтобы запустить Live Server');
+    alert(uiText('Откройте папку проекта или HTML-файл, чтобы запустить Live Server'));
     return null;
   }
   if (state.live && state.live.root !== root) await window.electronAPI.liveStop({ root: state.live.root });
   const res = await window.electronAPI.liveStart({ root, port: 5500 });
   if (!res?.success) {
-    alert(res?.error || 'Не удалось запустить Live Server');
+    alert(res?.error || uiText('Не удалось запустить Live Server'));
     return null;
   }
   state.live = { root, port: res.port, url: res.url, clients: 0 };

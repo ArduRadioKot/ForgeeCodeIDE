@@ -7,6 +7,7 @@ import { saveAllConfig } from './save-hook.js';
 import { escapeHtml, pathUtils } from './utils.js';
 import { icon } from './glyphs.js';
 import { runInNamedTerminal } from './terminal.js';
+import { getLang, onLangChange } from './i18n.js';
 
 const keyOf = () => state.currentFolder || '';
 const isWin = () => /^Win/i.test(navigator.platform);
@@ -62,7 +63,7 @@ export async function runConfig(cfg) {
   if (!cfg || !String(cfg.command || '').trim()) { openRunConfigDialog(cfg); return false; }
   const tab = state.currentTabs[state.activeTabIndex];
   if (/\$\{file/.test(cfg.command) && tab?.modified && tab.filePath) { const { saveFile } = await import('./editor.js'); await saveFile(); }
-  if (/\$\{file\}/.test(cfg.command) && !tab?.filePath) { alert('Для этой конфигурации нужен сохранённый файл: откройте файл или сохраните текущий.'); return false; }
+  if (/\$\{file\}/.test(cfg.command) && !tab?.filePath) { alert(getLang() === 'en' ? 'This configuration needs a saved file. Open a file or save the current one.' : 'Для этой конфигурации нужен сохранённый файл: откройте файл или сохраните текущий.'); return false; }
   let cwd = resolveVariables(cfg.cwd || '').trim();
   const base = state.currentFolder || (tab?.filePath ? tab.filePath.replace(/[\\/][^\\/]*$/, '') : '');
   if (cwd && !/^([a-zA-Z]:)?[\\/]/.test(cwd) && base) cwd = `${base}${/[\\/]$/.test(base) ? '' : '/'}${cwd}`;
@@ -83,7 +84,7 @@ export function refreshRunButton() {
   const btn = document.getElementById('run-file-btn');
   if (!btn) return;
   const cfg = selectedConfig();
-  btn.title = cfg ? `Запустить «${cfg.name}» (F5)` : 'Запустить файл (F5)';
+  btn.title = cfg ? (getLang() === 'en' ? `Run “${cfg.name}” (F5)` : `Запустить «${cfg.name}» (F5)`) : (getLang() === 'en' ? 'Run file (F5)' : 'Запустить файл (F5)');
 }
 
 // ───────────────────────── dialog ─────────────────────────
@@ -154,7 +155,7 @@ export function openRunConfigDialog(existing) {
     else if (act === 'save') save();
     else if (act === 'save-run') { const next = save(); if (next) runConfig(next); }
     else if (act === 'delete') {
-      if (!confirm(`Удалить конфигурацию «${cfg.name}»?`)) return;
+      if (!confirm(getLang() === 'en' ? `Delete configuration “${cfg.name}”?` : `Удалить конфигурацию «${cfg.name}»?`)) return;
       setConfigs(listConfigs().filter((c) => c.id !== cfg.id));
       if (selectedConfig() === null) select('');
       closeDialog();
@@ -203,9 +204,12 @@ export function setupRunConfigPanel() {
 
 /** Entries for the command palette. */
 export function configCommands() {
+  const en = getLang() === 'en';
   return [
-    ...listConfigs().map((c) => ({ label: `Запуск: ${c.name}`, detail: c.command, key: '', run: () => { select(c.id); runConfig(c); } })),
-    { label: 'Запуск: новая конфигурация…', detail: '', key: '', run: () => openRunConfigDialog() },
-    ...(selectedConfig() ? [{ label: 'Запуск: настроить выбранную конфигурацию…', detail: selectedConfig().name, key: '', run: () => openRunConfigDialog(selectedConfig()) }] : []),
+    ...listConfigs().map((c) => ({ label: `${en ? 'Run' : 'Запуск'}: ${c.name}`, detail: c.command, key: '', run: () => { select(c.id); runConfig(c); } })),
+    { label: en ? 'Run: new configuration…' : 'Запуск: новая конфигурация…', detail: '', key: '', run: () => openRunConfigDialog() },
+    ...(selectedConfig() ? [{ label: en ? 'Run: configure selected…' : 'Запуск: настроить выбранную конфигурацию…', detail: selectedConfig().name, key: '', run: () => openRunConfigDialog(selectedConfig()) }] : []),
   ];
 }
+
+onLangChange(renderPanel);

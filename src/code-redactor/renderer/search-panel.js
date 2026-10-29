@@ -7,6 +7,7 @@ import { getDom } from './dom.js';
 import { escapeHtml, pathUtils } from './utils.js';
 import { openSearchFileAtLine, goToEditorLine } from './explorer.js';
 import { icon } from './glyphs.js';
+import { getLang, onLangChange, uiText } from './i18n.js';
 
 const dom = getDom();
 const STORE = 'frogee.search';
@@ -41,7 +42,7 @@ function lineHtml(m) {
 }
 
 function placeholder(text, error = false) {
-  $('search-results').innerHTML = `<div class="search-placeholder${error ? ' error' : ''}">${escapeHtml(text)}</div>`;
+  $('search-results').innerHTML = `<div class="search-placeholder${error ? ' error' : ''}">${escapeHtml(uiText(text))}</div>`;
   $('search-actions').hidden = true;
 }
 
@@ -63,7 +64,7 @@ function searchInFile(query) {
   });
   last = matches.length ? { results: [{ file: tab.name, fullPath: tab.filePath || '', matches, matchCount: matches.length, current: true }], totalMatches: matches.length } : null;
   if (!last) return placeholder('Ничего не найдено');
-  renderResults(last, `${matches.length} в ${tab.name}`);
+  renderResults(last, `${matches.length} ${getLang() === 'en' ? 'in' : 'в'} ${tab.name}`);
 }
 
 async function searchInProject(query) {
@@ -91,11 +92,11 @@ async function searchInProject(query) {
   if (mine !== seq || res?.cancelled) return;
   if (box) box.classList.remove('busy');
   if (!res || !res.success) return placeholder(res?.error || 'Ошибка поиска', true);
-  if (!res.results?.length) { last = null; return placeholder(`Ничего не найдено (просмотрено файлов: ${res.filesScanned || 0})`); }
+  if (!res.results?.length) { last = null; return placeholder(getLang() === 'en' ? `No results (files scanned: ${res.filesScanned || 0})` : `Ничего не найдено (просмотрено файлов: ${res.filesScanned || 0})`); }
   last = { ...res, query };
   excluded.clear();
   const files = res.results.length;
-  renderResults(last, `${res.totalMatches}${res.truncated ? '+' : ''} в ${files} ${plural(files, 'файле', 'файлах', 'файлах')}`);
+  renderResults(last, getLang() === 'en' ? `${res.totalMatches}${res.truncated ? '+' : ''} in ${files} ${files === 1 ? 'file' : 'files'}` : `${res.totalMatches}${res.truncated ? '+' : ''} в ${files} ${plural(files, 'файле', 'файлах', 'файлах')}`);
 }
 
 const plural = (n, one, few, many) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many);
@@ -116,7 +117,7 @@ function renderResults(res, summary) {
         ${project && opts.replaceOpen ? `<button type="button" class="search-skip${excluded.has(f.fullPath) ? ' on' : ''}" data-skip="${fi}" title="${excluded.has(f.fullPath) ? 'Вернуть в замену' : 'Не заменять в этом файле'}">${excluded.has(f.fullPath) ? icon('plus', 10) : icon('close', 10)}</button>` : ''}
       </div>${rows}</div>`;
   }).join('');
-  $('search-results').innerHTML = `<div class="search-summary">${escapeHtml(summary)}${res.truncated ? ' · показаны не все результаты' : ''}</div>${html}`;
+  $('search-results').innerHTML = `<div class="search-summary">${escapeHtml(summary)}${res.truncated ? (getLang() === 'en' ? ' · some results hidden' : ' · показаны не все результаты') : ''}</div>${html}`;
   $('search-actions').hidden = !(project && opts.replaceOpen);
   updateReplaceButton();
 }
@@ -126,7 +127,7 @@ function updateReplaceButton() {
   if (!btn || !last) return;
   const files = last.results.filter((f) => !excluded.has(f.fullPath));
   const count = files.reduce((n, f) => n + f.matchCount, 0);
-  btn.textContent = `Заменить все (${count})`;
+  btn.textContent = `${uiText('Заменить все')} (${count})`;
   btn.disabled = !count;
 }
 
@@ -147,8 +148,12 @@ async function replaceAll() {
   if (!count) return;
   const replacement = $('replace-input-sidebar').value;
   const modified = state.currentTabs.filter((t) => t.modified && t.filePath && files.some((f) => f.fullPath === t.filePath));
-  const note = modified.length ? `\n\nНесохранённые изменения в открытых файлах (${modified.map((t) => t.name).join(', ')}) могут быть потеряны.` : '';
-  if (!window.confirm(`Заменить «${$('search-input').value}» на «${replacement}»: ${count} в ${files.length} ${plural(files.length, 'файле', 'файлах', 'файлах')}?${note}\nДействие нельзя отменить.`)) return;
+  const en = getLang() === 'en';
+  const note = modified.length ? (en ? `\n\nUnsaved changes in open files (${modified.map((t) => t.name).join(', ')}) may be lost.` : `\n\nНесохранённые изменения в открытых файлах (${modified.map((t) => t.name).join(', ')}) могут быть потеряны.`) : '';
+  const question = en
+    ? `Replace “${$('search-input').value}” with “${replacement}”: ${count} in ${files.length} ${files.length === 1 ? 'file' : 'files'}?${note}\nThis cannot be undone.`
+    : `Заменить «${$('search-input').value}» на «${replacement}»: ${count} в ${files.length} ${plural(files.length, 'файле', 'файлах', 'файлах')}?${note}\nДействие нельзя отменить.`;
+  if (!window.confirm(question)) return;
   const res = await window.electronAPI.projectReplace({ root: state.currentFolder, files: files.map((f) => f.fullPath), query: $('search-input').value, replacement, caseSensitive: opts.caseSensitive, wholeWord: opts.wholeWord, regex: opts.regex });
   if (!res.success) return placeholder(res.error || 'Не удалось заменить', true);
   // Open tabs show the old text: reload the ones that have no unsaved edits.
@@ -160,7 +165,7 @@ async function replaceAll() {
     if (state.currentTabs[state.activeTabIndex] === tab && dom.editor) { dom.editor.value = fresh.content; dom.editor.dispatchEvent(new Event('input', { bubbles: true })); }
   }
   await run();
-  $('search-results').insertAdjacentHTML('afterbegin', `<div class="search-summary ok">Заменено: ${res.replaced} в ${res.changedFiles} ${plural(res.changedFiles, 'файле', 'файлах', 'файлах')}</div>`);
+  $('search-results').insertAdjacentHTML('afterbegin', `<div class="search-summary ok">${en ? `Replaced: ${res.replaced} in ${res.changedFiles} ${res.changedFiles === 1 ? 'file' : 'files'}` : `Заменено: ${res.replaced} в ${res.changedFiles} ${plural(res.changedFiles, 'файле', 'файлах', 'файлах')}`}</div>`);
 }
 
 function openMatch(fi, mi) {
@@ -233,7 +238,7 @@ export function showSearchPanel() {
   for (const [id, key] of [['search-case-sensitive', 'caseSensitive'], ['search-whole-word', 'wholeWord'], ['search-regex', 'regex']]) {
     $(id).addEventListener('click', () => { opts[key] = !opts[key]; persist(); paint(); run(); });
   }
-  $('search-replace-toggle').addEventListener('click', () => { opts.replaceOpen = !opts.replaceOpen; persist(); paint(); if (last) renderResults(last, $('search-results').querySelector('.search-summary')?.textContent.replace(/ · показаны.*/, '') || ''); });
+  $('search-replace-toggle').addEventListener('click', () => { opts.replaceOpen = !opts.replaceOpen; persist(); paint(); if (last) renderResults(last, $('search-results').querySelector('.search-summary')?.textContent.replace(/ · (?:показаны.*|some results hidden)$/, '') || ''); });
   input.addEventListener('input', schedule);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { clearTimeout(timer); run(); }
@@ -263,7 +268,7 @@ export function showSearchPanel() {
       const f = last.results[Number(head.dataset.f)];
       const key = f.fullPath || f.file;
       if (collapsed.has(key)) collapsed.delete(key); else collapsed.add(key);
-      renderResults(last, results.querySelector('.search-summary')?.textContent.replace(/ · показаны.*/, '') || '');
+      renderResults(last, results.querySelector('.search-summary')?.textContent.replace(/ · (?:показаны.*|some results hidden)$/, '') || '');
     }
   });
   results.addEventListener('keydown', (e) => {
@@ -275,3 +280,5 @@ export function showSearchPanel() {
   });
   setTimeout(() => { input.focus(); input.select(); }, 0);
 }
+
+onLangChange(() => { if ($('search-results')) run(); });

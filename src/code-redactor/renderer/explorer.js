@@ -12,6 +12,7 @@ import { runCurrentFile } from './palette.js';
 import { showSearchPanel } from './search-panel.js';
 import { refreshGitignoreBox, isIgnoredHidden, toggleHideIgnored } from './gitignore-ui.js';
 import { icon, hydrateIcons } from './glyphs.js';
+import { getLang, uiText } from './i18n.js';
 import { setupRunConfigPanel } from './run-configs.js';
 import { showExtensionsPanel } from './extensions.js';
 
@@ -352,7 +353,7 @@ async function finishDrop(destDir) {
 export async function moveItem(srcPath, destDir) {
   const res = await window.electronAPI.movePath(srcPath, destDir);
   if (!res?.success) {
-    if (!res?.noop) alert(`Не удалось переместить: ${res?.error || 'неизвестная ошибка'}`);
+    if (!res?.noop) alert(`${getLang() === 'en' ? 'Could not move' : 'Не удалось переместить'}: ${res?.error || (getLang() === 'en' ? 'unknown error' : 'неизвестная ошибка')}`);
     return false;
   }
   const rebase = (p) => (p && sameOrInside(p, srcPath) ? res.newPath + p.slice(srcPath.length) : p);
@@ -495,7 +496,7 @@ export function getFileIcon(fileName) {
 export async function createNewFileInFolder() {
   if (!state.currentFolder) return;
   
-  const fileName = prompt('Введите имя файла:');
+  const fileName = prompt(uiText('Введите имя файла:'));
   if (!fileName || !fileName.trim()) return;
   
   try {
@@ -509,18 +510,18 @@ export async function createNewFileInFolder() {
         createTab(fileName.trim(), content.content, result.filePath);
       }
     } else {
-      alert('Ошибка: ' + result.error);
+      alert(`${getLang() === 'en' ? 'Error' : 'Ошибка'}: ${result.error}`);
     }
   } catch (error) {
     console.error('Ошибка создания файла:', error);
-    alert('Ошибка создания файла: ' + error.message);
+    alert(`${getLang() === 'en' ? 'Could not create file' : 'Ошибка создания файла'}: ${error.message}`);
   }
 }
 
 export async function createNewFolderInFolder() {
   if (!state.currentFolder) return;
   
-  const folderName = prompt('Введите имя папки:');
+  const folderName = prompt(uiText('Введите имя папки:'));
   if (!folderName || !folderName.trim()) return;
   
   try {
@@ -528,11 +529,11 @@ export async function createNewFolderInFolder() {
     if (result.success) {
       await refreshExplorerTree();
     } else {
-      alert('Ошибка: ' + result.error);
+      alert(`${getLang() === 'en' ? 'Error' : 'Ошибка'}: ${result.error}`);
     }
   } catch (error) {
     console.error('Ошибка создания папки:', error);
-    alert('Ошибка создания папки: ' + error.message);
+    alert(`${getLang() === 'en' ? 'Could not create folder' : 'Ошибка создания папки'}: ${error.message}`);
   }
 }
 
@@ -650,7 +651,7 @@ export async function renameFileItem(item) {
     .find(el => el.dataset.path === item.path);
   if (!fileItem) {
     // Fallback to prompt
-    const newName = prompt('Введите новое имя:', item.name);
+    const newName = prompt(uiText('Введите новое имя:'), item.name);
     if (!newName || !newName.trim() || newName.trim() === item.name) return;
     await applyRename(item, newName.trim());
     return;
@@ -712,12 +713,12 @@ export async function applyRename(item, trimmedName) {
         updateSyntaxHighlight();
       }
     } else {
-      alert('Ошибка переименования: ' + result.error);
+      alert(`${getLang() === 'en' ? 'Could not rename' : 'Ошибка переименования'}: ${result.error}`);
       await refreshExplorerTree();
     }
   } catch (error) {
     console.error('Ошибка переименования:', error);
-    alert('Ошибка переименования: ' + (error.message || 'Неизвестная ошибка'));
+    alert(`${getLang() === 'en' ? 'Could not rename' : 'Ошибка переименования'}: ${error.message || (getLang() === 'en' ? 'Unknown error' : 'Неизвестная ошибка')}`);
     await refreshExplorerTree();
   }
 }
@@ -768,16 +769,16 @@ export async function pasteFileItem(item) {
       }
       state.copiedFilePath = null; // Очищаем после вставки
     } else {
-      alert('Ошибка: ' + result.error);
+      alert(`${getLang() === 'en' ? 'Error' : 'Ошибка'}: ${result.error}`);
     }
   } catch (error) {
     console.error('Ошибка вставки:', error);
-    alert('Ошибка вставки: ' + error.message);
+    alert(`${getLang() === 'en' ? 'Could not paste' : 'Ошибка вставки'}: ${error.message}`);
   }
 }
 
 export async function deleteFileItem(item) {
-  const confirmMessage = `Вы уверены, что хотите удалить "${item.name}"?`;
+  const confirmMessage = getLang() === 'en' ? `Delete "${item.name}"?` : `Вы уверены, что хотите удалить "${item.name}"?`;
   if (!confirm(confirmMessage)) return;
   
   try {
@@ -790,11 +791,11 @@ export async function deleteFileItem(item) {
       }
       await refreshExplorerTree();
     } else {
-      alert('Ошибка: ' + result.error);
+      alert(`${getLang() === 'en' ? 'Error' : 'Ошибка'}: ${result.error}`);
     }
   } catch (error) {
     console.error('Ошибка удаления:', error);
-    alert('Ошибка удаления: ' + error.message);
+    alert(`${getLang() === 'en' ? 'Could not delete' : 'Ошибка удаления'}: ${error.message}`);
   }
 }
 

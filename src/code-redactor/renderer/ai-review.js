@@ -6,6 +6,7 @@
 import { state } from './state.js';
 import { isEditorTab } from './tab-model.js';
 import { escapeHtml } from './utils.js';
+import { getLang, onLangChange } from './i18n.js';
 import { icon } from './glyphs.js';
 
 const pending = new Map(); // tab.id -> { original, name }
@@ -165,7 +166,7 @@ function render() {
       d.added.forEach((n) => { const el = g.children[n - 1]; if (el) { el.classList.add('has-add'); marked.push(el); } });
       d.removed.forEach((rows, at) => {
         const el = g.children[Math.min(at, g.children.length - 1)];
-        if (el) { marked.push(el); el.classList.add('has-del'); el.dataset.del = rows.slice(0, 6).join('\n') + (rows.length > 6 ? '\n…' : ''); el.title = `Удалено строк: ${rows.length}\n${el.dataset.del}`; }
+        if (el) { marked.push(el); el.classList.add('has-del'); el.dataset.del = rows.slice(0, 6).join('\n') + (rows.length > 6 ? '\n…' : ''); el.title = `${getLang() === 'en' ? 'Deleted lines' : 'Удалено строк'}: ${rows.length}\n${el.dataset.del}`; }
       });
     }
   }
@@ -196,7 +197,7 @@ function renderBar(tab, p, stat) {
   const file = p
     ? `<span class="rb-name">${escapeHtml(tab.name)}</span><span class="rb-stat"><b class="rb-add">+${stat.addedCount}</b> <b class="rb-del">−${stat.removedCount}</b></span>
        <button type="button" data-rb="undo-file">Отменить файл</button><button type="button" class="primary" data-rb="keep-file">Оставить файл</button>`
-    : `<span class="rb-name">Правки ИИ в других файлах: ${pending.size}</span>`;
+    : `<span class="rb-name">${getLang() === 'en' ? 'AI changes in other files' : 'Правки ИИ в других файлах'}: ${pending.size}</span>`;
   const all = pending.size > 1 || !p
     ? `<span class="rb-sep"></span><button type="button" data-rb="undo-all">Отменить всё</button><button type="button" class="primary" data-rb="keep-all">Оставить всё</button>`
     : '';
@@ -209,3 +210,4 @@ export function setupAiReview() {
   const t = ed();
   t?.addEventListener('scroll', () => { const l = layer(); if (l) { l.scrollTop = t.scrollTop; l.scrollLeft = t.scrollLeft; } });
 }
+onLangChange(scheduleRender);

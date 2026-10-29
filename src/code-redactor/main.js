@@ -69,12 +69,56 @@ ipcMain.on('set-native-theme', (event, theme) => {
   if (!nativeBlur) for (const w of windows) if (!w.isDestroyed()) w.setBackgroundColor(windowColor());
 });
 
+let menuLanguage = 'ru';
+const MENU_EN = {
+  'Проверить обновления…': 'Check for Updates…', 'Настройки…': 'Settings…',
+  'Скрыть': 'Hide', 'Скрыть остальные': 'Hide Others', 'Показать все': 'Show All', 'Выйти': 'Quit',
+  'Файл': 'File', 'Новое окно': 'New Window', 'Новый файл': 'New File', 'Новый ноутбук': 'New Notebook',
+  'Открыть файл или папку…': 'Open File or Folder…', 'Открыть папку проекта…': 'Open Project Folder…',
+  'Быстрое открытие…': 'Quick Open…', 'Сохранить': 'Save', 'Сохранить как…': 'Save As…',
+  'Автосохранение': 'Auto Save', 'Закрыть вкладку': 'Close Tab', 'Открыть закрытую вкладку': 'Reopen Closed Tab',
+  'Правка': 'Edit', 'Отменить': 'Undo', 'Повторить': 'Redo', 'Вырезать': 'Cut',
+  'Копировать': 'Copy', 'Вставить': 'Paste', 'Выделить всё': 'Select All',
+  'Найти в файле': 'Find in File', 'Найти и заменить': 'Find and Replace',
+  'Перейти к строке…': 'Go to Line…', 'Перейти к символу…': 'Go to Symbol…',
+  'Форматировать документ': 'Format Document', 'Поиск по проекту': 'Search Project',
+  'TODO / FIXME проекта': 'Project TODO / FIXME', 'Палитра команд…': 'Command Palette…',
+  'Вид': 'View', 'Проводник': 'Explorer', 'Поиск': 'Search', 'Запуск': 'Run',
+  'Боковая панель': 'Sidebar', 'Терминал': 'Terminal', 'AI-чат': 'AI Chat', 'Браузер': 'Browser',
+  'Предпросмотр Markdown': 'Markdown Preview', 'Разделить редактор': 'Split Editor',
+  'Увеличить масштаб': 'Zoom In', 'Уменьшить масштаб': 'Zoom Out', 'Сбросить масштаб': 'Reset Zoom',
+  'Полноэкранный режим': 'Full Screen', 'Выполнить текущий файл': 'Run Current File',
+  'Live Server: запустить / остановить': 'Live Server: Start / Stop',
+  'Браузер рядом с редактором': 'Browser Beside Editor', 'Окно': 'Window',
+};
+const localizeMenu = (entries) => entries.map((entry) => ({
+  ...entry,
+  ...(entry.label ? { label: entry.label.startsWith('О программе ') ? `About ${entry.label.slice('О программе '.length)}` : (MENU_EN[entry.label] || entry.label) } : {}),
+  ...(Array.isArray(entry.submenu) ? { submenu: localizeMenu(entry.submenu) } : {}),
+}));
+ipcMain.on('set-ui-language', (_event, next) => {
+  const value = next === 'en' ? 'en' : 'ru';
+  if (value === menuLanguage) return;
+  menuLanguage = value;
+  if (process.platform === 'darwin' && app.isReady()) Menu.setApplicationMenu(buildMacMenu());
+  if (app.isReady()) updatePlatformShortcuts();
+});
+
+function updatePlatformShortcuts() {
+  const en = menuLanguage === 'en';
+  if (process.platform === 'darwin') {
+    try { app.dock.setMenu(Menu.buildFromTemplate([{ label: en ? 'New Window' : 'Новое окно', click: () => createWindow(true) }])); } catch {}
+  } else if (process.platform === 'win32') {
+    try { app.setUserTasks([{ program: process.execPath, arguments: '--new-window', iconPath: process.execPath, iconIndex: 0, title: en ? 'New Window' : 'Новое окно', description: en ? 'Open another FrogeeCodeIDE window' : 'Открыть ещё одно окно FrogeeCodeIDE' }]); } catch {}
+  }
+}
+
 /** Menu entries just tell the renderer which command to run; shortcuts are shown but handled by the page itself. */
 function buildMacMenu() {
   const send = (id) => () => { const w = getMainWindow(); if (w) w.webContents.send('menu-command', id); };
   const item = (label, id, accelerator) => ({ label, click: send(id), ...(accelerator ? { accelerator, registerAccelerator: false } : {}) });
   const sep = { type: 'separator' };
-  return Menu.buildFromTemplate([
+  const template = [
     { label: app.getName(), submenu: [item('О программе ' + app.getName(), 'about'), item('Проверить обновления…', 'check-updates'), sep, item('Настройки…', 'settings', 'Cmd+,'), sep, { role: 'hide', label: 'Скрыть' }, { role: 'hideOthers', label: 'Скрыть остальные' }, { role: 'unhide', label: 'Показать все' }, sep, { role: 'quit', label: 'Выйти' }] },
     { label: 'Файл', submenu: [
       { label: 'Новое окно', click: () => createWindow(true), accelerator: 'Shift+Cmd+N', registerAccelerator: false },
@@ -102,7 +146,8 @@ function buildMacMenu() {
       item('Выполнить текущий файл', 'run-file', 'F5'), item('Live Server: запустить / остановить', 'live'), item('Браузер рядом с редактором', 'browser-side'), item('Терминал', 'terminal'),
     ] },
     { role: 'windowMenu', label: 'Окно' },
-  ]);
+  ];
+  return Menu.buildFromTemplate(menuLanguage === 'en' ? localizeMenu(template) : template);
 }
 
 function createWindow(secondary = false) {
@@ -214,11 +259,7 @@ app.whenReady().then(async () => {
   registerAllIpc();
 
   // Right-click on the Dock icon (macOS) / taskbar icon (Windows): "New window".
-  if (process.platform === 'darwin') {
-    try { app.dock.setMenu(Menu.buildFromTemplate([{ label: 'Новое окно', click: () => createWindow(true) }])); } catch {}
-  } else if (process.platform === 'win32') {
-    try { app.setUserTasks([{ program: process.execPath, arguments: '--new-window', iconPath: process.execPath, iconIndex: 0, title: 'Новое окно', description: 'Открыть ещё одно окно FrogeeCodeIDE' }]); } catch {}
-  }
+  updatePlatformShortcuts();
 
   // The window opens first; nothing below may hold it up.
   createWindow();

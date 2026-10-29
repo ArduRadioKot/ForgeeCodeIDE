@@ -4,6 +4,7 @@ import { saveAllConfig } from './save-hook.js';
 import { escapeHtml, sanitizeHtml } from './utils.js';
 import { isEditorTab } from './tab-model.js';
 import { icon } from './glyphs.js';
+import { getLang, onLangChange } from './i18n.js';
 
 const dom = getDom();
 
@@ -124,7 +125,7 @@ function rememberModel() {
   state.modelByProvider = { ...(state.modelByProvider || {}), [state.currentAiProvider]: state.currentAiModel };
 }
 
-const formatSize = (bytes) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} ГБ` : `${Math.round(bytes / 1e6)} МБ`);
+const formatSize = (bytes) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} ${getLang() === 'en' ? 'GB' : 'ГБ'}` : `${Math.round(bytes / 1e6)} ${getLang() === 'en' ? 'MB' : 'МБ'}`);
 
 export async function refreshModelSelectForProvider() {
   if (!dom.aiModelSelect) return;
@@ -583,52 +584,64 @@ function showHistory(show) {
 function renderHistoryList() {
   const box = document.getElementById('chat-history');
   const list = chats.filter((x) => x.messages.length);
-  const ago = (time) => { const m = Math.round((Date.now() - time) / 60000); return m < 1 ? 'только что' : m < 60 ? `${m} мин назад` : m < 1440 ? `${Math.round(m / 60)} ч назад` : new Date(time).toLocaleDateString('ru-RU'); };
+  const ago = (time) => { const m = Math.round((Date.now() - time) / 60000); return getLang() === 'en' ? (m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} hr ago` : new Date(time).toLocaleDateString('en-US')) : (m < 1 ? 'только что' : m < 60 ? `${m} мин назад` : m < 1440 ? `${Math.round(m / 60)} ч назад` : new Date(time).toLocaleDateString('ru-RU')); };
   box.innerHTML = list.length ? list.map((x) => `
     <div class="history-row${chat && x.id === chat.id ? ' current' : ''}">
-      <button type="button" class="history-open" data-open="${x.id}"><strong>${escapeHtml(x.title)}</strong><small>${ago(x.updated)} · сообщений: ${x.messages.length}</small></button>
+      <button type="button" class="history-open" data-open="${x.id}"><strong>${escapeHtml(getLang() === 'en' && x.title === 'Новый чат' ? 'New chat' : x.title)}</strong><small>${ago(x.updated)} · ${getLang() === 'en' ? 'messages' : 'сообщений'}: ${x.messages.length}</small></button>
       <button type="button" class="chat-header-btn" data-delete="${x.id}" title="Удалить чат">${icon('close', 12)}</button>
     </div>`).join('') : '<p class="history-empty">Сохранённых чатов пока нет.</p>';
 }
+
+onLangChange(() => { if (document.getElementById('chat-history')?.hidden === false) renderHistoryList(); });
 
 // ───────────────────────── sending ─────────────────────────
 
 /** Open file + selection as a system prompt for providers that have no file access of their own. */
 function buildSystemPrompt() {
-  let prompt = 'Ты - ассистент программиста в редакторе кода FrogeeCodeIDE. Отвечай на русском, кратко и по делу. Код пиши в блоках markdown с указанием языка. Файлы пользователя передаются между тегами <файл>; если файла нет в запросе, не выдумывай его содержимое. Не используй эмодзи. Отвечай только на последний вопрос; прикреплённые ранее файлы к нему не относятся, если о них не спрашивают.';
+  const english = getLang() === 'en';
+  let prompt = english
+    ? 'You are a programming assistant in FrogeeCodeIDE. Reply in English unless the user asks for another language. Be concise and practical. Put code in Markdown blocks with a language tag. User files are enclosed in <file> tags; do not invent file contents when no file is supplied. Do not use emoji. Answer only the latest question; files attached to earlier messages do not apply unless asked about.'
+    : 'Ты - ассистент программиста в редакторе кода FrogeeCodeIDE. Отвечай на русском, кратко и по делу. Код пиши в блоках markdown с указанием языка. Файлы пользователя передаются между тегами <файл>; если файла нет в запросе, не выдумывай его содержимое. Не используй эмодзи. Отвечай только на последний вопрос; прикреплённые ранее файлы к нему не относятся, если о них не спрашивают.';
   const tab = state.currentTabs[state.activeTabIndex];
   if (!state.attachContext || !isEditorTab(tab) || !dom.editor) return prompt;
   const text = dom.editor.value || '';
   const lang = (/\.([a-z0-9]+)$/i.exec(tab.name || '') || [])[1] || '';
-  prompt += `\n\nОткрыт файл «${tab.name}»${tab.filePath ? ` (${tab.filePath})` : ''}. Его содержимое:\n\`\`\`${lang}\n${text.slice(0, FILE_CONTEXT_CHARS)}${text.length > FILE_CONTEXT_CHARS ? '\n… (файл обрезан)' : ''}\n\`\`\``;
+  prompt += english
+    ? `\n\nOpen file “${tab.name}”${tab.filePath ? ` (${tab.filePath})` : ''}. Contents:\n\`\`\`${lang}\n${text.slice(0, FILE_CONTEXT_CHARS)}${text.length > FILE_CONTEXT_CHARS ? '\n… (file truncated)' : ''}\n\`\`\``
+    : `\n\nОткрыт файл «${tab.name}»${tab.filePath ? ` (${tab.filePath})` : ''}. Его содержимое:\n\`\`\`${lang}\n${text.slice(0, FILE_CONTEXT_CHARS)}${text.length > FILE_CONTEXT_CHARS ? '\n… (файл обрезан)' : ''}\n\`\`\``;
   if (dom.editor.selectionEnd > dom.editor.selectionStart) {
-    prompt += `\n\nПользователь выделил фрагмент:\n\`\`\`${lang}\n${dom.editor.value.slice(dom.editor.selectionStart, dom.editor.selectionEnd).slice(0, 6000)}\n\`\`\``;
+    prompt += `\n\n${english ? 'The user selected this text:' : 'Пользователь выделил фрагмент:'}\n\`\`\`${lang}\n${dom.editor.value.slice(dom.editor.selectionStart, dom.editor.selectionEnd).slice(0, 6000)}\n\`\`\``;
   }
   return prompt;
 }
 
 function filesBlock(files) {
-  return (files || []).map((f) => `\n\n<файл имя="${f.name}"${f.path ? ` путь="${f.path}"` : ''}>\n${f.content}${f.truncated ? '\n… (файл обрезан)' : ''}\n</файл>`).join('');
+  const english = getLang() === 'en';
+  return (files || []).map((f) => english
+    ? `\n\n<file name="${f.name}"${f.path ? ` path="${f.path}"` : ''}>\n${f.content}${f.truncated ? '\n… (file truncated)' : ''}\n</file>`
+    : `\n\n<файл имя="${f.name}"${f.path ? ` путь="${f.path}"` : ''}>\n${f.content}${f.truncated ? '\n… (файл обрезан)' : ''}\n</файл>`).join('');
 }
 
 function agentContext(files) {
   const tab = state.currentTabs[state.activeTabIndex];
+  const english = getLang() === 'en';
   let ctx = '';
   if (state.attachContext && isEditorTab(tab) && tab.filePath) {
-    ctx += `\n\n[Контекст FrogeeCodeIDE] Открытый файл: ${tab.filePath}`;
+    ctx += `\n\n${english ? '[FrogeeCodeIDE context] Open file:' : '[Контекст FrogeeCodeIDE] Открытый файл:'} ${tab.filePath}`;
     const ed = dom.editor;
-    if (ed && ed.selectionEnd > ed.selectionStart) ctx += `\nВыделенный фрагмент:\n\`\`\`\n${ed.value.slice(ed.selectionStart, ed.selectionEnd).slice(0, 6000)}\n\`\`\``;
+    if (ed && ed.selectionEnd > ed.selectionStart) ctx += `\n${english ? 'Selected text:' : 'Выделенный фрагмент:'}\n\`\`\`\n${ed.value.slice(ed.selectionStart, ed.selectionEnd).slice(0, 6000)}\n\`\`\``;
   }
   const paths = (files || []).filter((f) => f.path).map((f) => f.path);
-  if (paths.length) ctx += `\n\nПрикреплённые файлы:\n${paths.join('\n')}`;
+  if (paths.length) ctx += `\n\n${english ? 'Attached files:' : 'Прикреплённые файлы:'}\n${paths.join('\n')}`;
   return ctx;
 }
 
 /** Turns the chat (up to the last question) into role/content pairs for the model. */
 function modelMessages() {
+  const english = getLang() === 'en';
   const turns = chat.messages
     .filter((m) => (m.role === 'user' || m.content) && !m.error)
-    .map((m, i, all) => ({ role: m.role, content: m.role === 'user' ? m.content + (i === all.length - 1 ? filesBlock(m.files) : (m.files?.length ? `\n[К этому сообщению были прикреплены файлы: ${m.files.map((f) => f.name).join(', ')}]` : '')) : m.content }));
+    .map((m, i, all) => ({ role: m.role, content: m.role === 'user' ? m.content + (i === all.length - 1 ? filesBlock(m.files) : (m.files?.length ? `\n[${english ? 'Files attached to this message' : 'К этому сообщению были прикреплены файлы'}: ${m.files.map((f) => f.name).join(', ')}]` : '')) : m.content }));
   const picked = [];
   let size = 0;
   for (let i = turns.length - 1; i >= 0 && picked.length < HISTORY_LIMIT; i--) {
@@ -722,7 +735,7 @@ async function runChat() {
     if (response && response.success === false) throw new Error(response.error || 'Ошибка AI');
     reply.content = response?.answer || '';
     reply.thinking = response?.thinking || '';
-    reply.stats = response?.stats ? `${response.stats.tokens} токенов · ${(response.stats.ms / 1000).toFixed(1)} с` : '';
+    reply.stats = response?.stats ? `${response.stats.tokens} ${getLang() === 'en' ? 'tokens' : 'токенов'} · ${(response.stats.ms / 1000).toFixed(1)} ${getLang() === 'en' ? 's' : 'с'}` : '';
     reply.who = modelLabel();
     cancelAnimationFrame(renderFrame);
     renderFrame = 0;

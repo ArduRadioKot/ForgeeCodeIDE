@@ -9,6 +9,7 @@ import {
   updateTabsList,
 } from './tabs-api.js';
 import { icon } from './glyphs.js';
+import { getLang, uiText } from './i18n.js';
 
 const dom = getDom();
 
@@ -146,7 +147,7 @@ export function openTerminalAsEditorTab() {
     state.currentTabs.push({
       id: 'terminal-tab',
       kind: 'terminal',
-      name: 'Терминал',
+      name: uiText('Терминал'),
       content: '',
       filePath: null,
       modified: false
@@ -166,7 +167,7 @@ export function ensureTerminalTab(activate = true) {
     state.currentTabs.push({
       id: 'terminal-tab',
       kind: 'terminal',
-      name: 'Терминал',
+      name: uiText('Терминал'),
       content: '',
       filePath: null,
       modified: false
@@ -332,7 +333,7 @@ export function setupTerminal() {
       if (!s) return;
       s.started = false;
       s.meta = 'остановлен';
-      s.xterm.writeln(`\r\n[процесс завершён${code != null ? ', код ' + code : ''}]`);
+      s.xterm.writeln(getLang() === 'en' ? `\r\n[process exited${code != null ? ', code ' + code : ''}]` : `\r\n[процесс завершён${code != null ? ', код ' + code : ''}]`);
       syncActiveAlias();
       if (id === state.activeTerminalId && dom.terminalMeta) dom.terminalMeta.textContent = 'остановлен';
     });
@@ -392,7 +393,7 @@ function createSession() {
   const fit = new FitCtor();
   xterm.loadAddon(fit);
   xterm.open(host);
-  const session = { id, title: `Терминал ${sessions.length + 1}`, xterm, fit, host, started: false, meta: '' };
+  const session = { id, title: `${uiText('Терминал')} ${sessions.length + 1}`, xterm, fit, host, started: false, meta: '' };
   xterm.onData((data) => window.electronAPI?.terminalWrite?.(data, id)?.catch?.(() => {}));
   sessions.push(session);
   return session;
@@ -504,7 +505,7 @@ export function fitTerminal() {
 
 async function startSession(s, restart = false) {
   if (!window.electronAPI?.terminalStart) {
-    s.xterm.writeln('[терминал] API недоступен - перезапустите приложение');
+    s.xterm.writeln(getLang() === 'en' ? '[terminal] API unavailable - restart the app' : '[терминал] API недоступен - перезапустите приложение');
     return;
   }
   if (s.id === state.activeTerminalId) fitTerminal();
@@ -523,7 +524,7 @@ async function startSession(s, restart = false) {
     s.meta = `${shellName} · ${result.cwd || '~'}${result.pty ? '' : ' · fallback'}`;
     s.title = shellName === 'shell' ? s.title : s.title.replace(/^Терминал/, 'Терминал');
   } else {
-    s.xterm.writeln(`[не удалось запустить терминал] ${(result && result.error) || ''}`);
+    s.xterm.writeln(`[${getLang() === 'en' ? 'could not start terminal' : 'не удалось запустить терминал'}] ${(result && result.error) || ''}`);
     s.meta = 'ошибка';
   }
   syncActiveAlias();
@@ -597,7 +598,7 @@ export async function setTerminalVisible(visible, shouldSave = true) {
     } catch (err) {
       console.error('[terminal] start failed:', err);
       if (state.xterm) {
-        state.xterm.writeln(`[ошибка терминала] ${err?.message || err}`);
+        state.xterm.writeln(`[${getLang() === 'en' ? 'terminal error' : 'ошибка терминала'}] ${err?.message || err}`);
       }
     }
     requestAnimationFrame(() => {
@@ -619,7 +620,7 @@ export async function ensureTerminalStarted() {
   try {
     await window.electronAPI?.terminalPing?.();
   } catch (err) {
-    s.xterm.writeln('[терминал] IPC не зарегистрирован. Полностью перезапустите приложение.');
+    s.xterm.writeln(getLang() === 'en' ? '[terminal] IPC is not registered. Restart the app completely.' : '[терминал] IPC не зарегистрирован. Полностью перезапустите приложение.');
     if (dom.terminalMeta) dom.terminalMeta.textContent = 'нет IPC';
     return;
   }

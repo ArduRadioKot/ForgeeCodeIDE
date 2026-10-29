@@ -3,6 +3,8 @@
  * Mark static HTML with data-i18n / data-i18n-title / data-i18n-placeholder / data-i18n-aria.
  * Use t('key') from JS. Never use em dashes (—) in UI strings.
  */
+import { looseEn } from './loose-en.js';
+
 const KEY = 'frogee.ui.lang';
 const listeners = new Set();
 
@@ -277,6 +279,75 @@ const dict = {
 
 let lang = 'ru';
 
+// Older panels still render Russian copy directly. Keep their original text on each
+// DOM node so switching back to Russian restores it without touching user content.
+const knownEn = Object.fromEntries(Object.keys(dict.ru).map((key) => [dict.ru[key], dict.en[key]]));
+Object.assign(knownEn, looseEn);
+const originalText = new WeakMap();
+const originalAttrs = new WeakMap();
+const skipLoose = 'script, style, pre, code, [contenteditable], #tabs-list, .file-name, .search-line-text, .search-file-name, .search-file-dir, .git-log, .git-output, .run-name, .run-cmd, .ext-name, .ext-desc, .nb-md-preview, .nb-output, .nb-toc-item, .nb-var-val, .msg-text, .msg-body, .think-body, .msg-files, .msg-who, .msg-foot, .history-open strong, .terminal-output';
+
+function eligible(el) {
+  return el && !el.closest(skipLoose);
+}
+
+function translateText(node) {
+  const parent = node.parentElement;
+  if (parent?.matches('textarea')) return;
+  if (!eligible(parent) || parent.closest('[data-i18n]')) return;
+  const current = node.nodeValue;
+  let source = originalText.get(node);
+  const priorEn = source && knownEn[source.trim()];
+  if (source && current !== source && current !== source.replace(source.trim(), priorEn || source.trim())) {
+    originalText.delete(node);
+    source = null;
+  }
+  if (!source) {
+    if (!knownEn[current.trim()]) return;
+    source = current;
+    originalText.set(node, source);
+  }
+  const target = lang === 'en' ? source.replace(source.trim(), knownEn[source.trim()]) : source;
+  if (node.nodeValue !== target) node.nodeValue = target;
+}
+
+function translateAttr(el, attr) {
+  if (!eligible(el)) return;
+  const marker = { title: 'data-i18n-title', placeholder: 'data-i18n-placeholder', 'aria-label': 'data-i18n-aria' }[attr];
+  if (el.hasAttribute(marker) || !el.hasAttribute(attr)) return;
+  const current = el.getAttribute(attr);
+  let saved = originalAttrs.get(el);
+  let source = saved?.[attr];
+  if (source && current !== source && current !== knownEn[source]) {
+    delete saved[attr];
+    source = null;
+  }
+  if (!source) {
+    if (!knownEn[current]) return;
+    source = current;
+    saved ||= {};
+    saved[attr] = source;
+    originalAttrs.set(el, saved);
+  }
+  const target = lang === 'en' ? knownEn[source] : source;
+  if (current !== target) el.setAttribute(attr, target);
+}
+
+function translateLoose(root) {
+  if (root.nodeType === Node.TEXT_NODE) {
+    translateText(root);
+    return;
+  }
+  if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE) return;
+  if (root.nodeType === Node.ELEMENT_NODE && !eligible(root)) return;
+  const elements = root.nodeType === Node.ELEMENT_NODE ? [root, ...root.querySelectorAll('*')] : root.querySelectorAll('*');
+  for (const el of elements) {
+    if (!eligible(el)) continue;
+    for (const attr of ['title', 'placeholder', 'aria-label']) translateAttr(el, attr);
+    for (const child of el.childNodes) if (child.nodeType === Node.TEXT_NODE) translateText(child);
+  }
+}
+
 function detect() {
   try {
     const saved = localStorage.getItem(KEY);
@@ -290,6 +361,10 @@ lang = detect();
 
 export function getLang() { return lang; }
 
+export function uiText(source) {
+  return lang === 'en' ? (knownEn[source] || source) : source;
+}
+
 export function t(key, vars = {}) {
   const table = dict[lang] || dict.ru;
   let s = table[key] ?? dict.ru[key] ?? key;
@@ -302,26 +377,32 @@ function setAttr(el, attr, key) {
   const val = t(key);
   if (attr === 'text') {
     // Prefer updating a dedicated text node / keep child elements (icons)
-    if (el.childElementCount === 0) el.textContent = val;
+    if (el.childElementCount === 0) {
+      if (el.textContent !== val) el.textContent = val;
+    }
     else {
       const span = el.querySelector('[data-i18n-text]') || [...el.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
-      if (span && span.nodeType === 3) span.textContent = val;
-      else if (el.querySelector('[data-i18n-text]')) el.querySelector('[data-i18n-text]').textContent = val;
-      else el.textContent = val;
+      if (span && span.nodeType === 3 && span.textContent !== val) span.textContent = val;
+      else if (el.querySelector('[data-i18n-text]') && el.querySelector('[data-i18n-text]').textContent !== val) el.querySelector('[data-i18n-text]').textContent = val;
+      else if (!span && el.textContent !== val) el.textContent = val;
     }
-  } else el.setAttribute(attr, val);
+  } else if (el.getAttribute(attr) !== val) el.setAttribute(attr, val);
 }
 
 export function applyI18n(root = document) {
   document.documentElement.lang = lang === 'en' ? 'en' : 'ru';
-  root.querySelectorAll('[data-i18n]').forEach((el) => setAttr(el, 'text', el.getAttribute('data-i18n')));
-  root.querySelectorAll('[data-i18n-title]').forEach((el) => setAttr(el, 'title', el.getAttribute('data-i18n-title')));
-  root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => setAttr(el, 'placeholder', el.getAttribute('data-i18n-placeholder')));
-  root.querySelectorAll('[data-i18n-aria]').forEach((el) => setAttr(el, 'aria-label', el.getAttribute('data-i18n-aria')));
+  if (root.nodeType === Node.ELEMENT_NODE && !eligible(root)) return;
+  if (root.nodeType === Node.ELEMENT_NODE || root.nodeType === Node.DOCUMENT_NODE) {
+    for (const [attr, type] of [['data-i18n', 'text'], ['data-i18n-title', 'title'], ['data-i18n-placeholder', 'placeholder'], ['data-i18n-aria', 'aria-label']]) {
+      if (root.nodeType === Node.ELEMENT_NODE && root.hasAttribute(attr)) setAttr(root, type, root.getAttribute(attr));
+      root.querySelectorAll(`[${attr}]`).forEach((el) => { if (eligible(el)) setAttr(el, type, el.getAttribute(attr)); });
+    }
+  }
+  translateLoose(root);
   // Settings tab titles map
   const title = document.getElementById('settings-main-title');
   const active = document.querySelector('.settings-nav-btn.active')?.dataset?.settingsTab;
-  if (title && active) title.textContent = t(`settings.${active}`);
+  if (title && active && title.textContent !== t(`settings.${active}`)) title.textContent = t(`settings.${active}`);
 }
 
 export function setLang(next, { persist = true } = {}) {
@@ -334,6 +415,7 @@ export function setLang(next, { persist = true } = {}) {
   if (persist) {
     try { localStorage.setItem(KEY, lang); } catch { /* ignore */ }
   }
+  if (typeof window !== 'undefined') window.electronAPI?.setUiLanguage?.(lang);
   applyI18n();
   for (const fn of listeners) {
     try { fn(lang); } catch { /* ignore */ }
@@ -348,7 +430,16 @@ export function onLangChange(fn) {
 export function setupI18n() {
   // Expose for modules that avoid circular imports
   if (typeof window !== 'undefined') window.__frogeeT = t;
+  if (typeof window !== 'undefined') window.electronAPI?.setUiLanguage?.(lang);
   applyI18n();
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === 'characterData') translateText(mutation.target);
+      else if (mutation.type === 'attributes') translateAttr(mutation.target, mutation.attributeName);
+      else for (const node of mutation.addedNodes) applyI18n(node);
+    }
+  });
+  observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['title', 'placeholder', 'aria-label'] });
   const select = document.getElementById('ui-lang-select');
   if (select) {
     select.value = lang;

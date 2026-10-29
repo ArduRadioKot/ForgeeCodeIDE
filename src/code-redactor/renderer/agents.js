@@ -7,10 +7,12 @@ import { getDom } from './dom.js';
 import { saveAllConfig } from './save-hook.js';
 import { setTerminalVisible, ensureTerminalStarted } from './terminal.js';
 import { updateOpenCodeStatus, refreshModelSelectForProvider } from './chat.js';
+import { getLang, onLangChange, uiText } from './i18n.js';
 
 const dom = getDom();
 const NAMES = { claude: 'Claude Code', codex: 'Codex', opencode: 'OpenCode' };
 let detected = null;
+onLangChange(() => { if (detected) detectAgents(); });
 
 const shellQuote = (s) => (navigator.platform.startsWith('Win') ? `"${s}"` : `'${String(s).replace(/'/g, `'\\''`)}'`);
 
@@ -25,7 +27,7 @@ export async function detectAgents() {
       badge.textContent = info.found ? 'Найден' : 'Не установлен';
       badge.className = `status-indicator ${info.found ? 'connected' : 'not-configured'}`;
     }
-    if (meta) meta.textContent = info.found ? `${info.version || ''} · ${info.path}` : `Установка: ${info.install}`;
+    if (meta) meta.textContent = info.found ? `${info.version || ''} · ${info.path}` : `${getLang() === 'en' ? 'Install' : 'Установка'}: ${info.install}`;
   }
   const serveBtn = document.getElementById('opencode-serve-btn');
   if (serveBtn) serveBtn.textContent = detected.opencodeServe?.running ? 'Остановить serve' : 'Запустить serve';
@@ -35,7 +37,9 @@ export async function detectAgents() {
 export async function openAgentInTerminal(agent) {
   const info = detected?.[agent] || (await detectAgents())?.[agent];
   if (!info?.found) {
-    alert(`${NAMES[agent]} не найден.\nУстановка: ${info?.install || ''}\nМожно указать путь к бинарнику в настройках, раздел AI.`);
+    alert(getLang() === 'en'
+      ? `${NAMES[agent]} was not found.\nInstall: ${info?.install || ''}\nYou can set the executable path in Settings → AI.`
+      : `${NAMES[agent]} не найден.\nУстановка: ${info?.install || ''}\nМожно указать путь к бинарнику в настройках, раздел AI.`);
     return;
   }
   await setTerminalVisible(true, false);
@@ -56,7 +60,7 @@ export async function toggleOpenCodeServe() {
   const res = await window.electronAPI.opencodeServeStart({ bin: state.agentPaths?.opencode || undefined, cwd: state.currentFolder || undefined, port: 4096 });
   if (btn) btn.disabled = false;
   if (!res.success) {
-    alert(res.error || 'Не удалось запустить opencode serve');
+    alert(res.error || uiText('Не удалось запустить opencode serve'));
   } else {
     state.opencodeBaseUrl = res.baseUrl;
     const input = document.getElementById('opencode-url');

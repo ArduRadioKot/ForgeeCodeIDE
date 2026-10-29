@@ -1,6 +1,7 @@
 /** Custom themes: loading from the themes folder, filling the selector and applying colours to <body>. */
 import { state } from './state.js';
 import { saveAllConfig } from './save-hook.js';
+import { getLang, uiText } from './i18n.js';
 
 const applied = new Set();
 
@@ -60,7 +61,7 @@ export async function loadCustomThemes() {
     error = err?.message || String(err);
     state.customThemes = await loadBundledFallback();
   }
-  showThemesStatus(error ? `Папка тем недоступна (${error}). Полностью перезапустите приложение (выйдите и запустите снова) - встроенная тема Dracula доступна и сейчас.` : '');
+  showThemesStatus(error ? (getLang() === 'en' ? `Themes folder is unavailable (${error}). Restart the app. The built-in Dracula theme is still available.` : `Папка тем недоступна (${error}). Полностью перезапустите приложение (выйдите и запустите снова) - встроенная тема Dracula доступна и сейчас.`) : '');
   fillThemeSelect();
   return state.customThemes;
 }
@@ -115,7 +116,7 @@ export function applyThemeVars(theme) {
 }
 
 export function setupThemeControls() {
-  const needRestart = () => alert('Эта функция появится после полного перезапуска приложения (выйдите и запустите снова).');
+  const needRestart = () => alert(uiText('Эта функция появится после полного перезапуска приложения (выйдите и запустите снова).'));
   document.getElementById('themes-open-btn')?.addEventListener('click', () => {
     if (!window.electronAPI?.themesOpenFolder) { needRestart(); return; }
     window.electronAPI.themesOpenFolder().catch(needRestart);
@@ -128,7 +129,7 @@ export function setupThemeControls() {
     let res;
     try { res = await window.electronAPI.themesImport(); } catch { needRestart(); return; }
     if (res?.canceled) return;
-    if (!res?.success) { alert(res?.error || 'Не удалось импортировать тему'); return; }
+    if (!res?.success) { alert(res?.error || uiText('Не удалось импортировать тему')); return; }
     await loadCustomThemes();
     const select = document.getElementById('theme-select');
     if (select) {

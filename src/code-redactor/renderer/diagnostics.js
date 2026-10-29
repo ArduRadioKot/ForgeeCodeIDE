@@ -6,6 +6,7 @@
 import { state } from './state.js';
 import { isEditorTab } from './tab-model.js';
 import { isBrowserSplit } from './tabs-api.js';
+import { getLang, onLangChange } from './i18n.js';
 
 const DELAY = 450;
 const MAX_SIZE = 250000;
@@ -15,6 +16,34 @@ const PAIRS = { '(': ')', '[': ']', '{': '}' };
 const CLOSERS = new Set([')', ']', '}']);
 const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
 const OPTIONAL_END = new Set(['p', 'li', 'td', 'tr', 'th', 'option', 'dt', 'dd', 'thead', 'tbody', 'tfoot', 'head', 'body', 'html', 'colgroup']);
+
+function localizeDiagnostic(message) {
+  if (getLang() !== 'en') return message;
+  const fixed = {
+    'Не закрыт комментарий «/* … */»': 'Unclosed /* … */ comment',
+    'Не закрыта многострочная строка': 'Unclosed multiline string',
+    'Не закрыта шаблонная строка': 'Unclosed template string',
+    'Не закрыта строка': 'Unclosed string',
+    'В YAML нельзя отступать табуляцией: используйте пробелы': 'YAML indentation cannot use tabs; use spaces',
+    'Блок кода не закрыт: добавьте закрывающие ```': 'Unclosed code block: add closing ```',
+  };
+  if (fixed[message]) return fixed[message];
+  let match = /^Лишняя закрывающая скобка «(.+)»$/.exec(message);
+  if (match) return `Unexpected closing bracket “${match[1]}”`;
+  match = /^Скобка «(.+)» не соответствует «(.+)» со строки (\d+): ожидалась «(.+)»$/.exec(message);
+  if (match) return `Bracket “${match[1]}” does not match “${match[2]}” on line ${match[3]}; expected “${match[4]}”`;
+  match = /^Здесь открыта «(.+)», но закрыта не так$/.exec(message);
+  if (match) return `“${match[1]}” opens here but is closed incorrectly`;
+  match = /^Не закрыта скобка «(.+)»: добавьте «(.+)»$/.exec(message);
+  if (match) return `Unclosed bracket “${match[1]}”; add “${match[2]}”`;
+  match = /^Лишний закрывающий тег <\/(.+)>$/.exec(message);
+  if (match) return `Unexpected closing tag </${match[1]}>`;
+  match = /^Тег <(.+)> не закрыт до <\/(.+)>$/.exec(message);
+  if (match) return `Tag <${match[1]}> is not closed before </${match[2]}>`;
+  match = /^Тег <(.+)> не закрыт$/.exec(message);
+  if (match) return `Unclosed tag <${match[1]}>`;
+  return message;
+}
 
 const sides = {
   left: { textarea: () => document.getElementById('editor'), layer: () => document.getElementById('diag-layer'), gutter: () => document.getElementById('line-numbers') },
@@ -164,7 +193,7 @@ function checkJson(code, name) {
     let ru = message.replace(/ in JSON at position \d+.*/, '').replace(/\(line .*\)/, '').trim();
     ru = ru.replace(/^Unexpected token (.)/, (m, t) => `Неожиданный символ «${t}»`).replace(/Unexpected end of JSON input/, 'Неожиданный конец JSON: не закрыта скобка или строка')
       .replace(/Expected property name or '}'/, 'Ожидалось имя свойства в кавычках или «}»').replace(/Expected ',' or '}'/, 'Ожидалась «,» или «}»').replace(/Expected ',' or '\]'/, 'Ожидалась «,» или «]»');
-    return [{ line: p.line, col: p.col, endCol: p.col + 1, severity: 'error', message: ru || 'Некорректный JSON', source: 'JSON' }];
+    return [{ line: p.line, col: p.col, endCol: p.col + 1, severity: 'error', message: getLang() === 'en' ? (message || 'Invalid JSON') : (ru || 'Некорректный JSON'), source: 'JSON' }];
   }
 }
 
@@ -336,7 +365,8 @@ function updateStatus() {
   chip.hidden = !checked || (!errors && !warnings);
   if (chip.hidden) return;
   chip.className = `status-chip problems${errors ? ' has-errors' : warnings ? ' has-warnings' : ''}`;
-  chip.textContent = `${errors ? `ошибок: ${errors}` : ''}${errors && warnings ? ' · ' : ''}${warnings ? `предупреждений: ${warnings}` : ''}`;
+  const en = getLang() === 'en';
+  chip.textContent = `${errors ? `${en ? 'errors' : 'ошибок'}: ${errors}` : ''}${errors && warnings ? ' · ' : ''}${warnings ? `${en ? 'warnings' : 'предупреждений'}: ${warnings}` : ''}`;
   chip.title = (typeof window !== 'undefined' && window.__frogeeT)
     ? window.__frogeeT('diag.problemsTitle')
     : 'Problems in file. Click or press F8 for the next one';
@@ -390,7 +420,7 @@ function diagnosticAt(side, e) {
 function showTip(diag, e) {
   const el = ensureTip();
   el.className = `diag-tip ${diag.severity}`;
-  el.innerHTML = `<div class="diag-tip-msg">${esc(diag.message)}</div><div class="diag-tip-src">${esc(diag.source || '')} · строка ${diag.line}</div>`;
+  el.innerHTML = `<div class="diag-tip-msg">${esc(localizeDiagnostic(diag.message))}</div><div class="diag-tip-src">${esc(diag.source === 'Проверка' && getLang() === 'en' ? 'Check' : (diag.source || ''))} · ${getLang() === 'en' ? 'line' : 'строка'} ${diag.line}</div>`;
   el.hidden = false;
   const w = el.offsetWidth;
   const h = el.offsetHeight;
@@ -459,9 +489,9 @@ export function goToProblem(direction = 1) {
 
 export function problemItems() {
   return results.left.map((d, i) => ({
-    label: d.message,
-    detail: `строка ${d.line} · ${d.severity === 'error' ? 'ошибка' : 'предупреждение'}`,
-    search: `${d.message} ${d.line}`,
+    label: localizeDiagnostic(d.message),
+    detail: `${getLang() === 'en' ? 'line' : 'строка'} ${d.line} · ${getLang() === 'en' ? (d.severity === 'error' ? 'error' : 'warning') : (d.severity === 'error' ? 'ошибка' : 'предупреждение')}`,
+    search: `${localizeDiagnostic(d.message)} ${d.line}`,
     order: i,
     run: () => selectDiagnostic(d),
   }));
@@ -475,3 +505,5 @@ export function setupDiagnostics() {
   document.getElementById('status-problems')?.addEventListener('click', () => goToProblem(1));
   scheduleDiagnostics();
 }
+
+onLangChange(() => { updateStatus(); hideTip(); });

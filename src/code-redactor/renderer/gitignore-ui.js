@@ -2,10 +2,11 @@
 import { state } from './state.js';
 import { escapeHtml } from './utils.js';
 import { openSearchFile } from './explorer.js';
+import { getLang, onLangChange } from './i18n.js';
 
 const KEY = 'frogee.hideIgnored';
 let open = false;
-const plural = (n) => (n % 10 === 1 && n % 100 !== 11 ? 'правило' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'правила' : 'правил');
+const plural = (n) => getLang() === 'en' ? (n === 1 ? 'rule' : 'rules') : (n % 10 === 1 && n % 100 !== 11 ? 'правило' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'правила' : 'правил');
 
 export function isIgnoredHidden() {
   try { return localStorage.getItem(KEY) === '1'; } catch { return false; }
@@ -43,3 +44,4 @@ export async function refreshGitignoreBox() {
   document.getElementById('gi-toggle').addEventListener('click', () => { open = !open; refreshGitignoreBox(); });
   document.getElementById('gi-open')?.addEventListener('click', () => openSearchFile(info.file));
 }
+onLangChange(() => { if (state.currentFolder) refreshGitignoreBox(); });

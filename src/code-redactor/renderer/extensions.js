@@ -12,6 +12,7 @@ import { enablePluginFiles, disablePluginFiles } from './plugins.js';
 import { loadContributions } from './ext-contrib.js';
 import { activateExtensionRuntime, deactivateExtensionRuntime } from './vscode-bridge.js';
 import { icon } from './glyphs.js';
+import { getLang, onLangChange, t } from './i18n.js';
 
 const dom = getDom();
 let installed = [];
@@ -120,8 +121,8 @@ export function expandSnippet(body, { indent = '', fileName = '', selection = ''
 const panel = () => document.getElementById('ext-panel');
 
 function fmtDownloads(n) {
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1).replace('.0', '')} млн`;
-  if (n >= 1e3) return `${Math.round(n / 1e3)} тыс.`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1).replace('.0', '')}${getLang() === 'en' ? 'M' : ' млн'}`;
+  if (n >= 1e3) return `${Math.round(n / 1e3)}${getLang() === 'en' ? 'K' : ' тыс.'}`;
   return String(n || 0);
 }
 
@@ -141,36 +142,37 @@ function newerVersion(a, b) {
 
 function row(ext, isInstalled) {
   const id = ext.id;
+  const en = getLang() === 'en';
   const working = busy.has(id);
   const parts = [];
   if (!isInstalled && ext.frogee) {
-    if (ext.plugins) parts.push(`плагины: ${ext.plugins}`);
-    if (ext.themes) parts.push(`темы: ${ext.themes}`);
-    if (ext.snippets) parts.push(`сниппеты: ${ext.snippets}`);
+    if (ext.plugins) parts.push(`${en ? 'plugins' : 'плагины'}: ${ext.plugins}`);
+    if (ext.themes) parts.push(`${en ? 'themes' : 'темы'}: ${ext.themes}`);
+    if (ext.snippets) parts.push(`${en ? 'snippets' : 'сниппеты'}: ${ext.snippets}`);
   }
   if (isInstalled) {
-    if (ext.pluginFiles?.length) parts.push(`плагины: ${ext.pluginFiles.length}`);
-    if (ext.themeIds?.length) parts.push(`темы: ${ext.themeIds.length}`);
-    if (ext.snippets?.length) parts.push(`сниппеты: ${ext.snippets.length}`);
-    if (ext.languages?.length) parts.push(`языки: ${ext.languages.length}`);
-    if (ext.grammars?.length) parts.push(`грамматики: ${ext.grammars.length}`);
-    if (ext.commands?.length) parts.push(`команды: ${ext.commands.length}`);
-    if (ext.main) parts.push(ext.codeEnabled ? 'код: включён' : 'код: выкл.');
+    if (ext.pluginFiles?.length) parts.push(`${en ? 'plugins' : 'плагины'}: ${ext.pluginFiles.length}`);
+    if (ext.themeIds?.length) parts.push(`${en ? 'themes' : 'темы'}: ${ext.themeIds.length}`);
+    if (ext.snippets?.length) parts.push(`${en ? 'snippets' : 'сниппеты'}: ${ext.snippets.length}`);
+    if (ext.languages?.length) parts.push(`${en ? 'languages' : 'языки'}: ${ext.languages.length}`);
+    if (ext.grammars?.length) parts.push(`${en ? 'grammars' : 'грамматики'}: ${ext.grammars.length}`);
+    if (ext.commands?.length) parts.push(`${en ? 'commands' : 'команды'}: ${ext.commands.length}`);
+    if (ext.main) parts.push(ext.codeEnabled ? (en ? 'code: enabled' : 'код: включён') : (en ? 'code: off' : 'код: выкл.'));
   }
   const newer = isInstalled ? frogeeList.find((x) => x.id === id && newerVersion(x.version, ext.version)) : null;
   const codeBtn = isInstalled && ext.main
     ? (ext.codeEnabled
-      ? `<button type="button" class="ext-btn ghost" data-code-off="${escapeHtml(id)}" ${working ? 'disabled' : ''}>Остановить код</button>`
-      : `<button type="button" class="ext-btn" data-code-on="${escapeHtml(id)}" ${working ? 'disabled' : ''}>Запустить код</button>`)
+      ? `<button type="button" class="ext-btn ghost" data-code-off="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${t('ext.stopCode')}</button>`
+      : `<button type="button" class="ext-btn" data-code-on="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${t('ext.runCode')}</button>`)
     : '';
   const action = isInstalled
-    ? `${newer ? `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>Обновить до ${escapeHtml(newer.version)}</button>` : ''}${ext.themeIds?.length ? `<button type="button" class="ext-btn" data-apply="${escapeHtml(id)}">Применить тему</button>` : ''}${codeBtn}<button type="button" class="ext-btn ghost" data-remove="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${working ? 'Удаление…' : 'Удалить'}</button>`
-    : `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${working ? 'Установка…' : 'Установить'}</button>`;
+    ? `${newer ? `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${en ? 'Update to' : 'Обновить до'} ${escapeHtml(newer.version)}</button>` : ''}${ext.themeIds?.length ? `<button type="button" class="ext-btn" data-apply="${escapeHtml(id)}">${t('ext.applyTheme')}</button>` : ''}${codeBtn}<button type="button" class="ext-btn ghost" data-remove="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${t(working ? 'ext.removing' : 'ext.remove')}</button>`
+    : `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${t(working ? 'ext.installing' : 'ext.install')}</button>`;
   return `<div class="ext-row" data-id="${escapeHtml(id)}">
     ${iconHtml(ext)}
     <div class="ext-main">
       <div class="ext-name">${escapeHtml(ext.displayName || ext.name)}${ext.version ? ` <span>${escapeHtml(ext.version)}</span>` : ''}</div>
-      <div class="ext-meta">${ext.forFrogee || ext.frogee ? '<em class="ext-badge">для FrogeeCodeIDE</em>' : ''}${escapeHtml(ext.namespace || '')}${ext.downloads != null && !isInstalled ? ` · ${fmtDownloads(ext.downloads)} загрузок` : ''}${parts.length ? ` · ${escapeHtml(parts.join(', '))}` : ''}</div>
+      <div class="ext-meta">${ext.forFrogee || ext.frogee ? `<em class="ext-badge">${en ? 'for' : 'для'} FrogeeCodeIDE</em>` : ''}${escapeHtml(ext.namespace || '')}${ext.downloads != null && !isInstalled ? ` · ${fmtDownloads(ext.downloads)} ${en ? 'downloads' : 'загрузок'}` : ''}${parts.length ? ` · ${escapeHtml(parts.join(', '))}` : ''}</div>
       ${ext.description ? `<div class="ext-desc">${escapeHtml(ext.description)}</div>` : ''}
       <div class="ext-actions">${action}</div>
     </div>
@@ -183,13 +185,13 @@ function render() {
   const ids = new Set(installed.map((e) => e.id));
   host.querySelector('#ext-installed').innerHTML = installed.length
     ? installed.map((e) => row(e, true)).join('')
-    : '<p class="ext-empty">Пока ничего не установлено. Своё расширение можно поставить из папки кнопкой с плюсом вверху.</p>';
+    : `<p class="ext-empty">${t('ext.empty')}</p>`;
   host.querySelector('#ext-installed-title').hidden = false;
   const frogee = frogeeList.filter((e) => !ids.has(e.id)).map((e) => ({ ...e, frogee: true }));
   const fSec = host.querySelector('#ext-frogee');
   fSec.innerHTML = frogee.length
     ? frogee.map((e) => row(e, false)).join('')
-    : `<p class="ext-empty${frogeeError ? ' ext-error' : ''}">${frogeeError ? `Каталог расширений на сайте недоступен: ${escapeHtml(frogeeError)}. Проверьте интернет.` : frogeeList.length ? 'Все расширения из каталога уже установлены.' : 'В каталоге пока пусто.'}</p>`;
+    : `<p class="ext-empty${frogeeError ? ' ext-error' : ''}">${frogeeError ? (getLang() === 'en' ? `The website extension catalog is unavailable: ${escapeHtml(frogeeError)}. Check your connection.` : `Каталог расширений на сайте недоступен: ${escapeHtml(frogeeError)}. Проверьте интернет.`) : frogeeList.length ? (getLang() === 'en' ? 'All catalog extensions are installed.' : 'Все расширения из каталога уже установлены.') : (getLang() === 'en' ? 'The catalog is empty.' : 'В каталоге пока пусто.')}</p>`;
   host.querySelector('#ext-frogee-title').hidden = !!lastQuery;
   fSec.hidden = !!lastQuery;
   const fIds = new Set(frogee.map((e) => e.id));
@@ -197,8 +199,10 @@ function render() {
   host.querySelector('#ext-results').innerHTML = list.length
     ? list.map((e) => row(e, false)).join('')
     : `<p class="ext-empty">${lastQuery ? 'Ничего не найдено. Попробуйте другое название.' : ''}</p>`;
-  host.querySelector('#ext-results-title').textContent = lastQuery ? `Open VSX: «${lastQuery}»` : 'Популярное в Open VSX: темы';
+  host.querySelector('#ext-results-title').textContent = lastQuery ? `Open VSX: «${lastQuery}»` : t('ext.popular');
 }
+
+onLangChange(() => { if (panel()) render(); });
 
 async function refreshInstalled() {
   const res = await window.electronAPI.extensionsInstalled();
@@ -213,7 +217,7 @@ async function runSearch(query) {
   if (query !== lastQuery) return; // a newer search started
   if (!Array.isArray(res)) {
     results = [];
-    if (host) host.querySelector('#ext-results').innerHTML = `<p class="ext-empty ext-error">Open VSX недоступен: ${escapeHtml(res?.error || 'нет связи')}. Проверьте интернет и повторите поиск.</p>`;
+    if (host) host.querySelector('#ext-results').innerHTML = `<p class="ext-empty ext-error">${getLang() === 'en' ? 'Open VSX is unavailable' : 'Open VSX недоступен'}: ${escapeHtml(res?.error || (getLang() === 'en' ? 'no connection' : 'нет связи'))}. ${getLang() === 'en' ? 'Check your connection and try again.' : 'Проверьте интернет и повторите поиск.'}</p>`;
     return;
   }
   results = res;
@@ -225,27 +229,28 @@ function applyTheme(ext) {
   const id = ext?.themeIds?.[0];
   if (!select || !id) return;
   select.value = `custom:${id}`;
-  if (select.value !== `custom:${id}`) { toast('Тема ещё не в списке: откройте Настройки → Внешний вид'); return; }
+  if (select.value !== `custom:${id}`) { toast(getLang() === 'en' ? 'Theme not listed yet: open Settings → Appearance' : 'Тема ещё не в списке: откройте Настройки → Внешний вид'); return; }
   select.dispatchEvent(new Event('change'));
-  toast(`Тема «${ext.themes?.[0] || ext.displayName}» применена`);
+  toast(getLang() === 'en' ? `Theme “${ext.themes?.[0] || ext.displayName}” applied` : `Тема «${ext.themes?.[0] || ext.displayName}» применена`);
 }
 
 async function afterInstall(res) {
   if (res?.canceled) return;
-  if (!res?.success) { toast(res?.error || 'Не удалось установить расширение'); return; }
+  if (!res?.success) { toast(res?.error || (getLang() === 'en' ? 'Could not install extension' : 'Не удалось установить расширение')); return; }
   const got = res.extension;
   await Promise.all([refreshInstalled(), loadCustomThemes(), loadSnippets(), loadContributions()]);
   if (got.pluginFiles?.length) await enablePluginFiles(got.pluginFiles);
+  const en = getLang() === 'en';
   const what = [
-    got.pluginFiles?.length ? `плагинов: ${got.pluginFiles.length}` : '',
-    got.themeIds?.length ? `тем: ${got.themeIds.length}` : '',
-    got.snippets?.length ? `наборов сниппетов: ${got.snippets.length}` : '',
-    got.languages?.length ? `языков: ${got.languages.length}` : '',
-    got.grammars?.length ? `грамматик: ${got.grammars.length}` : '',
-    got.commands?.length ? `команд: ${got.commands.length}` : '',
-    got.codeEnabled ? 'код запущен' : (got.main ? 'код выкл.' : ''),
+    got.pluginFiles?.length ? `${en ? 'plugins' : 'плагинов'}: ${got.pluginFiles.length}` : '',
+    got.themeIds?.length ? `${en ? 'themes' : 'тем'}: ${got.themeIds.length}` : '',
+    got.snippets?.length ? `${en ? 'snippet sets' : 'наборов сниппетов'}: ${got.snippets.length}` : '',
+    got.languages?.length ? `${en ? 'languages' : 'языков'}: ${got.languages.length}` : '',
+    got.grammars?.length ? `${en ? 'grammars' : 'грамматик'}: ${got.grammars.length}` : '',
+    got.commands?.length ? `${en ? 'commands' : 'команд'}: ${got.commands.length}` : '',
+    got.codeEnabled ? (en ? 'code running' : 'код запущен') : (got.main ? (en ? 'code off' : 'код выкл.') : ''),
   ].filter(Boolean).join(', ');
-  toast(`«${got.displayName}» установлено (${what || 'данные подключены'})`);
+  toast(en ? `“${got.displayName}” installed (${what || 'data enabled'})` : `«${got.displayName}» установлено (${what || 'данные подключены'})`);
   if (got.codeEnabled) {
     const act = await activateExtensionRuntime(got.id);
     if (act?.ok === false) toast(`Код «${got.displayName}»: ${act.error}`);
@@ -271,18 +276,19 @@ async function onClick(e) {
     render();
     try {
       if (on) {
-        const ok = window.confirm(`Запустить код расширения «${installed.find((x) => x.id === id)?.displayName || id}»?\n\nКод выполняется с правами редактора через vscode.* API Frogee (не полный VS Code).`);
+        const name = installed.find((x) => x.id === id)?.displayName || id;
+        const ok = window.confirm(getLang() === 'en' ? `Run extension code “${name}”?\n\nIt runs with editor permissions through Frogee’s vscode.* API (not full VS Code).` : `Запустить код расширения «${name}»?\n\nКод выполняется с правами редактора через vscode.* API Frogee (не полный VS Code).`);
         if (!ok) return;
         const res = await window.electronAPI.extensionsSetCode({ id, enabled: true });
-        if (!res?.success) { toast(res?.error || 'Не удалось включить код'); return; }
+        if (!res?.success) { toast(res?.error || (getLang() === 'en' ? 'Could not enable code' : 'Не удалось включить код')); return; }
         await refreshInstalled();
         const act = await activateExtensionRuntime(id);
-        toast(act?.ok === false ? `Ошибка: ${act.error}` : 'Код расширения запущен');
+        toast(act?.ok === false ? `${getLang() === 'en' ? 'Error' : 'Ошибка'}: ${act.error}` : (getLang() === 'en' ? 'Extension code started' : 'Код расширения запущен'));
       } else {
         await deactivateExtensionRuntime(id);
         await window.electronAPI.extensionsSetCode({ id, enabled: false });
         await refreshInstalled();
-        toast('Код расширения остановлен');
+        toast(getLang() === 'en' ? 'Extension code stopped' : 'Код расширения остановлен');
       }
     } finally {
       busy.delete(id);
@@ -307,10 +313,10 @@ async function onClick(e) {
       if (ext?.codeEnabled) await deactivateExtensionRuntime(id);
       await disablePluginFiles(ext?.pluginFiles || []);
       const res = await window.electronAPI.extensionsRemove(id);
-      if (!res?.success) { toast(res?.error || 'Не удалось удалить расширение'); return; }
+      if (!res?.success) { toast(res?.error || (getLang() === 'en' ? 'Could not remove extension' : 'Не удалось удалить расширение')); return; }
       await Promise.all([refreshInstalled(), loadCustomThemes(), loadSnippets(), loadContributions()]);
       if (usesTheme && select) { select.value = 'dark'; select.dispatchEvent(new Event('change')); }
-      toast(`«${ext?.displayName || id}» удалено`);
+      toast(getLang() === 'en' ? `“${ext?.displayName || id}” removed` : `«${ext?.displayName || id}» удалено`);
     }
   } finally {
     busy.delete(id);
@@ -325,7 +331,7 @@ export async function showExtensionsPanel() {
     </div>
     <div class="ext-panel" id="ext-panel">
       <input type="search" class="ext-search" id="ext-search" placeholder="Поиск в Open VSX: темы, сниппеты, языки…" spellcheck="false" value="${escapeHtml(lastQuery || '')}">
-      <p class="ext-note">Open VSX: темы, сниппеты, языки; код (<code>main</code>) - через vscode.* API Frogee: команды, правки, диагностика, completion/hover/format, findFiles, terminal, простые webview. Не полный VS Code (нет LSP-сервера и debug). Кнопка «Запустить код» у установленного расширения.</p>
+      <p class="ext-note" data-i18n="ext.note">${t('ext.note')}</p>
       <div class="run-title" id="ext-installed-title" hidden>Установленные</div>
       <div id="ext-installed"></div>
       <div class="run-title" id="ext-frogee-title">Для FrogeeCodeIDE <a class="ext-link" href="https://arduradiokot.github.io/ForgeeCodeIDE/extensions.html" target="_blank" rel="noopener">каталог на сайте</a></div>

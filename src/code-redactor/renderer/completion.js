@@ -5,6 +5,7 @@
 import { state } from './state.js';
 import { isEditorTab } from './tab-model.js';
 import { escapeHtml } from './utils.js';
+import { getLang, onLangChange } from './i18n.js';
 
 const KEY = 'frogee.complete';
 const DELAY = 600;
@@ -235,12 +236,14 @@ async function modelsFor(provider) {
 function fillProviders() {
   const select = $('ai-complete-provider');
   if (!select) return;
-  const options = [['ollama', 'Ollama (локально)'], ['bionic', 'Bionic / LM Studio (локально)'], ['openrouter', 'OpenRouter (облако)'], ...(state.customProviders || []).map((p) => [`custom:${p.id}`, `${p.name || 'Свой провайдер'} (свой сервер)`])];
-  select.innerHTML = options.map(([v, l]) => `<option value="${escapeHtml(v)}">${escapeHtml(l)}</option>`).join('') + '<option value="__add">Добавить своего провайдера…</option>';
+  const en = getLang() === 'en';
+  const options = [['ollama', `Ollama (${en ? 'local' : 'локально'})`], ['bionic', `Bionic / LM Studio (${en ? 'local' : 'локально'})`], ['openrouter', `OpenRouter (${en ? 'cloud' : 'облако'})`], ...(state.customProviders || []).map((p) => [`custom:${p.id}`, `${p.name || (en ? 'Custom provider' : 'Свой провайдер')} (${en ? 'custom server' : 'свой сервер'})`])];
+  select.innerHTML = options.map(([v, l]) => `<option value="${escapeHtml(v)}">${escapeHtml(l)}</option>`).join('') + `<option value="__add">${en ? 'Add custom provider…' : 'Добавить своего провайдера…'}</option>`;
   if (options.some(([v]) => v === cfg.provider)) select.value = cfg.provider; else { cfg.provider = 'ollama'; select.value = 'ollama'; }
   const note = $('ai-complete-note');
-  if (note) note.textContent = LOCAL.has(cfg.provider) ? 'Модель работает на этом компьютере.' : 'Код вокруг курсора отправляется выбранному провайдеру.';
+  if (note) note.textContent = LOCAL.has(cfg.provider) ? (en ? 'The model runs on this computer.' : 'Модель работает на этом компьютере.') : (en ? 'Code near the cursor is sent to the selected provider.' : 'Код вокруг курсора отправляется выбранному провайдеру.');
 }
+onLangChange(fillProviders);
 
 /** Fills the suggestions of the model field. Local providers pick an installed model when none is set; for the cloud the name is the user's. */
 async function fillModels() {

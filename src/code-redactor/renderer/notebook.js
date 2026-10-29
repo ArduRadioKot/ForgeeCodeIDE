@@ -5,6 +5,7 @@ import { isNotebookTab, isNotebookPath } from './tab-model.js';
 import { updateTabsList, updateTabTitle } from './tabs-api.js';
 import { createSmartKeydown } from './smart-edit.js';
 import { icon } from './glyphs.js';
+import { getLang, t } from './i18n.js';
 
 let cachedEnvsByWorkspace = new Map();
 
@@ -28,7 +29,7 @@ export function emptyNotebook() {
       {
         cell_type: 'markdown',
         metadata: {},
-        source: ['# Notebook\n', '\n', 'Новый Jupyter Notebook.']
+        source: ['# Notebook\n', '\n', getLang() === 'en' ? 'New Jupyter Notebook.' : 'Новый Jupyter Notebook.']
       },
       {
         cell_type: 'code',
@@ -83,7 +84,7 @@ export function parseNotebook(raw) {
     nb.cells = [{
       cell_type: 'markdown',
       metadata: {},
-      source: ['# Ошибка разбора .ipynb\n', `\n\`\`\`\n${err.message}\n\`\`\`\n`]
+      source: [getLang() === 'en' ? '# Could not parse .ipynb\n' : '# Ошибка разбора .ipynb\n', `\n\`\`\`\n${err.message}\n\`\`\`\n`]
     }];
     return nb;
   }
@@ -558,7 +559,7 @@ function paintCellState(tab, cell) {
     else if (cell._state === 'queued') status.textContent = 'В очереди';
     else if (cell._lastDuration != null) {
       const sec = cell._lastDuration < 10 ? cell._lastDuration.toFixed(2) : cell._lastDuration.toFixed(1);
-      status.innerHTML = `${icon(cell._status === 'error' ? 'close' : 'check', 11)} ${Number(sec)} с`;
+      status.innerHTML = `${icon(cell._status === 'error' ? 'close' : 'check', 11)} ${Number(sec)} ${getLang() === 'en' ? 's' : 'с'}`;
     } else status.textContent = '';
     status.dataset.kind = cell._status === 'error' && !cell._state ? 'error' : '';
   }
@@ -839,7 +840,7 @@ function runAndAdvance(tab, id, { insertBelow = false } = {}) {
     const ta = el?.querySelector('textarea');
     ta?.blur();
     const prev = el?.querySelector('.nb-md-preview');
-    if (prev) prev.innerHTML = renderMarkdown(sourceToString(cell.source) || EMPTY_MD);
+    if (prev) prev.innerHTML = renderMarkdown(sourceToString(cell.source) || emptyMd());
   }
   const next = nb.cells[index + 1];
   if (insertBelow || !next) {
@@ -849,7 +850,7 @@ function runAndAdvance(tab, id, { insertBelow = false } = {}) {
   }
 }
 
-const EMPTY_MD = '*Двойной щелчок - редактировать текст*';
+const emptyMd = () => t('nb.emptyMd');
 
 // ───────────────────────── DOM builders ─────────────────────────
 
@@ -939,7 +940,7 @@ function buildCell(tab, cell, index) {
   if (cell.cell_type === 'markdown') {
     const preview = document.createElement('div');
     preview.className = 'nb-md-preview';
-    preview.innerHTML = renderMarkdown(source || EMPTY_MD);
+    preview.innerHTML = renderMarkdown(source || emptyMd());
     const editorWrap = document.createElement('div');
     editorWrap.className = 'nb-editor-wrap nb-md-editor-wrap';
     const ta = document.createElement('textarea');
@@ -954,7 +955,7 @@ function buildCell(tab, cell, index) {
     ta.addEventListener('focus', () => { selectCell(tab, cell._id, { scroll: false }); wrap.classList.add('nb-editing'); autoSize(ta); });
     ta.addEventListener('blur', () => {
       cell.source = stringToSource(ta.value);
-      preview.innerHTML = renderMarkdown(ta.value || EMPTY_MD);
+      preview.innerHTML = renderMarkdown(ta.value || emptyMd());
       wrap.classList.remove('nb-editing');
       markModified(tab);
       if (session(tab).side === 'toc') renderSidePanel(tab);
@@ -974,7 +975,7 @@ function buildCell(tab, cell, index) {
     ta.value = source;
     ta.spellcheck = false;
     ta.rows = 1;
-    ta.setAttribute('aria-label', `Ячейка ${index + 1}`);
+    ta.setAttribute('aria-label', `${getLang() === 'en' ? 'Cell' : 'Ячейка'} ${index + 1}`);
     if (cell.cell_type === 'raw') pre.style.display = 'none';
     editorWrap.appendChild(pre);
     editorWrap.appendChild(ta);
