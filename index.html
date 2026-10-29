@@ -6,14 +6,14 @@
 <title>FrogeeCodeIDE</title>
 <meta name="description" content="Редактор кода с ИИ на вашем компьютере: чат, правки с проверкой, подсказки на лету, ноутбуки, терминалы и плагины.">
 <link rel="icon" href="img/icon.png">
-<script>try{var t=localStorage.getItem('frogee-theme');if(t)document.documentElement.dataset.theme=t;var l=localStorage.getItem('frogee-lang');if(l==='en'||l==='ru')document.documentElement.lang=l}catch(e){}document.documentElement.classList.add('js')</script>
+<script>try{var t=localStorage.getItem('frogee-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="kit.css">
 <link rel="stylesheet" href="site.css">
 </head>
-<body id="top" data-page="home">
-<a class="skip-link" href="#main" data-i18n="skip">К содержимому</a>
+<body id="top">
+<a class="skip-link" href="#main">К содержимому</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <symbol id="i-spark" viewBox="0 0 32 32"><path class="f" d="M16 3c1.2 7.2 5.8 11.8 13 13-7.2 1.2-11.8 5.8-13 13-1.2-7.200-5.800-11.800-13-13 7.200-1.200 11.800-5.800 13-13z"/><path class="s" d="M16 3c1.2 7.2 5.8 11.8 13 13-7.2 1.2-11.8 5.8-13 13-1.2-7.2-5.8-11.8-13-13 7.2-1.2 11.8-5.8 13-13z"/></symbol>
 <symbol id="i-glass" viewBox="0 0 32 32"><rect class="f" x="9" y="9" width="19" height="19" rx="5"/><rect class="s" x="4" y="4" width="19" height="19" rx="5"/><path class="s" d="M9 12.500a3.500 3.500 0 0 1 3.500-3.500"/></symbol>
@@ -43,84 +43,80 @@
 
 <header class="site-header" data-header>
 <div class="header-inner">
-<a class="brand" href="#top" data-i18n-aria="brand.home" aria-label="FrogeeCodeIDE, наверх"><img class="fg-brand-icon" src="img/icon.png" width="256" height="256" alt=""><span class="brand-text">FrogeeCode<span class="fg-brand-separator">IDE</span></span></a>
+<a class="brand" href="#top" aria-label="FrogeeCodeIDE, наверх"><img class="fg-brand-icon" src="img/icon.png" width="256" height="256" alt=""><span class="brand-text">FrogeeCode<span class="fg-brand-separator">IDE</span></span></a>
 <div class="header-end">
-<nav class="site-nav" data-i18n-aria="nav.main" aria-label="Основная навигация"><a href="#tour" data-i18n="nav.overview">Обзор</a><a href="#features" data-i18n="nav.features">Возможности</a><a href="extensions.html" data-i18n="nav.extensions">Расширения</a><a href="#company-projects" data-i18n="nav.companies">Для компаний</a><a href="#faq" data-i18n="nav.faq">Вопросы</a><a href="#download" data-i18n="nav.download">Скачать</a></nav>
+<nav class="site-nav" aria-label="Основная навигация"><a href="#tour">Обзор</a><a href="#features">Возможности</a><a href="extensions.html">Расширения</a><a href="#faq">Вопросы</a><a href="#download">Скачать</a></nav>
 <div class="header-actions">
-<div class="lang-toggle" role="group" data-i18n-aria="lang.toggle" aria-label="Language / Язык">
-<button type="button" data-lang-btn="ru" aria-pressed="true">RU</button>
-<button type="button" data-lang-btn="en" aria-pressed="false">EN</button>
-</div>
-<button class="theme-toggle" type="button" id="theme" data-i18n-aria="theme.toggle" aria-label="Переключить тему">
+<button class="theme-toggle" type="button" id="theme" aria-label="Переключить тему">
 <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.930 4.930l1.420 1.420M17.660 17.660l1.410 1.410M2 12h2M20 12h2M4.930 19.070l1.420-1.420M17.660 6.340l1.410-1.410"/></svg>
 <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.790A9 9 0 1 1 11.210 3 7 7 0 0 0 21 12.790Z"/></svg>
 </button>
-<button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" data-i18n-aria="nav.openMenu" aria-label="Открыть меню" aria-controls="mobile-menu"><span></span><span></span></button>
+<button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Открыть меню" aria-controls="mobile-menu"><span></span><span></span></button>
 </div>
 </div>
 </div>
 </header>
-<nav class="fg-mobile-menu" id="mobile-menu" data-mobile-menu data-i18n-aria="nav.menu" aria-label="Меню" aria-hidden="true" inert>
-<a href="#tour" data-i18n="nav.overview">Обзор</a><a href="#features" data-i18n="nav.features">Возможности</a><a href="extensions.html" data-i18n="nav.extensions">Расширения</a><a href="#company-projects" data-i18n="nav.companies">Для компаний</a><a href="#faq" data-i18n="nav.faq">Вопросы</a><a href="#download" data-i18n="nav.download">Скачать</a>
+<nav class="fg-mobile-menu" id="mobile-menu" data-mobile-menu aria-label="Меню" aria-hidden="true" inert>
+<a href="#tour">Обзор</a><a href="#features">Возможности</a><a href="extensions.html">Расширения</a><a href="#faq">Вопросы</a><a href="#download">Скачать</a>
 <a class="mobile-menu-contact" href="mailto:frogeesoft.team@gmail.com">frogeesoft.team@gmail.com</a>
 </nav>
 
 <main id="main">
 <section class="hero">
 <div class="wrap hero-inner">
-<h1 data-i18n-html="hero.title">Редактор кода с ИИ <span>на вашем компьютере</span></h1>
-<p class="hero-lead" data-i18n="hero.lead">Подключите Ollama, LM Studio или свой провайдер. Чат видит ваши файлы, предлагает правки, а вы принимаете или откатываете их одной кнопкой.</p>
+<h1>Редактор кода с ИИ <span>на вашем компьютере</span></h1>
+<p class="hero-lead">Подключите Ollama, LM Studio или свой провайдер. Чат видит ваши файлы, предлагает правки, а вы принимаете или откатываете их одной кнопкой.</p>
 <div class="hero-cta">
-<a class="button button-primary" id="dl-main" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span id="dl-label" data-i18n="hero.download">Скачать</span></a>
-<a class="button button-secondary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span data-i18n="hero.source">Исходный код</span></a>
+<a class="button button-primary" id="dl-main" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span id="dl-label">Скачать</span></a>
+<a class="button button-secondary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>Исходный код</a>
 </div>
-<p class="hero-fine"><a href="#download" data-i18n="hero.fine">Другие платформы</a> <span data-i18n="hero.fineAnd">и</span> <a href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases" data-i18n="hero.releases">все релизы</a> <span data-i18n="hero.fineTail">на GitHub</span></p>
-<figure class="hero-shot"><img src="img/hero.jpg" data-i18n-alt="hero.shotAlt" alt="Окно FrogeeCodeIDE: проводник, редактор и чат с ИИ" width="1800" height="1079"></figure>
+<p class="hero-fine"><a href="#download">Другие платформы</a> и <a href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases">все релизы</a> на GitHub</p>
+<figure class="hero-shot"><img src="img/hero.jpg" alt="Окно FrogeeCodeIDE: проводник, редактор и чат с ИИ" width="1800" height="1079"></figure>
 </div>
 </section>
 
 <section class="section" id="tour">
-<div class="section-head reveal"><h2 data-i18n-html="tour.head">Всё для кода <em>в одном окне</em></h2><p data-i18n="tour.lead">Чат с ИИ, проверка его правок, ноутбуки, терминалы и запуск проекта без переключения между программами.</p></div>
-<div class="tabs reveal" role="tablist" data-i18n-aria="tour.tabs" aria-label="Обзор">
-<button role="tab" aria-selected="true" data-tab="0" data-i18n="tour.tab0">Проверка правок</button>
-<button role="tab" aria-selected="false" data-tab="1" data-i18n="tour.tab1">Ноутбуки</button>
-<button role="tab" aria-selected="false" data-tab="2" data-i18n="tour.tab2">Запуск и терминалы</button>
+<div class="section-head reveal"><h2>Всё для кода <em>в одном окне</em></h2><p>Чат с ИИ, проверка его правок, ноутбуки, терминалы и запуск проекта без переключения между программами.</p></div>
+<div class="tabs reveal" role="tablist" aria-label="Обзор">
+<button role="tab" aria-selected="true" data-tab="0">Проверка правок</button>
+<button role="tab" aria-selected="false" data-tab="1">Ноутбуки</button>
+<button role="tab" aria-selected="false" data-tab="2">Запуск и терминалы</button>
 </div>
 <div class="panel" role="tabpanel" data-panel="0">
-<div class="panel-copy"><h3 data-i18n="tour.p0h">Правки ИИ, которые можно проверить</h3><p data-i18n="tour.p0p">Ответ модели не затирает файл. Изменения подсвечиваются в самом редакторе, и вы решаете, что оставить: «Оставить файл» или «Отменить файл».</p></div>
-<figure class="shot"><img src="img/review.jpg" data-i18n-alt="tour.p0alt" alt="Проверка правок ИИ с кнопками Оставить и Отменить" loading="lazy" width="1800" height="1079"></figure></div>
+<div class="panel-copy"><h3>Правки ИИ, которые можно проверить</h3><p>Ответ модели не затирает файл. Изменения подсвечиваются в самом редакторе, и вы решаете, что оставить: «Оставить файл» или «Отменить файл».</p></div>
+<figure class="shot"><img src="img/review.jpg" alt="Проверка правок ИИ с кнопками Оставить и Отменить" loading="lazy" width="1800" height="1079"></figure></div>
 <div class="panel" role="tabpanel" data-panel="1" hidden>
-<div class="panel-copy"><h3 data-i18n="tour.p1h">Ноутбуки с выбором окружения</h3><p data-i18n="tour.p1p">Открывайте .ipynb и запускайте ячейки. Редактор сам находит .venv, conda и pyenv проекта и предлагает выбрать ядро.</p></div>
-<figure class="shot"><img src="img/notebook.jpg" data-i18n-alt="tour.p1alt" alt="Jupyter-ноутбук с выводом ячеек" loading="lazy" width="1800" height="1079"></figure></div>
+<div class="panel-copy"><h3>Ноутбуки с выбором окружения</h3><p>Открывайте .ipynb и запускайте ячейки. Редактор сам находит .venv, conda и pyenv проекта и предлагает выбрать ядро.</p></div>
+<figure class="shot"><img src="img/notebook.jpg" alt="Jupyter-ноутбук с выводом ячеек" loading="lazy" width="1800" height="1079"></figure></div>
 <div class="panel" role="tabpanel" data-panel="2" hidden>
-<div class="panel-copy"><h3 data-i18n="tour.p2h">Конфигурации запуска и несколько терминалов</h3><p data-i18n="tour.p2p">Сохраните команду один раз и запускайте кнопкой. Каждая конфигурация открывается в своей вкладке терминала, скрипты из package.json подхватываются сами.</p></div>
-<figure class="shot"><img src="img/run.jpg" data-i18n-alt="tour.p2alt" alt="Панель запуска и вкладки терминала" loading="lazy" width="1800" height="1079"></figure></div>
+<div class="panel-copy"><h3>Конфигурации запуска и несколько терминалов</h3><p>Сохраните команду один раз и запускайте кнопкой. Каждая конфигурация открывается в своей вкладке терминала, скрипты из package.json подхватываются сами.</p></div>
+<figure class="shot"><img src="img/run.jpg" alt="Панель запуска и вкладки терминала" loading="lazy" width="1800" height="1079"></figure></div>
 </section>
 
 <section class="section" id="features">
-<div class="section-head reveal"><h2 data-i18n-html="feat.head">ИИ работает там, <em>где вы решите</em></h2><p data-i18n="feat.lead">Локальная модель держит код на вашей машине. Если нужна мощнее, подключается провайдер с вашим ключом.</p></div>
+<div class="section-head reveal"><h2>ИИ работает там, <em>где вы решите</em></h2><p>Локальная модель держит код на вашей машине. Если нужна мощнее, подключается провайдер с вашим ключом.</p></div>
 <div class="info-grid">
-<article class="info-card reveal"><h3 data-i18n="feat.c1h">Локальные модели</h3><p data-i18n="feat.c1p">Ollama и LM Studio. Код остаётся на вашем компьютере и работает без интернета.</p></article>
-<article class="info-card reveal"><h3 data-i18n="feat.c2h">Подсказки на лету</h3><p data-i18n="feat.c2p">Серое продолжение принимается по Tab. Для FIM-моделей учитывается код после курсора.</p></article>
-<article class="info-card reveal"><h3 data-i18n="feat.c3h">Контекст из файлов</h3><p data-i18n="feat.c3p">Прикрепляйте файлы к сообщению, редактируйте свои сообщения и перегенерируйте ответы.</p></article>
-<article class="info-card reveal"><h3 data-i18n="feat.c4h">Live Server и браузер</h3><p data-i18n="feat.c4p">Страница обновляется при сохранении, встроенный браузер открывается рядом с кодом.</p></article>
-<article class="info-card reveal"><h3 data-i18n="feat.c5h">Поиск и проект</h3><p data-i18n="feat.c5p">Поиск и замена, поиск по проекту, перетаскивание файлов, изменения из других программ подхватываются сами.</p></article>
-<article class="info-card reveal"><h3 data-i18n="feat.c6h">Стеклянное окно</h3><p data-i18n="feat.c6p">Liquid Glass на macOS, светлые и тёмные темы, свои темы в JSON, несколько окон.</p></article>
+<article class="info-card reveal"><h3>Локальные модели</h3><p>Ollama и LM Studio. Код остаётся на вашем компьютере и работает без интернета.</p></article>
+<article class="info-card reveal"><h3>Подсказки на лету</h3><p>Серое продолжение принимается по Tab. Для FIM-моделей учитывается код после курсора.</p></article>
+<article class="info-card reveal"><h3>Контекст из файлов</h3><p>Прикрепляйте файлы к сообщению, редактируйте свои сообщения и перегенерируйте ответы.</p></article>
+<article class="info-card reveal"><h3>Live Server и браузер</h3><p>Страница обновляется при сохранении, встроенный браузер открывается рядом с кодом.</p></article>
+<article class="info-card reveal"><h3>Поиск и проект</h3><p>Поиск и замена, поиск по проекту, перетаскивание файлов, изменения из других программ подхватываются сами.</p></article>
+<article class="info-card reveal"><h3>Стеклянное окно</h3><p>Liquid Glass на macOS, светлые и тёмные темы, свои темы в JSON, несколько окон.</p></article>
 </div>
 </section>
 
 <section class="section" id="extensions">
-<div class="section-head reveal"><h2 data-i18n-html="ext.head">Расширения <em>для FrogeeCodeIDE</em></h2><p data-i18n="ext.lead">Ставятся из панели «Расширения» в один клик и работают полностью. Темы и сниппеты можно взять и из расширений VS Code в Open VSX.</p></div>
-<div class="ext-grid" data-catalog data-limit="3" data-featured="frogeesoft.processing-mobile"><p class="ext-empty" data-i18n="ext.loading">Загружаю каталог…</p></div>
-<div class="ext-more reveal"><a class="button button-primary" href="extensions.html" data-i18n="ext.all">Весь каталог</a><a class="button button-secondary" href="extensions.html#make" data-i18n="ext.make">Сделать своё расширение</a></div>
+<div class="section-head reveal"><h2>Расширения <em>для FrogeeCodeIDE</em></h2><p>Ставятся из панели «Расширения» в один клик и работают полностью. Темы и сниппеты можно взять и из расширений VS Code в Open VSX.</p></div>
+<div class="ext-grid" data-catalog data-limit="3" data-featured="frogeesoft.processing-mobile"><p class="ext-empty">Загружаю каталог…</p></div>
+<div class="ext-more reveal"><a class="button button-primary" href="extensions.html">Весь каталог</a><a class="button button-secondary" href="extensions.html#make">Сделать своё расширение</a></div>
 </section>
 
 <section class="section" id="plugins">
 <div class="plugins-grid">
-<div class="reveal"><h2 data-i18n-html="plugins.head">Плагин <em>одним файлом</em></h2>
-<p class="plugins-lead" data-i18n="plugins.lead">Плагин - это файл .js или .css с доступом к редактору: кнопки на левой панели, текст открытого файла, предпросмотр Markdown. Его можно поставить отдельно или упаковать в расширение. Плагины FgSNotes работают без изменений.</p>
-<a class="button button-secondary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/tree/main/plugins" data-i18n="plugins.how">Как написать плагин</a></div>
-<pre class="code reveal" data-i18n-aria="plugins.example" aria-label="Пример плагина"><span class="tc">// ==FrogeePlugin==
+<div class="reveal"><h2>Плагин <em>одним файлом</em></h2>
+<p class="plugins-lead">Плагин — это файл .js или .css с доступом к редактору: кнопки на левой панели, текст открытого файла, предпросмотр Markdown. Его можно поставить отдельно или упаковать в расширение. Плагины FgSNotes работают без изменений.</p>
+<a class="button button-secondary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/tree/main/plugins">Как написать плагин</a></div>
+<pre class="code reveal" aria-label="Пример плагина"><span class="tc">// ==FrogeePlugin==
 // @name  Вставить дату
 // ==/FrogeePlugin==</span>
 frogee.<span class="tf">addButton</span>({
@@ -132,63 +128,46 @@ frogee.<span class="tf">addButton</span>({
 </div>
 </section>
 
-<section class="section company-projects" id="company-projects" aria-labelledby="company-title">
-<div class="company-panel reveal">
-<div class="company-intro">
-<div><p class="company-eyebrow" data-i18n="company.eyebrow">FrogeeSoft / проекты</p>
-<h2 id="company-title" data-i18n-html="company.head">Проекты <em>для компаний</em></h2>
-</div><div class="company-intro-copy"><p class="company-lead" data-i18n="company.lead">Примеры задач для компаний и проектов с их поддержкой. По ссылкам можно посмотреть готовый сайт и исходный код.</p>
-<a class="button button-primary" href="mailto:frogeesoft.team@gmail.com" data-i18n="company.cta">Обсудить свой проект</a></div>
-</div>
-<div class="company-cases">
-<article class="company-case"><p class="company-case-label" data-i18n="company.yandex.label">Яндекс</p><h3 data-i18n="company.yandex.head">Топология</h3><p data-i18n="company.yandex.desc">Сервис для проектирования логистических систем и складов: распознавание планов и автоматическая расстановка стеллажей.</p><a href="https://x200l.github.io/MarketLog/" target="_blank" rel="noopener noreferrer" data-i18n="company.view">Смотреть проект ↗</a></article>
-<article class="company-case"><p class="company-case-label" data-i18n="company.geoscan.label">При поддержке «Геоскан»</p><h3 data-i18n="company.geoscan.head">МОПС</h3><p data-i18n="company.geoscan.desc">Обследование сооружений с помощью БПЛА: ортофото фасада и поиск трещин на снимках.</p><a href="https://github.com/ArduRadioKot/Geoscan_MOPS" target="_blank" rel="noopener noreferrer" data-i18n="company.source">Код проекта ↗</a></article>
-<article class="company-case"><p class="company-case-label" data-i18n="company.yakovlev.label">При поддержке ПАО «Яковлев»</p><h3 data-i18n="company.yakovlev.head">Визуальная навигация дрона</h3><p data-i18n="company.yakovlev.desc">Коррекция курса и посадки по цветовой метке. Алгоритм отрабатывается в симуляторе Gazebo SITL.</p><a href="https://github.com/nikitosrus01/UAC_2026" target="_blank" rel="noopener noreferrer" data-i18n="company.source">Код проекта ↗</a></article>
-</div>
-</div>
-</section>
-
 <section class="section faq" id="faq">
 <div class="faq-grid">
-<div class="reveal"><h2 data-i18n-html="faq.head">Частые <em>вопросы</em></h2><p class="faq-lead" data-i18n="faq.lead">Не нашли ответ? Напишите нам, контакты ниже.</p></div>
+<div class="reveal"><h2>Частые <em>вопросы</em></h2><p class="faq-lead">Не нашли ответ? Напишите нам, контакты ниже.</p></div>
 <div class="faq-items reveal">
-<details><summary data-i18n="faq.q1">Нужен ли интернет?</summary><p data-i18n="faq.a1">Нет, если модель локальная: Ollama и LM Studio работают на вашем компьютере. Интернет нужен только для облачных провайдеров вроде OpenRouter.</p></details>
-<details><summary data-i18n="faq.q2">Сколько стоит?</summary><p data-i18n="faq.a2">Ничего. Код открыт и распространяется по лицензии MIT.</p></details>
-<details><summary data-i18n="faq.q3">Какие системы поддерживаются?</summary><p data-i18n="faq.a3">macOS, Windows и Linux. Стеклянное окно с размытием есть только на macOS, на остальных окно непрозрачное и берёт цвета темы.</p></details>
-<details><summary data-i18n="faq.q4">Где хранятся настройки, темы и плагины?</summary><p data-i18n="faq.a4">В папке Документы/FrogeeCodeIDE: настройки в config, темы в themes, плагины в plugins, расширения в extensions.</p></details>
-<details><summary data-i18n="faq.q5">Работают ли расширения VS Code?</summary><p data-i18n="faq.a5">Частично. Панель «Расширения» ищет в Open VSX: из расширений VS Code берутся темы оформления и сниппеты, а их код не запускается. Расширения из каталога FrogeeCodeIDE работают полностью.</p></details>
-<details><summary data-i18n="faq.q6">Как поставить плагин?</summary><p data-i18n="faq.a6">Настройки → Плагины → «Установить…» и выберите файл .js или .css. Плагин выполняется внутри редактора, поэтому ставьте только те, которым доверяете.</p></details>
+<details><summary>Нужен ли интернет?</summary><p>Нет, если модель локальная: Ollama и LM Studio работают на вашем компьютере. Интернет нужен только для облачных провайдеров вроде OpenRouter.</p></details>
+<details><summary>Сколько стоит?</summary><p>Ничего. Код открыт и распространяется по лицензии MIT.</p></details>
+<details><summary>Какие системы поддерживаются?</summary><p>macOS, Windows и Linux. Стеклянное окно с размытием есть только на macOS, на остальных окно непрозрачное и берёт цвета темы.</p></details>
+<details><summary>Где хранятся настройки, темы и плагины?</summary><p>В папке Документы/FrogeeCodeIDE: настройки в config, темы в themes, плагины в plugins, расширения в extensions.</p></details>
+<details><summary>Работают ли расширения VS Code?</summary><p>Частично. Панель «Расширения» ищет в Open VSX: из расширений VS Code берутся темы оформления и сниппеты, а их код не запускается. Расширения из каталога FrogeeCodeIDE работают полностью.</p></details>
+<details><summary>Как поставить плагин?</summary><p>Настройки → Плагины → «Установить…» и выберите файл .js или .css. Плагин выполняется внутри редактора, поэтому ставьте только те, которым доверяете.</p></details>
 </div>
 </div>
 </section>
 
 <section class="section" id="download">
-<div class="section-head reveal"><h2 data-i18n-html="dl.head">Скачать <em>FrogeeCodeIDE</em></h2><p id="dl-ver" data-i18n="dl.ver">Бесплатно. Сборки лежат на странице релизов GitHub.</p></div>
+<div class="section-head reveal"><h2>Скачать <em>FrogeeCodeIDE</em></h2><p id="dl-ver">Бесплатно. Сборки лежат на странице релизов GitHub.</p></div>
 <div class="info-grid">
-<article class="info-card dl reveal" data-os="mac"><svg class="logo" aria-hidden="true"><use href="#i-mac"/></svg><h3>macOS</h3><p data-i18n="dl.mac.p">.dmg для Apple Silicon и .zip с приложением.</p><a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span data-i18n="dl.mac.btn">Для macOS</span></a></article>
-<article class="info-card dl reveal" data-os="win"><svg class="logo" aria-hidden="true"><use href="#i-win"/></svg><h3>Windows</h3><p data-i18n="dl.win.p">Установщик .exe и портативная версия в .zip.</p><a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span data-i18n="dl.win.btn">Для Windows</span></a></article>
-<article class="info-card dl reveal" data-os="linux"><svg class="logo" aria-hidden="true"><use href="#i-linux"/></svg><h3>Linux</h3><p data-i18n="dl.linux.p">AppImage без установки и пакет .deb.</p><a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span data-i18n="dl.linux.btn">Для Linux</span></a></article>
+<article class="info-card dl reveal" data-os="mac"><svg class="logo" aria-hidden="true"><use href="#i-mac"/></svg><h3>macOS</h3><p>.dmg для Apple Silicon и .zip с приложением.</p><a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Для macOS</a></article>
+<article class="info-card dl reveal" data-os="win"><svg class="logo" aria-hidden="true"><use href="#i-win"/></svg><h3>Windows</h3><p>Установщик .exe и портативная версия в .zip.</p><a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Для Windows</a></article>
+<article class="info-card dl reveal" data-os="linux"><svg class="logo" aria-hidden="true"><use href="#i-linux"/></svg><h3>Linux</h3><p>AppImage без установки и пакет .deb.</p><a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Для Linux</a></article>
 </div>
 </section>
 
 <section class="contact" aria-labelledby="contact-title">
 <div class="contact-card">
 <img class="mascot" src="img/brand/mascot.png" width="248" height="182" alt="">
-<div class="contact-copy"><h2 id="contact-title" data-i18n-html="contact.head">Нашли ошибку <em>или есть идея</em></h2>
-<p data-i18n="contact.lead">Напишите в Issues на GitHub или на почту команды. Мы читаем всё и отвечаем.</p>
-<a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/issues" data-i18n="contact.issues">Открыть Issues</a></div>
+<div class="contact-copy"><h2 id="contact-title">Нашли ошибку <em>или есть идея</em></h2>
+<p>Напишите в Issues на GitHub или на почту команды. Мы читаем всё и отвечаем.</p>
+<a class="button button-primary" href="https://github.com/ArduRadioKot/ForgeeCodeIDE/issues">Открыть Issues</a></div>
 </div>
 </section>
 </main>
 
 <footer class="footer">
 <div class="footer-row">
-<a class="footer-name" href="#top" data-i18n-aria="brand.home" aria-label="FrogeeCodeIDE, наверх">FROGEE<em>CODE</em></a>
-<nav data-i18n-aria="footer.links" aria-label="Ссылки"><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE">GitHub</a><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE#readme" data-i18n="footer.docs">Документация</a><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases" data-i18n="footer.releases">Релизы</a><a href="https://t.me/SIT_team">Telegram</a><a href="mailto:frogeesoft.team@gmail.com" data-i18n="footer.mail">Почта</a><a class="frogee" href="https://sit-edu.ru/index.html" aria-label="FrogeeSoft"><img class="on-light" src="img/brand/logo-light.png" width="309" height="85" alt=""><img class="on-dark" src="img/brand/logo-dark.png" width="309" height="85" alt=""></a></nav>
+<a class="footer-name" href="#top" aria-label="FrogeeCodeIDE, наверх">FROGEE<em>CODE</em></a>
+<nav aria-label="Ссылки"><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE">GitHub</a><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE#readme">Документация</a><a href="https://github.com/ArduRadioKot/ForgeeCodeIDE/releases">Релизы</a><a href="https://t.me/SIT_team">Telegram</a><a href="mailto:frogeesoft.team@gmail.com">Почта</a><a class="frogee" href="https://sit-edu.ru/index.html" aria-label="FrogeeSoft"><img class="on-light" src="img/brand/logo-light.png" width="309" height="85" alt=""><img class="on-dark" src="img/brand/logo-dark.png" width="309" height="85" alt=""></a></nav>
 </div>
-<p class="legal" data-i18n-html="footer.legal">© <span data-year>2026</span> FrogeeSoft. Открытый код, лицензия MIT.</p>
+<p class="legal">© <span data-year>2026</span> FrogeeSoft. Открытый код, лицензия MIT.</p>
 </footer>
-<script src="i18n.js"></script>
 <script src="site.js"></script>
 </body>
 </html>
