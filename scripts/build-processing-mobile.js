@@ -10,7 +10,7 @@ const modules = ['android-runtime', 'android-project', 'device-transpile', 'devi
 const parts = [
   '// ==FrogeePlugin==',
   '// @name        Processing Mobile',
-  '// @version     1.0.0',
+  '// @version     1.1.0',
   '// @description Эмулятор Processing, экспорт и сборка Android',
   '// @author      FrogeeSoft',
   '// ==/FrogeePlugin==',

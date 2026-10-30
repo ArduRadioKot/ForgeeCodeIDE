@@ -56,7 +56,8 @@ export function createProcessingRuntime(options) {
     rotation: 0, orientation: 'portrait', heading: 0,
     lat: 0, lon: 0, alt: 0, accuracy: 0,
     permissions: Object.assign({}, opts.permissions || {}),
-    orientationLock: 0,        // 0 — не зафиксирована
+    orientationLock: -1,       // -1 — не зафиксирована (ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED)
+    fullScreenMode: true,      // без size() скетч занимает весь экран и следует за поворотом
     keyboard: false,
     paused: false,
     light: 320,
@@ -474,8 +475,8 @@ export function createProcessingRuntime(options) {
     // Рендереры (в эмуляторе всегда 2D)
     DEFAULT: 0, P2D: 1, P3D: 2, FX2D: 3, AR: 4, METRO: 5, WEBGL: 2, OPENGL: 2,
 
-    // Ориентация экрана (как в android.content.pm.ActivityInfo)
-    PORTRAIT: 0, LANDSCAPE: 1, REVERSE_PORTRAIT: 2, REVERSE_LANDSCAPE: 3, UNKNOWN: 4,
+    // Ориентация экрана: те же значения, что в android.content.pm.ActivityInfo и в экспортированном PApplet
+    LANDSCAPE: 0, PORTRAIT: 1, SENSOR_LANDSCAPE: 6, SENSOR_PORTRAIT: 7, REVERSE_LANDSCAPE: 8, REVERSE_PORTRAIT: 9, UNSPECIFIED: -1,
 
     // Коды клавиш
     CODED: 65535, ENTER: 10, RETURN: 13, BACKSPACE: 8, TAB: 9, ESC: 27, DELETE: 127,
@@ -519,14 +520,23 @@ export function createProcessingRuntime(options) {
       }
       S.sketchW = Math.max(1, Math.round(w));
       S.sketchH = Math.max(1, Math.round(h));
+      S.fullScreenMode = false;
       applySize();
     },
-    fullScreen() { applySize(); },
+    fullScreen() {
+      S.fullScreenMode = true;
+      S.sketchW = S.w;
+      S.sketchH = S.h;
+      applySize();
+    },
     createCanvas(w, h) { API.size(w, h); return { elt: canvas }; },
     noCanvas() { /* the canvas always exists */ },
     pixelDensity(d) { if (d === undefined) return S.dpr; S.dpr = d; applySize(); },
     /** В Processing for Android это переменная: `24 * displayDensity`. Поддерживаем и вызов. */
     displayDensity() { return S.dpr; },
+    // размер экрана устройства (в Processing for Android — переменные displayWidth / displayHeight)
+    get displayWidth() { return S.w; },
+    get displayHeight() { return S.h; },
     get width() { return S.sketchW; },
     get height() { return S.sketchH; },
     get pixelWidth() { return canvas.width; },
@@ -748,7 +758,7 @@ export function createProcessingRuntime(options) {
 
     // Android Mode: ориентация, клавиатура, кнопка «Назад», lifecycle
     orientation(mode) {
-      S.orientationLock = mode === undefined ? 0 : mode;
+      S.orientationLock = mode === undefined ? -1 : mode;
       post({ type: 'orientation', mode: S.orientationLock });
     },
     openKeyboard() {
@@ -1069,6 +1079,22 @@ export function createProcessingRuntime(options) {
         if (d.orientation !== undefined) S.orientation = d.orientation;
         if (d.heading !== undefined) S.heading = d.heading;
         if (d.shake) callHandler('shake', d);
+      } else if (d.type === 'rotate') {
+        S.w = Math.max(1, Math.round(d.width || S.w));
+        S.h = Math.max(1, Math.round(d.height || S.h));
+        if (d.rotation !== undefined) S.rotation = d.rotation;
+        if (d.orientation !== undefined) S.orientation = d.orientation;
+        if (S.fullScreenMode) {
+          // a full-screen sketch follows the screen; one with size(w, h) keeps its size and is letterboxed
+          S.sketchW = S.w;
+          S.sketchH = S.h;
+          applySize();
+          if (!S.loop && !S.dead) { try { drawFrame(); } catch (err) { fail(err); } }
+        } else {
+          fitCanvas();
+        }
+        callHandler('windowResized');
+        callHandler('onConfigurationChanged', { orientation: S.orientation });
       } else if (d.type === 'permission-result') {
         S.permissions[String(d.permission)] = !!d.granted;
         const pending = pendingPermissions.find((p) => p.name === String(d.permission));

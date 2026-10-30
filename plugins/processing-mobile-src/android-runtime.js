@@ -205,7 +205,11 @@ public class PApplet extends View implements SensorEventListener {
 
   // ── размер и координаты ───────────────────────────────────────────────────────────
 
+  /** fullScreen(): ширина и высота следуют за экраном при повороте. */
+  protected boolean fullScreenMode = true;
+
   public void size(int w, int h) {
+    fullScreenMode = false;
     designWidth = w;
     designHeight = h;
     width = w;
@@ -222,6 +226,7 @@ public class PApplet extends View implements SensorEventListener {
   }
 
   public void fullScreen() {
+    fullScreenMode = true;
     width = displayWidth;
     height = displayHeight;
     designWidth = width;
@@ -236,6 +241,13 @@ public class PApplet extends View implements SensorEventListener {
     super.onSizeChanged(w, h, oldw, oldh);
     displayWidth = w;
     displayHeight = h;
+    if (fullScreenMode) {
+      // поворот без пересоздания Activity (configChanges в manifest): полноэкранный скетч получает новый размер
+      width = w;
+      height = h;
+      designWidth = w;
+      designHeight = h;
+    }
     computeAdaptiveTransform();
   }
 

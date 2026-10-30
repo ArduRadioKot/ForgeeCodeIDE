@@ -1,7 +1,7 @@
 {
   "publisher": "frogeesoft",
   "name": "processing-mobile",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Processing Mobile",
   "description": "Эмулятор Processing для .pde, экспорт Android-проекта, сборка APK и запуск через ADB.",
   "author": "FrogeeSoft",

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-10-28",
+  "updated": "2026-10-30",
   "extensions": [
     {
       "id": "frogeesoft.insert-date",
@@ -93,7 +93,7 @@
       "name": "processing-mobile",
       "displayName": "Processing Mobile",
       "description": "Эмулятор Processing для .pde, экспорт Android-проекта, сборка APK и запуск через ADB.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": "FrogeeSoft",
       "tags": [
         "processing",
@@ -110,7 +110,7 @@
         "icon.png",
         "plugin.js"
       ],
-      "size": 232205,
+      "size": 249112,
       "plugins": 1,
       "themes": 0,
       "snippets": 0,
