@@ -1,6 +1,6 @@
 {
   "name": "FrogeeCodeIDE",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "A modern code editor with AI chat integration, built with Electron",
   "main": "main.js",
   "scripts": {
@@ -8,11 +8,11 @@
     "test": "node --test tests/*.test.js",
     "rebuild": "electron-rebuild -f -w node-pty",
     "postinstall": "electron-rebuild -f -w node-pty || true",
-    "build": "electron-builder --publish=never",
-    "build:mac": "electron-builder --mac --publish=never",
-    "build:win": "electron-builder --win --publish=never",
-    "build:linux": "electron-builder --linux --publish=never",
-    "build:all": "electron-builder --mac --win --linux --publish=never",
+    "build": "node scripts/prefetch-electron.js && electron-builder --publish=never",
+    "build:mac": "node scripts/prefetch-electron.js darwin && electron-builder --mac --publish=never",
+    "build:win": "node scripts/prefetch-electron.js win32 && electron-builder --win --publish=never",
+    "build:linux": "node scripts/prefetch-electron.js linux && electron-builder --linux --publish=never",
+    "build:all": "node scripts/prefetch-electron.js darwin win32 linux && electron-builder --mac --win --linux --publish=never",
     "dist": "npm run build"
   },
   "keywords": [
@@ -23,8 +23,9 @@
     "openrouter",
     "ollama"
   ],
-  "author": "arduradiokot",
-  "license": "MIT",
+  "author": "arduradiokot <frogeesoft.team@gmail.com>",
+  "homepage": "https://github.com/ArduRadioKot/ForgeeCodeIDE",
+  "license": "GPL-2.0",
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
     "electron": "^28.0.0",
