@@ -6,6 +6,7 @@
  *
  * Usage: node scripts/prefetch-electron.js darwin win32 linux
  */
+const { spawnSync } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
@@ -16,8 +17,17 @@ const { Transform } = require('stream');
 
 const version = require('electron/package.json').version.replace(/^v/, '');
 const arch = process.arch;
-const platforms = process.argv.slice(2);
-if (platforms.length === 0) platforms.push(process.platform);
+
+const LINUX_TOOLS = {
+  arm64: {
+    file: 'linux-tools-mac-darwin-arm64.tar.gz',
+    sha256: '204e76f08364352edb28a6a4be87e8f9bd9340213865d9a0d1c664aa46fcf053',
+  },
+  x64: {
+    file: 'linux-tools-mac-darwin-x86_64.tar.gz',
+    sha256: '7ee26dfbd0d2a4c2c83b55a9416a30cc84876eef01c6497ca49bb016a190c726',
+  },
+};
 
 function cacheDir() {
   if (process.env.ELECTRON_CACHE) return process.env.ELECTRON_CACHE;
@@ -102,16 +112,58 @@ async function ensureZip(dir, platform, shasums) {
   console.log(`cached ${name}`);
 }
 
-async function main() {
+async function prefetch(platforms) {
+  const list = platforms && platforms.length ? platforms : [process.platform];
   const dir = cacheDir();
   fs.mkdirSync(dir, { recursive: true });
   const shasums = await readShasums(dir);
-  for (const platform of platforms) {
+  for (const platform of list) {
     await ensureZip(dir, platform, shasums);
   }
 }
 
-main().catch((error) => {
-  console.error(error.message || error);
-  process.exit(1);
-});
+/**
+ * macOS /usr/bin/ar is BSD ar. It drops non-Mach-O members and writes a
+ * 96-byte deb that contains only __.SYMDEF. GNU ar from electron-builder's
+ * linux-tools-mac toolset produces a real Debian package.
+ * Returns the bin directory, or null when it is not needed.
+ */
+async function ensureLinuxTools() {
+  if (process.platform !== 'darwin') return null;
+  const spec = LINUX_TOOLS[arch === 'arm64' ? 'arm64' : 'x64'];
+  if (!spec) return null;
+  const root = path.join(cacheDir(), `linux-tools-mac-1.0.0-${arch === 'arm64' ? 'arm64' : 'x64'}`);
+  const tgz = path.join(root, spec.file);
+  const extracted = path.join(root, 'extracted');
+  const bin = path.join(extracted, 'linux-tools-mac', 'bin');
+  fs.mkdirSync(root, { recursive: true });
+  const valid = fs.existsSync(tgz) && (await sha256File(tgz)) === spec.sha256;
+  if (!valid) {
+    const url = `https://github.com/electron-userland/electron-builder-binaries/releases/download/linux-tools-mac@1.0.0/${spec.file}`;
+    console.log(`downloading ${spec.file}`);
+    const { tmp, hash } = await download(url, tgz);
+    if (hash !== spec.sha256) {
+      fs.unlinkSync(tmp);
+      throw new Error(`${spec.file} checksum ${hash} != ${spec.sha256}`);
+    }
+    fs.renameSync(tmp, tgz);
+    fs.rmSync(extracted, { recursive: true, force: true });
+  }
+  if (!fs.existsSync(path.join(bin, 'ar'))) {
+    fs.mkdirSync(extracted, { recursive: true });
+    const tar = spawnSync('tar', ['-xzf', tgz, '-C', extracted], { stdio: 'inherit' });
+    if (tar.status !== 0) throw new Error(`failed to extract ${spec.file}`);
+  }
+  if (!fs.existsSync(path.join(bin, 'ar'))) throw new Error('GNU ar is missing from linux-tools-mac');
+  console.log(`linux tools cache hit ${spec.file}`);
+  return bin;
+}
+
+module.exports = { prefetch, ensureLinuxTools };
+
+if (require.main === module) {
+  prefetch(process.argv.slice(2)).catch((error) => {
+    console.error(error.message || error);
+    process.exit(1);
+  });
+}

@@ -8,11 +8,11 @@
     "test": "node --test tests/*.test.js",
     "rebuild": "electron-rebuild -f -w node-pty",
     "postinstall": "electron-rebuild -f -w node-pty || true",
-    "build": "node scripts/prefetch-electron.js && electron-builder --publish=never",
-    "build:mac": "node scripts/prefetch-electron.js darwin && electron-builder --mac --publish=never",
-    "build:win": "node scripts/prefetch-electron.js win32 && electron-builder --win --publish=never",
-    "build:linux": "node scripts/prefetch-electron.js linux && electron-builder --linux --publish=never",
-    "build:all": "node scripts/prefetch-electron.js darwin win32 linux && electron-builder --mac --win --linux --publish=never",
+    "build": "node scripts/run-builder.js --publish=never",
+    "build:mac": "node scripts/run-builder.js --mac --publish=never",
+    "build:win": "node scripts/run-builder.js --win --publish=never",
+    "build:linux": "node scripts/run-builder.js --linux --publish=never",
+    "build:all": "node scripts/run-builder.js --mac --win --linux --publish=never",
     "dist": "npm run build"
   },
   "keywords": [
