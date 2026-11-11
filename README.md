@@ -1,31 +1,31 @@
 # FrogeeCodeIDE
 
-Лёгкая IDE на Electron с ИИ, который работает на вашем компьютере. Подключите Ollama, LM Studio или свой провайдер: чат видит файлы проекта, предлагает правки, а вы принимаете или откатываете их кнопкой.
+A lightweight Electron IDE with AI that runs on your computer. Connect Ollama, LM Studio, or your own provider: the chat can see project files, suggest edits, and let you accept or revert them with a button.
 
 ![FrogeeCodeIDE](website/img/hero.jpg)
 
-## Возможности
+## Features
 
-**ИИ**
-- Чат с Ollama, LM Studio, OpenRouter и любыми совместимыми провайдерами.
-- Файлы как контекст, редактирование и перегенерация сообщений.
-- Проверка правок: изменения подсвечиваются в редакторе, «Оставить» или «Отменить» для файла.
-- Подсказки по ходу набора (Tab принимает), с поддержкой FIM-моделей.
+**AI**
+- Chat with Ollama, LM Studio, OpenRouter, and any compatible provider.
+- Use files as context, edit messages, and regenerate responses.
+- Review edits: changes are highlighted in the editor, with "Keep" or "Discard" actions for each file.
+- Inline completions (press Tab to accept), with support for FIM models.
 
-**Код**
-- Подсветка синтаксиса, диагностика, поиск и замена, поиск по проекту.
-- Jupyter-ноутбуки с автопоиском виртуальных окружений и выбором ядра.
-- Конфигурации запуска, скрипты `package.json`, несколько терминалов.
-- Live Server и встроенный браузер, предпросмотр Markdown, просмотр изображений.
-- Проводник с перетаскиванием файлов между папками.
+**Code**
+- Syntax highlighting, diagnostics, find and replace, and project-wide search.
+- Jupyter notebooks with automatic virtual-environment discovery and kernel selection.
+- Run configurations, `package.json` scripts, and multiple terminals.
+- Live Server and an integrated browser, Markdown preview, and image viewing.
+- An explorer with drag-and-drop file management.
 
-**Интерфейс**
-- Liquid Glass (размытие окна только на macOS), светлые и тёмные темы в JSON.
-- Несколько окон, меню Dock, восстановление вкладок.
+**Interface**
+- Liquid Glass (window blur is available only on macOS), plus JSON light and dark themes.
+- Multiple windows, a Dock menu, and tab restoration.
 
-## Запуск
+## Getting started
 
-Нужен Node.js 18 или новее.
+Node.js 18 or newer is required.
 
 ```bash
 cd src/code-redactor
@@ -33,50 +33,50 @@ npm install
 npm start
 ```
 
-## Сборка
+## Building
 
 ```bash
 npm run build:mac     # .dmg
-npm run build:win     # установщик Windows
+npm run build:win     # Windows installer
 npm run build:linux   # AppImage / deb
 ```
 
-Результат появится в `src/code-redactor/dist`.
+The output is created in `src/code-redactor/dist`.
 
-## Плагины
+## Plugins
 
-Как в FgSNotes: плагины — файлы `.js` и `.css` в `~/Documents/FrogeeCodeIDE/plugins`. Настройки → Плагины → «Установить…» копирует их туда и включает; кнопки плагинов появляются на левой панели, лишние уходят в меню «…». API и примеры (Exildraw, вставка даты) — в [plugins/](plugins/README.md).
+As in FgSNotes, plugins are `.js` and `.css` files in `~/Documents/FrogeeCodeIDE/plugins`. Settings → Plugins → "Install…" copies them there and enables them; plugin buttons appear in the left panel, while any extra buttons are moved to the "…" menu. See [plugins/](plugins/README.md) for the API and examples (Exildraw and date insertion).
 
-## Расширения
+## Extensions
 
-Расширения для FrogeeCodeIDE — обычные папки с `extension.json`, плагинами, темами и сниппетами. Они лежат в каталоге на сайте проекта ([extensions.html](https://arduradiokot.github.io/ForgeeCodeIDE/extensions.html)) и ставятся из панели «Расширения» в один клик или из папки на диске; их плагины работают полностью. Поиск в той же панели идёт по Open VSX: из расширений VS Code берутся темы и сниппеты, их код не запускается. Формат, примеры и сборка каталога (`node scripts/build-extensions.js`) — в [extensions/](extensions/README.md).
+FrogeeCodeIDE extensions are regular folders containing `extension.json`, plugins, themes, and snippets. They are listed in the project catalog ([extensions.html](https://arduradiokot.github.io/ForgeeCodeIDE/extensions.html)) and can be installed with one click from the Extensions panel or from a local folder; their plugins run fully. The same panel searches Open VSX: themes and snippets are taken from VS Code extensions, but their code is not executed. See [extensions/](extensions/README.md) for the format, examples, and catalog build command (`node scripts/build-extensions.js`).
 
-Расширение [Processing Mobile](extensions/processing-mobile/README.md) добавляет эмулятор Processing, экспорт Android-проекта и сборку APK из `.pde`.
+The [Processing Mobile](extensions/processing-mobile/README.md) extension adds a Processing emulator, Android project export, and APK builds from `.pde` files.
 
-## Настройки и темы
+## Settings and themes
 
-Конфигурация хранится в `~/Documents/FrogeeCodeIDE/config`. Свои темы кладутся в `themes/`, формат описан в [src/code-redactor/themes/README.md](src/code-redactor/themes/README.md).
+Configuration is stored in `~/Documents/FrogeeCodeIDE/config`. Put custom themes in `themes/`; the format is described in [src/code-redactor/themes/README.md](src/code-redactor/themes/README.md).
 
-## Обновления
+## Updates
 
-В **Настройки → О программе** можно проверить GitHub Releases и установить новую версию. Собранное приложение проверяет обновления при запуске, не чаще одного раза в 12 часов, и показывает уведомление, если вышел новый релиз. Файл для текущей платформы скачивается с отображением прогресса; `.dmg`, установщик Windows и AppImage устанавливаются по команде пользователя. Для остальных пакетов скачанный файл открывается для ручной установки.
+Use **Settings → About** to check GitHub Releases and install a new version. A packaged application checks for updates at launch, no more than once every 12 hours, and shows a notification when a new release is available. The file for the current platform is downloaded with a progress indicator; `.dmg`, the Windows installer, and AppImage are installed after the user confirms. Other packages are opened for manual installation.
 
-## Структура
+## Project structure
 
 ```
 src/code-redactor/
-  main.js, preload.js   процесс Electron и мост IPC
-  lib/                  файлы, терминал, ИИ, окружения Python
-  renderer/             интерфейс (ES-модули)
-  styles/               стили
-  themes/               темы
-website/                сайт проекта
+  main.js, preload.js   Electron process and IPC bridge
+  lib/                  files, terminal, AI, and Python environments
+  renderer/             interface (ES modules)
+  styles/               styles
+  themes/               themes
+website/                project website
 ```
 
-## Платформы
+## Platforms
 
-macOS проверена полностью. Windows и Linux собираются, но размытие окна там заменено непрозрачной темой.
+macOS is fully tested. Windows and Linux builds are available, but window blur is replaced with an opaque theme on those platforms.
 
-## Лицензия
+## License
 
 MIT, Frogeesoft.
