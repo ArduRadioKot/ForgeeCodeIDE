@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { getDom, invalidateDomCache } from './dom.js';
 import { pathUtils, escapeHtml } from './utils.js';
-import { hideWelcomePage, createTab, closeTab } from './tabs.js';
+import { hideWelcomePage, createTab, closeTab, markRightCurrentLine } from './tabs.js';
 import { updateLineNumbers, updateSyntaxHighlight } from './editor-api.js';
 import { showGitPanel, refreshGitPanel } from './git-panel.js';
 import { invalidatePythonEnvCache } from './notebook.js';
@@ -142,18 +142,24 @@ export async function showRunPanel() {
   } catch {}
 }
 
-export function goToEditorLine(lineNumber) {
-  if (!dom.editor) return;
-  const lines = dom.editor.value.split('\n');
-  const targetLine = Math.max(0, lineNumber - 1);
-  const lineHeight = parseFloat(getComputedStyle(dom.editor).lineHeight) || 24;
+export function goToEditorLine(lineNumber, pane) {
+  const secondary = document.getElementById('editor-right');
+  const right = state.splitView && (pane ? pane === 'right' : state.focusedPane === 'right' || document.activeElement === secondary);
+  const other = right && secondary;
+  const editor = other && other.offsetParent ? other : dom.editor;
+  if (!editor || !Number.isFinite(lineNumber)) return;
+  const lines = editor.value.split('\n');
+  const targetLine = Math.max(0, Math.min(lines.length - 1, Math.trunc(lineNumber) - 1));
+  const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 24;
   const start = lines.slice(0, targetLine).join('\n').length + (targetLine > 0 ? 1 : 0);
-  const end = start + (lines[targetLine]?.length || 0);
-  dom.editor.focus();
-  dom.editor.setSelectionRange(start, end);
-  dom.editor.scrollTop = Math.max(0, targetLine * lineHeight - dom.editor.clientHeight / 3);
-  updateLineNumbers();
-  updateSyntaxHighlight();
+  editor.focus({ preventScroll: true });
+  editor.setSelectionRange(start, start + lines[targetLine].length);
+  editor.scrollTop = Math.max(0, targetLine * lineHeight - editor.clientHeight / 3);
+  if (editor === other) markRightCurrentLine();
+  else {
+    updateLineNumbers();
+    updateSyntaxHighlight();
+  }
 }
 
 window.goToEditorLine = goToEditorLine;
@@ -176,10 +182,10 @@ export function openSearchFileAtLine(filePath, lineNumber) {
       hideWelcomePage();
       const fileName = pathUtils.basename(filePath);
       createTab(fileName, result.content, filePath);
-      // Прокручиваем к нужной строке после небольшой задержки
-      setTimeout(() => {
-        goToEditorLine(lineNumber);
-      }, 100);
+      const left = state.currentTabs[state.activeTabIndex];
+      const right = state.splitView && state.currentTabs[state.rightTabIndex];
+      if (right?.filePath === filePath && (left?.filePath !== filePath || state.focusedPane === 'right')) goToEditorLine(lineNumber, 'right');
+      else if (left?.filePath === filePath) goToEditorLine(lineNumber, 'left');
     }
   });
 }

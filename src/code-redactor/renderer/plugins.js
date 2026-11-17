@@ -35,7 +35,7 @@ function setEnabled(file, on) {
 export function parseMeta(source, file) {
   const head = /==(?:FrogeePlugin|FgsPlugin)==([\s\S]*?)==\/(?:FrogeePlugin|FgsPlugin)==/.exec(String(source).slice(0, 4000));
   const field = (name) => { const m = head && new RegExp(`@${name}\\s+(.+)`).exec(head[1]); return m ? m[1].trim() : ''; };
-  return { name: field('name') || file.replace(/\.(js|css)$/i, ''), version: field('version'), description: field('description'), author: field('author') };
+  return { isolation: field('isolation'), name: field('name') || file.replace(/\.(js|css)$/i, ''), version: field('version'), description: field('description'), author: field('author') };
 }
 
 // ───────────────────────── icons ─────────────────────────
@@ -238,7 +238,33 @@ async function start(file) {
   try {
     const text = await window.electronAPI.readPlugin(file);
     const api = makeApi(file, run);
+    if (running.get(file) !== run) return;
     if (/\.css$/i.test(file)) api.addStyle(text);
+    else if (parseMeta(text, file).isolation === 'process') {
+      run.cleanups.push(() => window.electronAPI.stopIsolatedPlugin(file).catch(() => {}));
+      const specs = await window.electronAPI.startIsolatedPlugin(file, text);
+      if (running.get(file) !== run) return;
+      specs.forEach((spec, index) => api.addButton({
+        title: spec.title,
+        icon: Object.hasOwn(ICONS, spec.icon) ? spec.icon : 'sparkles',
+        run: async () => {
+          try {
+            const area = textEditor();
+            const tab = state.currentTabs[state.activeTabIndex];
+            const input = { index, text: api.editor.get(), selection: api.editor.cursor(), file: api.editor.file() };
+            const result = await window.electronAPI.runIsolatedPlugin(file, input);
+            if (running.get(file) !== run) return;
+            if (result.text !== input.text) {
+              if (!area || tab !== state.currentTabs[state.activeTabIndex] || area.value !== input.text) {
+                throw new Error(getLang() === 'en' ? 'The active file changed while the plugin was running.' : 'Активный файл изменился во время выполнения плагина.');
+              }
+              api.editor.set(result.text);
+            }
+            result.notices.forEach(api.notify);
+          } catch (error) { api.notify(error.message); }
+        },
+      }));
+    }
     else new Function('frogee', 'fgs', text)(api, api); // eslint-disable-line no-new-func
   } catch (err) {
     run.error = err?.message || String(err);
@@ -276,7 +302,7 @@ async function drawList() {
     return `<div class="plugin-row" data-file="${escapeHtml(file)}">
       <div class="plugin-row-main">
         <div class="plugin-row-name">${escapeHtml(info.name)}${info.version ? ` <span>${escapeHtml(info.version)}</span>` : ''}</div>
-        <div class="plugin-row-desc">${escapeHtml(info.description || file)}</div>
+        <div class="plugin-row-desc">${escapeHtml(info.description || file)}${info.isolation === 'process' ? (getLang() === 'en' ? ' · Isolated' : ' · Изолирован') : ''}</div>
         ${err ? `<div class="plugin-row-error">${getLang() === 'en' ? 'Error' : 'Ошибка'}: ${escapeHtml(err)}</div>` : ''}
       </div>
       <button type="button" class="settings-btn ghost" data-act="remove">${armed === file ? 'Точно удалить?' : 'Удалить'}</button>

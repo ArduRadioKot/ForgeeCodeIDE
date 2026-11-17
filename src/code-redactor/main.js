@@ -10,6 +10,8 @@ const { registerAiIpc } = require('./lib/ipc-ai');
 const { registerKernelIpc, killAllKernels } = require('./lib/kernel');
 const { registerFolderWatchIpc } = require('./lib/folder-watch');
 const { registerPluginsIpc } = require('./lib/plugins');
+const { registerIsolatedPlugins } = require('./lib/isolated-plugins');
+const { registerWorkbench } = require('./lib/workbench');
 const { registerExtensionsIpc } = require('./lib/extensions');
 const { registerVscodeHostIpc } = require('./lib/vscode-host');
 const { registerProjectFilesIpc } = require('./lib/project-files');
@@ -226,6 +228,8 @@ function registerAllIpc() {
   registerKernelIpc(getMainWindow);
   registerFolderWatchIpc();
   registerPluginsIpc();
+  registerIsolatedPlugins();
+  registerWorkbench();
   registerExtensionsIpc();
   registerVscodeHostIpc();
   registerProjectFilesIpc();
@@ -269,7 +273,7 @@ app.whenReady().then(async () => {
     .catch((err) => { console.error('Не удалось загрузить конфиг при старте:', err); setOpenRouterApiKey(''); });
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (windows.size === 0) createWindow();
   });
 });
 

@@ -13,3 +13,11 @@
 .palette-item.active kbd { background: #ffffff26; border-color: transparent; color: var(--accent-text); }
 .palette-empty { padding: 20px; text-align: center; color: var(--text-muted); }
 .palette-foot { padding: 6px 16px; border-top: 1px solid var(--border-color); color: var(--text-faint); font-size: 11px; }
+.palette-scopes { display: flex; flex: 0 0 auto; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--border-color); }
+.palette-scopes[hidden] { display: none; }
+.palette-scopes button {
+  min-height: var(--ctl-h-sm); padding: 0 9px; border-radius: var(--radius-sm);
+  color: var(--text-muted); font-size: 12px;
+}
+.palette-scopes button:hover { background: var(--hover-color); color: var(--text-color); }
+.palette-scopes button[aria-pressed="true"] { background: var(--active-bg); color: var(--text-color); }

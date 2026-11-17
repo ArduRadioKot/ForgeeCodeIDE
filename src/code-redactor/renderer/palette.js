@@ -25,7 +25,8 @@ import { configCommands } from './run-configs.js';
 import { toggleMarkdownPreview, formatTable, insertTable } from './markdown.js';
 import { extensionPaletteCommands } from './ext-contrib.js';
 import { runtimePaletteCommands } from './vscode-bridge.js';
-import { t, uiText } from './i18n.js';
+import { workbenchCommands } from './workbench.js';
+import { getLang, t, uiText } from './i18n.js';
 
 const dom = getDom();
 let overlay = null;
@@ -35,6 +36,9 @@ let items = [];
 let shown = [];
 let active = 0;
 let mode = 'commands';
+let returnFocus = null;
+let viewRevision = 0;
+const searchModes = ['files', 'commands', 'symbols'];
 let fileCache = { root: null, at: 0, files: [] };
 
 const RUNNERS = {
@@ -70,7 +74,16 @@ function ensureOverlay() {
   overlay = document.createElement('div');
   overlay.className = 'palette-overlay';
   overlay.hidden = true;
-  overlay.innerHTML = '<div class="palette" role="dialog" aria-modal="true"><input class="palette-input" type="text" spellcheck="false" autocomplete="off"><div class="palette-list" role="listbox"></div><div class="palette-foot"></div></div>';
+  overlay.innerHTML = `<div class="palette" role="dialog" aria-modal="true">
+    <div class="palette-scopes" role="group">
+      <button type="button" data-scope="files"></button>
+      <button type="button" data-scope="commands"></button>
+      <button type="button" data-scope="symbols"></button>
+    </div>
+    <input class="palette-input" type="text" spellcheck="false" autocomplete="off">
+    <div class="palette-list" role="listbox"></div>
+    <div class="palette-foot"></div>
+  </div>`;
   document.body.appendChild(overlay);
   const dialog = overlay.querySelector('.palette');
   dialog.setAttribute('data-glass', 'dialog');
@@ -78,9 +91,23 @@ function ensureOverlay() {
   input = overlay.querySelector('.palette-input');
   list = overlay.querySelector('.palette-list');
   overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) closePalette(); });
+  overlay.querySelector('.palette-scopes').addEventListener('click', (event) => {
+    const scope = event.target.closest('[data-scope]')?.dataset.scope;
+    if (scope) changeScope(scope);
+  });
+  overlay.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !event.defaultPrevented) {
+      event.preventDefault();
+      closePalette();
+    }
+  });
   input.addEventListener('input', () => { active = 0; refresh(); });
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+    if (e.key === 'Tab' && e.ctrlKey && searchModes.includes(mode)) {
+      e.preventDefault();
+      const i = searchModes.indexOf(mode);
+      changeScope(searchModes[(i + (e.shiftKey ? 2 : 1)) % searchModes.length]);
+    } else if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
     else if (e.key === 'Enter') { e.preventDefault(); choose(shown[active]); }
     else if (e.key === 'Escape') { e.preventDefault(); closePalette(); }
@@ -104,9 +131,13 @@ function choose(item) {
 }
 
 function closePalette() {
-  if (overlay) overlay.hidden = true;
-  const ed = state.findBarVisible ? null : dom.editor;
-  ed?.focus();
+  if (!overlay || overlay.hidden) return;
+  overlay.hidden = true;
+  viewRevision++;
+  if (returnFocus?.isConnected && returnFocus.getClientRects().length) {
+    returnFocus.focus({ preventScroll: true });
+  }
+  returnFocus = null;
 }
 
 let onSubmit = null;
@@ -137,22 +168,42 @@ function refresh() {
 function paint() {
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   list.innerHTML = shown.length
-    ? shown.map((it, i) => `<div class="palette-item${i === active ? ' active' : ''}" data-i="${i}" role="option"><span class="palette-label">${esc(it.label)}</span>${it.detail ? `<span class="palette-detail">${esc(it.detail)}</span>` : ''}${it.key ? `<kbd>${esc(it.key)}</kbd>` : ''}</div>`).join('')
-    : '<div class="palette-empty">Ничего не найдено</div>';
+    ? shown.map((it, i) => `<div class="palette-item${i === active ? ' active' : ''}" data-i="${i}" role="option" aria-selected="${i === active}"><span class="palette-label">${esc(it.label)}</span>${it.detail ? `<span class="palette-detail">${esc(it.detail)}</span>` : ''}${it.key ? `<kbd>${esc(it.key)}</kbd>` : ''}</div>`).join('')
+    : `<div class="palette-empty">${getLang() === 'en' ? 'No results' : 'Ничего не найдено'}</div>`;
   list.querySelector('.palette-item.active')?.scrollIntoView({ block: 'nearest' });
 }
 
-function open(nextMode, placeholder, nextItems, foot) {
+function open(nextMode, placeholder, nextItems, foot, query = '') {
   ensureOverlay();
+  if (overlay.hidden) returnFocus = document.activeElement;
+  const revision = ++viewRevision;
+  const en = getLang() === 'en';
+  const scopes = overlay.querySelector('.palette-scopes');
+  scopes.hidden = !searchModes.includes(nextMode);
+  scopes.setAttribute('aria-label', en ? 'Search categories' : 'Категории поиска');
+  const labels = en ? { files: 'Files', commands: 'Actions', symbols: 'Symbols' } : { files: 'Файлы', commands: 'Действия', symbols: 'Символы' };
+  for (const node of scopes.children) {
+    node.textContent = labels[node.dataset.scope];
+    node.setAttribute('aria-pressed', String(node.dataset.scope === nextMode));
+  }
+  overlay.querySelector('.palette').setAttribute('aria-label', en ? 'Quick search' : 'Быстрый поиск');
   mode = nextMode;
   items = nextItems;
   active = 0;
-  input.value = '';
+  input.value = query;
   input.placeholder = placeholder;
   overlay.querySelector('.palette-foot').textContent = foot;
   overlay.hidden = false;
   refresh();
   input.focus();
+  return revision;
+}
+
+function changeScope(scope) {
+  const query = input.value;
+  if (scope === 'files') openQuickOpen(query);
+  if (scope === 'commands') openCommandPalette(query);
+  if (scope === 'symbols') openSymbols(query);
 }
 
 // ───────── commands ─────────
@@ -232,6 +283,7 @@ function buildCommands() {
     ...extra,
     ...fromExt,
     ...fromRuntime,
+    ...workbenchCommands(),
     cmd('Файл: новый файл', createNewFile, 'Ctrl+N'),
     cmd('Файл: новый ноутбук', createNewNotebook),
     cmd('Файл: открыть…', openFileOrFolder, 'Ctrl+O'),
@@ -374,11 +426,16 @@ function extractSymbols(text, name) {
   return out;
 }
 
-export function openSymbols() {
-  const tab = activeTab();
-  if (!isEditorTab(tab) || !dom.editor) return;
-  const symbols = extractSymbols(dom.editor.value, tab.name);
-  open('symbols', symbols.length ? 'Перейти к символу…' : 'Символы для этого типа файлов не найдены', symbols, 'Классы, функции и заголовки текущего файла');
+export function openSymbols(query = '') {
+  const secondary = document.getElementById('editor-right');
+  const right = state.splitView && (state.focusedPane === 'right' || document.activeElement === secondary);
+  const tab = right ? state.currentTabs[state.rightTabIndex] : activeTab();
+  const area = right ? secondary : dom.editor;
+  const symbols = isEditorTab(tab) && area ? extractSymbols(area.value, tab.name) : [];
+  const en = getLang() === 'en';
+  open('symbols', en ? 'Go to symbol…' : 'Перейти к символу…', symbols,
+    en ? 'Classes, functions and headings in the active file' : 'Классы, функции и заголовки текущего файла',
+    typeof query === 'string' ? query : '');
 }
 
 export async function openTodos() {
@@ -483,8 +540,8 @@ function agentPrompt(instruction) {
   askAgent(text);
 }
 
-export function openCommandPalette() {
-  open('commands', t('palette.commands'), buildCommands(), t('palette.commandsFoot'));
+export function openCommandPalette(query = '') {
+  open('commands', t('palette.commands'), buildCommands(), t('palette.commandsFoot'), typeof query === 'string' ? query : '');
 }
 
 async function loadFiles() {
@@ -496,21 +553,30 @@ async function loadFiles() {
   return fileCache.files;
 }
 
-export async function openQuickOpen() {
-  const files = await loadFiles();
+export async function openQuickOpen(query = '') {
+  const root = state.currentFolder;
   const openTabs = state.currentTabs
-    .map((t, i) => ({ t, i }))
-    .filter(({ t }) => t && t.kind !== 'terminal')
-    .map(({ t, i }) => ({ label: t.name, detail: 'открыта', search: t.name, order: -100 + i, run: () => switchToTab(i) }));
-  const known = new Set(state.currentTabs.map((t) => t.filePath).filter(Boolean));
-  const fromDisk = files.filter((f) => !known.has(f.path)).map((f, i) => ({
-    label: f.rel.split(/[\\/]/).pop(),
-    detail: f.rel,
-    search: f.rel,
-    order: i,
-    run: () => openSearchFile(f.path),
-  }));
-  open('files', state.currentFolder ? t('palette.files') : t('palette.filesEmpty'), [...openTabs, ...fromDisk], t('palette.filesFoot'));
+    .filter((tab) => tab && tab.kind !== 'terminal')
+    .map((tab, i) => ({
+      label: tab.name, detail: getLang() === 'en' ? 'Open tab' : 'Открытая вкладка', search: tab.name, order: -100 + i,
+      run: () => switchToTab(state.currentTabs.indexOf(tab)),
+    }));
+  const revision = open('files', root ? t('palette.files') : t('palette.filesEmpty'), openTabs, t('palette.filesFoot'),
+    typeof query === 'string' ? query : '');
+  if (!root) return;
+  try {
+    const files = await loadFiles();
+    if (viewRevision !== revision || root !== state.currentFolder) return;
+    const known = new Set(state.currentTabs.map((tab) => tab.filePath).filter(Boolean));
+    items = [...openTabs, ...files.filter((file) => !known.has(file.path)).map((file, index) => ({
+      label: file.rel.split(/[\\/]/).pop(), detail: file.rel, search: file.rel, order: index,
+      run: () => openSearchFile(file.path),
+    }))];
+    active = 0;
+    refresh();
+  } catch (error) {
+    if (viewRevision === revision) overlay.querySelector('.palette-foot').textContent = error.message;
+  }
 }
 
 export function openProblems() {

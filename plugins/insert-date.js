@@ -3,6 +3,7 @@
 // @version     1.0
 // @description Кнопка на левой панели вставляет сегодняшнюю дату и время
 // @author      FrogeeSoft
+// @isolation   process
 // ==/FrogeePlugin==
 fgs.addButton({
     title: 'Вставить дату и время',

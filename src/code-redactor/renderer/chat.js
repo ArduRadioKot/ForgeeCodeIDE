@@ -633,6 +633,8 @@ function agentContext(files) {
   }
   const paths = (files || []).filter((f) => f.path).map((f) => f.path);
   if (paths.length) ctx += `\n\n${english ? 'Attached files:' : 'Прикреплённые файлы:'}\n${paths.join('\n')}`;
+  const inline = (files || []).filter((file) => !file.path && file.content);
+  if (inline.length) ctx += filesBlock(inline);
   return ctx;
 }
 

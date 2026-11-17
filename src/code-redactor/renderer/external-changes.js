@@ -7,7 +7,7 @@ import { state } from './state.js';
 import { getDom } from './dom.js';
 import { isEditorTab } from './tab-model.js';
 import { refreshExplorerTree } from './explorer.js';
-import { updateTabsList } from './tabs.js';
+import { updateTabsList, updateSecondaryChrome } from './tabs.js';
 import { updateSyntaxHighlight, updateLineNumbers } from './editor.js';
 
 let timer = 0;
@@ -25,18 +25,21 @@ async function dropMissingFolders() {
 
 async function syncTabs() {
   let changed = false;
-  for (let i = 0; i < state.currentTabs.length; i++) {
-    const tab = state.currentTabs[i];
+  for (const tab of [...state.currentTabs]) {
     if (!tab?.filePath || !isEditorTab(tab)) continue;
-    const st = await window.electronAPI.fileStat(tab.filePath);
+    const path = tab.filePath;
+    const st = await window.electronAPI.fileStat(path);
+    if (tab.filePath !== path || !state.currentTabs.includes(tab)) continue;
     if (!st.exists) {
       if (!tab.missing) { tab.missing = true; changed = true; }
       continue;
     }
     if (tab.missing) { tab.missing = false; changed = true; }
     if (tab.modified) continue;
-    const res = await window.electronAPI.getFileContent(tab.filePath);
-    if (!res?.success || typeof res.content !== 'string') continue;
+    const res = await window.electronAPI.getFileContent(path);
+    if (!res?.success || typeof res.content !== 'string' || tab.filePath !== path) continue;
+    const i = state.currentTabs.indexOf(tab);
+    if (i < 0) continue;
     // our own save (autosave, Ctrl+S) also wakes the watcher: that is not a change from outside
     if (res.content === (tab.content ?? '') || res.content === tab.diskContent) continue;
     // the user may have typed while the file was being read
@@ -44,16 +47,26 @@ async function syncTabs() {
     tab.content = res.content;
     tab.diskContent = res.content;
     if (i === state.activeTabIndex) {
-      const dom = getDom();
-      const { selectionStart, selectionEnd, scrollTop } = dom.editor;
-      dom.editor.value = res.content;
-      dom.editor.setSelectionRange(Math.min(selectionStart, res.content.length), Math.min(selectionEnd, res.content.length));
-      dom.editor.scrollTop = scrollTop;
+      const editor = getDom().editor;
+      refreshText(editor, res.content);
       updateLineNumbers();
       updateSyntaxHighlight();
     }
+    if (state.splitView && i === state.rightTabIndex) {
+      refreshText(document.getElementById('editor-right'), res.content);
+      updateSecondaryChrome();
+    }
   }
   if (changed) updateTabsList();
+}
+
+function refreshText(editor, content) {
+  if (!editor) return;
+  const { selectionStart, selectionEnd, scrollTop, scrollLeft } = editor;
+  editor.value = content;
+  editor.setSelectionRange(selectionStart, selectionEnd);
+  editor.scrollTop = scrollTop;
+  editor.scrollLeft = scrollLeft;
 }
 
 async function onChange() {

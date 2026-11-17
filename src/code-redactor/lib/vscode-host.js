@@ -30,7 +30,7 @@ let prevSnapshot = { ...editorSnapshot };
 function getWindow() {
   const front = BrowserWindow.getFocusedWindow();
   if (front && !front.isDestroyed()) return front;
-  const all = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed());
+  const all = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed() && w.isVisible());
   return all.length ? all[all.length - 1] : null;
 }
 

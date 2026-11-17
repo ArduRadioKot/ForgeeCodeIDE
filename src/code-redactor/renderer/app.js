@@ -20,6 +20,7 @@ import {
 import { openFolder, switchActivity, registerSearchGlobals } from './explorer.js';
 import { setupExternalChanges } from './external-changes.js';
 import { setupPlugins } from './plugins.js';
+import { setupWorkbench } from './workbench.js';
 import { setupExtensions } from './extensions.js';
 import { startVscodeHost } from './vscode-bridge.js';
 import {
@@ -356,6 +357,7 @@ export function setupEventListeners() {
   initAutoSave();
   setupExternalChanges();
   setupPlugins();
+  setupWorkbench();
   setupExtensions();
   startVscodeHost().catch((err) => console.warn('[vscode-host]', err));
   setupBrowserEvents();

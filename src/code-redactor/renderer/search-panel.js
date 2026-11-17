@@ -172,7 +172,7 @@ function openMatch(fi, mi) {
   const f = last?.results[fi];
   const m = f?.matches[mi];
   if (!m) return;
-  if (f.current) goToEditorLine(m.line);
+  if (f.current) goToEditorLine(m.line, 'left');
   else openSearchFileAtLine(f.fullPath, m.line);
 }
 

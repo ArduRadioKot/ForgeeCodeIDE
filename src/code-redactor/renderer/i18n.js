@@ -401,7 +401,7 @@ export function applyI18n(root = document) {
   translateLoose(root);
   // Settings tab titles map
   const title = document.getElementById('settings-main-title');
-  const active = document.querySelector('.settings-nav-btn.active')?.dataset?.settingsTab;
+  const active = document.querySelector('#settings-nav [data-settings-tab].active')?.dataset?.settingsTab;
   if (title && active && title.textContent !== t(`settings.${active}`)) title.textContent = t(`settings.${active}`);
 }
 

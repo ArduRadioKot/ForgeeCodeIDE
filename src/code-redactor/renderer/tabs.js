@@ -163,10 +163,13 @@ export function createTab(name, content = '', filePath = null) {
       (t) => t && t.kind !== 'terminal' && t.filePath && t.filePath === filePath
     );
     if (existing >= 0) {
-      state.currentTabs[existing].content = content;
-      if (isNotebookTab(state.currentTabs[existing]) || isNotebookPath(filePath)) {
-        state.currentTabs[existing].kind = 'notebook';
-        state.currentTabs[existing].notebook = parseNotebook(content);
+      const tab = state.currentTabs[existing];
+      if (!tab.modified && tab.content !== content) {
+        tab.content = content;
+        tab.diskContent = content;
+        if (isNotebookTab(tab)) tab.notebook = parseNotebook(content);
+        if (isEditorTab(tab) && existing === state.activeTabIndex && dom.editor) dom.editor.value = content;
+        if (isEditorTab(tab) && state.splitView && existing === state.rightTabIndex) renderRightPane();
       }
       hideWelcomePage();
       showTab(existing);
@@ -810,6 +813,7 @@ export function updateSecondaryChrome() {
     const name = state.rightTabIndex >= 0 ? state.currentTabs[state.rightTabIndex]?.name : '';
     syntaxRight.innerHTML = window.SyntaxHighlight.highlight(text, name || '');
     syntaxRight.scrollTop = editorRight.scrollTop;
+    syntaxRight.scrollLeft = editorRight.scrollLeft;
   }
   window.dispatchEvent(new Event('frogee:content'));
 }
@@ -968,7 +972,10 @@ export function setupSplitUi() {
       const lineRight = document.getElementById('line-numbers-right');
       const syntaxRight = document.getElementById('syntax-highlight-right');
       if (lineRight) lineRight.scrollTop = editorRight.scrollTop;
-      if (syntaxRight) syntaxRight.scrollTop = editorRight.scrollTop;
+      if (syntaxRight) {
+        syntaxRight.scrollTop = editorRight.scrollTop;
+        syntaxRight.scrollLeft = editorRight.scrollLeft;
+      }
     });
   }
 

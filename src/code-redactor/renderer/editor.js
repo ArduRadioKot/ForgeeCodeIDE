@@ -15,7 +15,7 @@ import {
 } from './tabs.js';
 import { toggleTerminal } from './terminal.js';
 import { registerEditorApi } from './editor-api.js';
-import { isNotebookTab, isBrowserTab, isEditorTab } from './tab-model.js';
+import { isNotebookTab, isEditorTab } from './tab-model.js';
 import { syncNotebookContent, createNotebookTab } from './notebook.js';
 import { createSmartKeydown } from './smart-edit.js';
 import { smartOptsFor } from './ext-contrib.js';
@@ -65,7 +65,7 @@ function saveTarget() {
     if (tab && isEditorTab(tab) && right) return { tab, content: right.value };
   }
   const tab = state.currentTabs[state.activeTabIndex];
-  if (!tab || isBrowserTab(tab)) return null;
+  if (!isEditorTab(tab) && !isNotebookTab(tab)) return null;
   if (isNotebookTab(tab)) {
     syncNotebookContent(tab);
     return { tab, content: tab.content || '' };
@@ -73,62 +73,49 @@ function saveTarget() {
   return { tab, content: dom.editor?.value ?? tab.content ?? '' };
 }
 
-export async function saveFile() {
+const pendingWrites = new WeakMap();
+
+function writeInOrder(tab, write) {
+  const next = (pendingWrites.get(tab) || Promise.resolve()).catch(() => {}).then(write);
+  pendingWrites.set(tab, next);
+  return next.finally(() => {
+    if (pendingWrites.get(tab) === next) pendingWrites.delete(tab);
+  });
+}
+
+async function saveCurrentTab(forceDialog) {
   const target = saveTarget();
-  if (target) {
-    const { tab, content } = target;
-    tab.content = content;
-    try {
+  if (!target) return;
+  const { tab, content } = target;
+  tab.content = content;
+  try {
+    await writeInOrder(tab, async () => {
       let result;
-      if (tab.filePath && window.electronAPI.writeFile) {
-        result = await window.electronAPI.writeFile(tab.filePath, content);
-        if (result.success) result.filePath = tab.filePath;
-      } else if (tab.filePath) {
-        result = await window.electronAPI.saveFile(content);
-      } else {
-        result = await window.electronAPI.saveFileAs(content);
-      }
-      
-      if (result.success) {
-        tab.diskContent = content;
-        tab.filePath = result.filePath;
-        tab.name = pathUtils.basename(result.filePath);
-        tab.modified = false;
-        updateTabsList();
-        updateTabTitle();
-        saveTabs();
-      }
-    } catch (error) {
-      console.error('Ошибка сохранения файла:', error);
-    }
+      if (forceDialog || !tab.filePath) result = await window.electronAPI.saveFileAs(content);
+      else if (window.electronAPI.writeFile) {
+        const filePath = tab.filePath;
+        const response = await window.electronAPI.writeFile(filePath, content);
+        result = { ...response, filePath };
+      } else result = await window.electronAPI.saveFile(content);
+      if (!result?.success) return;
+
+      if (isNotebookTab(tab)) syncNotebookContent(tab);
+      tab.diskContent = content;
+      tab.filePath = result.filePath;
+      tab.name = pathUtils.basename(result.filePath);
+      tab.modified = tab.content !== content;
+      if (forceDialog && /\.ipynb$/i.test(result.filePath)) tab.kind = 'notebook';
+      updateTabsList();
+      updateTabTitle();
+      saveTabs();
+    });
+  } catch (error) {
+    console.error('Ошибка сохранения файла:', error);
   }
 }
 
-// Функции для работы с редактором
-
-export async function saveFileAs() {
-  const target = saveTarget();
-  if (target) {
-    const { tab, content } = target;
-    tab.content = content;
-    try {
-      const result = await window.electronAPI.saveFileAs(content);
-      if (result.success) {
-        tab.filePath = result.filePath;
-        tab.name = pathUtils.basename(result.filePath);
-        tab.modified = false;
-        if (/\.ipynb$/i.test(result.filePath)) {
-          tab.kind = 'notebook';
-        }
-        updateTabsList();
-        updateTabTitle();
-        saveTabs();
-      }
-    } catch (error) {
-      console.error('Ошибка сохранения файла:', error);
-    }
-  }
-}
+export function saveFile() { return saveCurrentTab(false); }
+export function saveFileAs() { return saveCurrentTab(true); }
 
 export function createNewNotebook() {
   hideWelcomePage();
@@ -195,16 +182,18 @@ async function flushAutoSave() {
   let saved = false;
   try {
     for (const tab of state.currentTabs) {
-      if (!tab || !tab.modified || !tab.filePath || tab.kind === 'terminal') continue;
+      if (!tab?.modified || !tab.filePath || pendingWrites.has(tab) || (!isEditorTab(tab) && !isNotebookTab(tab))) continue;
       if (isNotebookTab(tab)) syncNotebookContent(tab);
       const content = tab.content ?? '';
       try {
-        const res = await window.electronAPI.writeFile(tab.filePath, content);
-        if (res?.success) {
-          tab.diskContent = content; // our own write: the folder watcher must not "reload" it
-          // typing may have gone on while the file was being written: then the tab is still modified
-          if (tab.content === content) { tab.modified = false; saved = true; }
-        }
+        await writeInOrder(tab, async () => {
+          const res = await window.electronAPI.writeFile(tab.filePath, content);
+          if (res?.success) {
+            tab.diskContent = content;
+            if (isNotebookTab(tab)) syncNotebookContent(tab);
+            if (tab.content === content) { tab.modified = false; saved = true; }
+          }
+        });
       } catch (err) {
         console.warn('[autosave]', err);
       }

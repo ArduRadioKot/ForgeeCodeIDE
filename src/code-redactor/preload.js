@@ -1,6 +1,15 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  workbench: (name, input) => ipcRenderer.invoke('workbench:action', name, input),
+  onWorkbenchDebug: (callback) => {
+    const listener = (_event, status) => callback(status);
+    ipcRenderer.on('workbench:debug', listener);
+    return () => ipcRenderer.removeListener('workbench:debug', listener);
+  },
+  startIsolatedPlugin: (file, source) => ipcRenderer.invoke('isolated-plugin:start', file, source),
+  runIsolatedPlugin: (file, input) => ipcRenderer.invoke('isolated-plugin:run', file, input),
+  stopIsolatedPlugin: (file) => ipcRenderer.invoke('isolated-plugin:stop', file),
   abortRequest: () => ipcRenderer.invoke('abort-request'),
   onStreamUpdate: (callback) => ipcRenderer.on('stream-update', callback),
   saveFile: (content) => ipcRenderer.invoke('save-file', content),
