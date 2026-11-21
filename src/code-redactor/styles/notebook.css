@@ -139,7 +139,20 @@
 .nb-html th { background: var(--active-bg); font-weight: 600; }
 .nb-html tbody tr:hover { background: var(--hover-color); }
 .nb-img { display: block; max-width: 100%; height: auto; padding: 6px 14px; background: transparent; }
-body:not(.light-theme) .nb-img { filter: none; }
+/* Light notebook turned dark: black text and paper flip, hues stay put. */
+body.light-theme .notebook-host.nb-invert .nb-cells {
+  filter: invert(1) hue-rotate(180deg);
+  background: #fff;
+}
+/* Already dark: only leftover black ink (plots, HTML, explicit black) becomes white. */
+body:not(.light-theme) .notebook-host.nb-invert .nb-html,
+body:not(.light-theme) .notebook-host.nb-invert .nb-img {
+  filter: invert(1) hue-rotate(180deg);
+}
+body:not(.light-theme) .notebook-host.nb-invert .nb-md-preview :is(
+  [style*="color:black"], [style*="color: black"], [style*="color:#000"], [style*="color: #000"],
+  [style*="rgb(0,0,0)"], [style*="rgb(0, 0, 0)"]
+) { color: #f5f6f8 !important; }
 
 /* floating menu */
 .nb-menu { position: fixed; z-index: 10000; min-width: 230px; padding: 4px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--card-bg); box-shadow: 0 8px 24px var(--shadow-color); }

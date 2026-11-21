@@ -61,6 +61,9 @@ export const state = {
   splitView: false,
   focusedPane: 'left',
   rightTabIndex: -1,
+  // Side Markdown preview. Stays open across tab and window switches; the source
+  // changes only when another .md file becomes the active editor tab.
+  mdPreview: { open: false, sourceId: null },
   glassRim: 10,
   glassShadow: 12,
   editorDim: 0.88,

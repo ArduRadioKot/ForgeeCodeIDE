@@ -10,7 +10,30 @@
 // или щёлкните по рисунку в предпросмотре. Работает без интернета и без сторонних библиотек.
 
 const MARK = 'exildraw';
+const INVERT_KEY = 'frogee.exildraw.invert';
 const COLORS = ['#1e1e1e', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#9c36b5'];
+const themeIsDark = () => document.documentElement.dataset.theme !== 'light';
+function readInvert() {
+    try {
+        const saved = localStorage.getItem(INVERT_KEY);
+        if (saved === '1' || saved === '0') return saved === '1';
+    } catch { /* private mode */ }
+    return themeIsDark();
+}
+function luminance(hex) {
+    const n = String(hex || '').replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(n)) return 0.5;
+    const r = parseInt(n.slice(0, 2), 16), g = parseInt(n.slice(2, 4), 16), b = parseInt(n.slice(4, 6), 16);
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+// Dark paper keeps coloured ink. Only near-black notes flip to white, and near-white ink flips back so it stays visible.
+function displayColor(hex, invert) {
+    if (!invert) return hex;
+    const light = luminance(hex);
+    if (light < 0.28) return '#f5f6f8';
+    if (light > 0.82) return '#1e1e1e';
+    return hex;
+}
 const WIDTHS = [2, 4, 7];
 const TOOLS = [
     ['pen', 'Перо'], ['line', 'Линия'], ['arrow', 'Стрелка'], ['rect', 'Прямоугольник'],
@@ -20,8 +43,8 @@ const W = 1000, H = 640;
 const FONT = '"Segoe Print", "Bradley Hand", "Comic Sans MS", cursive';
 
 fgs.addStyle(`
-.exd-back { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .55); }
-.exd-box { display: flex; flex-direction: column; gap: 10px; width: min(1040px, 100%); max-height: 100%; padding: 12px; border-radius: 14px; background: var(--card-bg, #27282c); color: var(--text-color, #eee); }
+.exd-back { position: relative; flex: 1; min-height: 0; height: 100%; display: flex; padding: 0; background: transparent; }
+.exd-box { display: flex; flex-direction: column; gap: 10px; width: 100%; height: 100%; max-height: none; padding: 12px; border-radius: 0; background: var(--editor-bg, var(--card-bg, #27282c)); color: var(--text-color, #eee); }
 .exd-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .exd-bar .exd-sep { width: 1px; height: 22px; margin: 0 4px; background: var(--border-color, #444); }
 .exd-bar button { height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
@@ -32,8 +55,9 @@ fgs.addStyle(`
 .exd-bar .exd-wd { width: 32px; padding: 0; display: grid; place-items: center; }
 .exd-bar .exd-wd i { display: block; width: 18px; background: currentColor; border-radius: 4px; }
 .exd-bar .exd-grow { flex: 1; }
-.exd-stage { position: relative; overflow: hidden; border-radius: 10px; background: #fff; touch-action: none; min-height: 0; }
-.exd-stage canvas { display: block; width: 100%; height: auto; aspect-ratio: ${W} / ${H}; cursor: crosshair; touch-action: none; }
+.exd-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; border-radius: 10px; background: #fff; touch-action: none; }
+.exd-stage.exd-invert { background: #16171a; }
+.exd-stage canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
 .exd-text { position: absolute; min-width: 60px; padding: 0; border: 0; outline: 1px dashed #888; background: transparent; font: 24px ${FONT}; }
 @media (max-width: 720px) { .exd-bar button { height: 36px; } }
 `);
@@ -67,8 +91,8 @@ function penPath(points) {
 }
 
 // Draws one element on a canvas context.
-function paint(ctx, element) {
-    ctx.strokeStyle = ctx.fillStyle = element.color;
+function paint(ctx, element, invert) {
+    ctx.strokeStyle = ctx.fillStyle = displayColor(element.color, invert);
     ctx.lineWidth = element.width;
     ctx.lineCap = ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -88,12 +112,13 @@ function paint(ctx, element) {
     }
 }
 
-function toSvg(scene) {
+function toSvg(scene, invert) {
     const live = scene.filter(Boolean);
     const box = live.map(bounds).reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])], [Infinity, Infinity, -Infinity, -Infinity]);
     const pad = 24;
     const x = Math.floor(box[0] - pad), y = Math.floor(box[1] - pad), w = Math.ceil(box[2] - box[0] + pad * 2), h = Math.ceil(box[3] - box[1] + pad * 2);
-    const common = el => `stroke="${el.color}" stroke-width="${el.width}" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
+    const ink = el => displayColor(el.color, invert);
+    const common = el => `stroke="${ink(el)}" stroke-width="${el.width}" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
     const body = live.map(el => {
         if (el.type === 'pen') return `<path d="${penPath(el.points)}" ${common(el)}/>`;
         if (el.type === 'line') return `<line x1="${el.x1}" y1="${el.y1}" x2="${el.x2}" y2="${el.y2}" ${common(el)}/>`;
@@ -101,10 +126,11 @@ function toSvg(scene) {
         if (el.type === 'rect') return `<rect x="${Math.min(el.x1, el.x2)}" y="${Math.min(el.y1, el.y2)}" width="${Math.abs(el.x2 - el.x1)}" height="${Math.abs(el.y2 - el.y1)}" ${common(el)}/>`;
         if (el.type === 'ellipse') return `<ellipse cx="${(el.x1 + el.x2) / 2}" cy="${(el.y1 + el.y2) / 2}" rx="${Math.abs(el.x2 - el.x1) / 2}" ry="${Math.abs(el.y2 - el.y1) / 2}" ${common(el)}/>`;
         const lines = el.text.split('\n').map((line, i) => `<tspan x="${el.x1}" dy="${i ? el.size * 1.2 : 0}">${escapeXml(line)}</tspan>`).join('');
-        return `<text x="${el.x1}" y="${el.y1}" dominant-baseline="hanging" font-family='${FONT.replace(/"/g, '&quot;')}' font-size="${el.size}" fill="${el.color}">${lines}</text>`;
+        return `<text x="${el.x1}" y="${el.y1}" dominant-baseline="hanging" font-family='${FONT.replace(/"/g, '&quot;')}' font-size="${el.size}" fill="${ink(el)}">${lines}</text>`;
     }).join('');
+    const paper = invert ? '#16171a' : '#ffffff';
     // The scene itself rides along in <metadata>, which is what makes the picture editable again.
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}"><metadata id="${MARK}">${escapeXml(JSON.stringify(live))}</metadata><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffffff"/>${body}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}"><metadata id="${MARK}">${escapeXml(JSON.stringify(live))}</metadata><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${paper}"/>${body}</svg>`;
 }
 function fromSvg(svg) {
     const match = /<metadata id="exildraw">([\s\S]*?)<\/metadata>/.exec(svg);
@@ -122,9 +148,24 @@ function drawings(text) {
 
 // --- the board -----------------------------------------------------------------------------------------------------------------
 function openBoard(existing) {
+    const key = existing ? `img:${existing.from}:${existing.data.length}` : 'draft';
+    if (fgs.openTab) {
+        let detach = () => {};
+        const tab = fgs.openTab({
+            key,
+            title: existing ? 'Рисунок' : 'Новый рисунок',
+            onClose() { detach(); },
+            render(el, handle) { detach = mountBoard(el, handle, existing) || detach; },
+        });
+        if (tab) return;
+    }
+    mountBoard(document.body, null, existing);
+}
+function mountBoard(parent, handle, existing) {
     let scene = existing ? fromSvg(fromBase64(existing.data)) : [];
     let redo = [];
     let tool = 'pen', color = COLORS[0], width = WIDTHS[1];
+    let inverted = readInvert();
     let draft = null, typing = null;
 
     const back = document.createElement('div');
@@ -143,20 +184,33 @@ function openBoard(existing) {
     const undoButton = button('Отменить', () => { commitText(); const el = scene.pop(); if (el) redo.push(el); draw(); });
     const redoButton = button('Вернуть', () => { const el = redo.pop(); if (el) scene.push(el); draw(); });
     const clearButton = button('Очистить', () => { commitText(); scene = []; redo = []; draw(); });
+    const invertButton = button('Инверсия', () => {
+        inverted = !inverted;
+        try { localStorage.setItem(INVERT_KEY, inverted ? '1' : '0'); } catch { /* private mode */ }
+        if (typing) typing.field.style.color = displayColor(color, inverted);
+        sync();
+        draw();
+    });
+    invertButton.title = 'Тёмная бумага: чёрные записи становятся белыми';
     const cancelButton = button('Закрыть', () => close());
     const insertButton = button(existing ? 'Сохранить' : 'Вставить', () => insert(), 'on');
-    bar.append(...toolButtons, sep(), ...swatches, sep(), ...widths, sep(), undoButton, redoButton, clearButton, grow, cancelButton, insertButton);
+    bar.append(...toolButtons, sep(), ...swatches, sep(), ...widths, sep(), invertButton, undoButton, redoButton, clearButton, grow, cancelButton, insertButton);
 
     function sync() {
         for (const b of toolButtons) b.classList.toggle('on', b.dataset.tool === tool);
-        for (const b of swatches) b.classList.toggle('on', b.dataset.color === color);
+        stage.classList.toggle('exd-invert', inverted);
+        invertButton.classList.toggle('on', inverted);
+        for (const b of swatches) {
+            b.style.setProperty('--c', displayColor(b.dataset.color, inverted));
+            b.classList.toggle('on', b.dataset.color === color);
+        }
         for (const b of widths) b.classList.toggle('on', Number(b.dataset.width) === width);
         canvas.style.cursor = tool === 'erase' ? 'cell' : tool === 'text' ? 'text' : 'crosshair';
     }
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        for (const el of scene) paint(ctx, el);
-        if (draft) paint(ctx, draft);
+        for (const el of scene) paint(ctx, el, inverted);
+        if (draft) paint(ctx, draft, inverted);
     }
     const point = event => {
         const rect = canvas.getBoundingClientRect();
@@ -184,7 +238,7 @@ function openBoard(existing) {
         const field = document.createElement('textarea');
         field.className = 'exd-text';
         field.rows = 1; field.cols = 14;
-        field.style.color = color;
+        field.style.color = displayColor(color, inverted);
         field.style.fontSize = (12 + width * 3) + 'px';
         const rect = canvas.getBoundingClientRect(), box = stage.getBoundingClientRect();
         field.style.left = (event.clientX - box.left) + 'px';
@@ -230,7 +284,7 @@ function openBoard(existing) {
     function insert() {
         commitText();
         if (!scene.length) { close(); return; }
-        const markdown = `![${MARK}](data:image/svg+xml;base64,${toBase64(toSvg(scene))})`;
+        const markdown = `![${MARK}](data:image/svg+xml;base64,${toBase64(toSvg(scene, inverted))})`;
         if (existing) {
             // the file may have changed while the board was open: look the picture up again
             const now = drawings(fgs.editor.get()).find(item => item.data === existing.data);
@@ -239,7 +293,21 @@ function openBoard(existing) {
         fgs.notify('Рисунок вставлен в файл');
         close();
     }
-    function close() { document.removeEventListener('keydown', onKey, true); back.remove(); }
+    const themeObserver = new MutationObserver(() => {
+        try { if (localStorage.getItem(INVERT_KEY) != null) return; } catch { return; }
+        const next = themeIsDark();
+        if (next === inverted) return;
+        inverted = next;
+        sync();
+        draw();
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    function detach() { themeObserver.disconnect(); document.removeEventListener('keydown', onKey, true); }
+    function close() {
+        detach();
+        if (handle) { const h = handle; handle = null; h.close(); }
+        else back.remove();
+    }
     function onKey(event) {
         if (!back.isConnected) return;
         if (event.key === 'Escape' && !typing) { event.stopPropagation(); close(); }
@@ -247,11 +315,11 @@ function openBoard(existing) {
         else if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z')) && !typing) { event.preventDefault(); event.stopPropagation(); redoButton.click(); }
     }
     document.addEventListener('keydown', onKey, true);
-    back.addEventListener('mousedown', event => { if (event.target === back) close(); });
-    document.body.append(back);
-    fgs.onUnload(close);
+    parent.append(back);
+    if (!handle) fgs.onUnload(close);
     sync();
     draw();
+    return detach;
 }
 
 // The button edits the picture under the cursor, or starts a new one.

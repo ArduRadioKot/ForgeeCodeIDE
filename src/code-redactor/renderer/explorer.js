@@ -28,8 +28,15 @@ const ACTIVITIES = {
 
 function paintActivityButtons() {
   for (const [name, def] of Object.entries(ACTIVITIES)) {
-    dom[def.btn]?.classList.toggle('active', state.activityVisible !== false && state.currentActivity === name);
+    (def.el || dom[def.btn])?.classList.toggle('active', state.activityVisible !== false && state.currentActivity === name);
   }
+  window.dispatchEvent(new Event('frogee:activity'));
+}
+
+/** A side view added by another module (Structure…): its stripe button and how it draws itself. */
+export function registerActivity(name, el, show) {
+  ACTIVITIES[name] = { el, show };
+  el.addEventListener('click', () => switchActivity(name, { toggle: true }));
 }
 
 export function setActivityVisible(visible) {

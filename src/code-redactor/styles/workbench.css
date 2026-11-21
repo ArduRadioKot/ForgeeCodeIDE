@@ -1,18 +1,5 @@
-.workbench {
-  position: relative;
-  flex: 0 0 var(--wb-size, 380px);
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.workbench[hidden], .wb-section[hidden], .wb-output[hidden] { display: none; }
-.wb-header, .wb-tabs, .wb-section { padding: 10px 12px; }
-.wb-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.wb-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border-color); }
-.wb-tabs .settings-nav-btn { width: auto; padding: 0 7px; }
-.wb-section { display: flex; flex-direction: column; gap: 11px; overflow: auto; }
+.wb-section[hidden], .wb-output[hidden] { display: none; }
+.wb-section { padding: 10px 12px; display: flex; flex-direction: column; gap: 11px; overflow: auto; }
 .wb-field { display: grid; min-width: 0; gap: 5px; align-content: start; color: var(--text-muted); font-size: 12px; }
 .wb-field :is(input, select, textarea) { width: 100%; min-width: 0; }
 .wb-field textarea { min-height: 48px; height: auto; resize: vertical; padding: 7px 9px; font-family: var(--mono-font); }
@@ -26,19 +13,7 @@
 .wb-error { color: var(--danger-color); }
 .wb-table { width: 100%; font: 12px var(--mono-font); border-collapse: collapse; }
 .wb-table :is(th, td) { padding: 4px 7px; border: 1px solid var(--border-color); text-align: left; }
-.wb-mcp { font: 10px var(--mono-font); }
 .line-number.wb-breakpoint { box-shadow: inset 3px 0 var(--danger-color); }
-/* The handle sits on the inner edge of the dock. */
-.wb-grip { position: absolute; z-index: 1; touch-action: none; }
-.workbench[data-placement="right"] .wb-grip { inset: 0 auto 0 0; width: 6px; cursor: ew-resize; }
-.workbench[data-placement="bottom"] .wb-grip { inset: 0 0 auto; height: 6px; cursor: ns-resize; }
-.wb-grip:is(:hover, :focus-visible) { background: var(--accent-color); }
-.wb-placement { min-width: 56px; }
-.wb-header, .wb-tabs { flex: 0 0 auto; }
 .wb-section { flex: 1; }
-.workbench[data-placement="bottom"] .wb-section { flex-direction: row; flex-wrap: wrap; align-content: start; }
-.workbench[data-placement="bottom"] .wb-section > * { flex: 1 1 220px; }
-.workbench[data-placement="bottom"] .wb-section > :is(.wb-status, .wb-results, .wb-output) { flex-basis: 100%; }
 .wb-db-connection { display: grid; gap: 7px; }
 .wb-db-connection[hidden] { display: none; }
-.wb-welcome-action { width: 100%; text-align: left; }

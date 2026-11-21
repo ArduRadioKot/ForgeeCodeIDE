@@ -10,11 +10,13 @@
  *   // @description Кнопка слева вставляет сегодняшнюю дату
  *   // ==/FrogeePlugin==
  *   frogee.addButton({ title: 'Вставить дату', icon: 'calendar', run: (editor) => editor.insert(new Date().toLocaleDateString()) });
+ *   frogee.openTab({ title: 'Доска', render: (el, tab) => { el.textContent = '…'; } });
  */
 import { state } from './state.js';
 import { escapeHtml } from './utils.js';
 import { toast } from './image-view.js';
 import { isEditorTab } from './tab-model.js';
+import { openPluginTab } from './tabs-api.js';
 import { getLang, onLangChange } from './i18n.js';
 
 const ENABLED = 'frogee.plugins.enabled';
@@ -216,6 +218,16 @@ function makeApi(file, run) {
       buttons.push(entry);
       layout();
       track(() => { buttons.splice(buttons.indexOf(entry), 1); layout(); });
+    },
+    // A tab in the editor. render(element, tab) runs once; the same key brings that tab forward.
+    // tab: { close(), focus(), setTitle(text), element, created }.
+    openTab({ key = file, title, render, onClose } = {}) {
+      const tab = openPluginTab({ key: `${file}:${key}`, title: title || file, onClose });
+      if (tab?.created && render) {
+        try { render(tab.element, tab); } catch (err) { console.error(`[plugin ${file}]`, err); toast(err.message || String(err)); }
+      }
+      if (tab) track(() => tab.close());
+      return tab;
     },
     editor,
     // Small private storage for the plugin.

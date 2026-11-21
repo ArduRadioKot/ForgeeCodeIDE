@@ -11,6 +11,7 @@ const api = {
   setSplitView() {},
   setFocusedPane() {},
   isBrowserSplit() { return false; },
+  openPluginTab() { return null; },
 };
 
 export function registerTabsApi( partial ) {
@@ -28,3 +29,4 @@ export function openTabInSplit(...a) { return api.openTabInSplit(...a); }
 export function setSplitView(...a) { return api.setSplitView(...a); }
 export function setFocusedPane(...a) { return api.setFocusedPane(...a); }
 export function isBrowserSplit(...a) { return api.isBrowserSplit(...a); }
+export function openPluginTab(...a) { return api.openPluginTab(...a); }

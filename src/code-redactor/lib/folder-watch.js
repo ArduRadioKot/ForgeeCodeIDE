@@ -44,7 +44,7 @@ function registerFolderWatchIpc() {
   ipcMain.handle('file-stat', async (e, filePath) => {
     try {
       const st = await fsp.stat(filePath);
-      return { exists: true, mtimeMs: st.mtimeMs, size: st.size };
+      return { exists: true, isDirectory: st.isDirectory(), mtimeMs: st.mtimeMs, size: st.size };
     } catch {
       return { exists: false };
     }

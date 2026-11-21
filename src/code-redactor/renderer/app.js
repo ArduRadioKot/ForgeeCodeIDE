@@ -84,6 +84,8 @@ import { setupMenuBridge } from './menu-bridge.js';
 import { setupAiSettings } from './ai-settings.js';
 import { setupDiagnostics, goToProblem } from './diagnostics.js';
 import { setupMarkdown } from './markdown.js';
+import { setupNavExtras } from './nav-extras.js';
+import { setupIdeShell } from './ide-shell.js';
 import { setupAiReview } from './ai-review.js';
 import { setupAutocomplete } from './autocomplete.js';
 import { setupCompletion } from './completion.js';
@@ -371,6 +373,7 @@ export function setupEventListeners() {
   setupDiagnostics();
   hydrateIcons();
   setupMarkdown();
+  setupNavExtras();
   setupAiReview();
   import('./run-configs.js').then((m) => m.refreshRunButton());
   setupAutocomplete();
@@ -381,6 +384,9 @@ export function setupEventListeners() {
   setupActivityResizer();
   document.getElementById('browser-btn')?.addEventListener('click', () => openBrowserTab('about:blank'));
   
+  // Окно в раскладке IntelliJ: верхняя панель, полосы окон слева и справа, нижние окна
+  setupIdeShell();
+
   // Горячие клавиши
   document.addEventListener('keydown', handleGlobalKeydown);
 }
@@ -536,8 +542,12 @@ export function handleGlobalKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
     e.preventDefault();
     if (state.currentTabs.length > 1) {
-      const nextIndex = (state.activeTabIndex + 1) % state.currentTabs.length;
-      switchToTab(nextIndex);
+      let next = state.activeTabIndex;
+      for (let n = 0; n < state.currentTabs.length; n++) {
+        next = (next + 1) % state.currentTabs.length;
+        if (state.currentTabs[next]?.kind !== 'preview') break;
+      }
+      switchToTab(next);
     }
   }
   
@@ -563,7 +573,7 @@ export function handleGlobalKeydown(e) {
   }
 
   // Ctrl+\ / Cmd+\ - split
-  if ((e.ctrlKey || e.metaKey) && (e.key === '\\' || e.code === 'Backslash')) {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === '\\' || e.code === 'Backslash')) {
     e.preventDefault();
     if (state.splitView) {
       setSplitView(false);

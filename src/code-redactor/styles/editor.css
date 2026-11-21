@@ -20,6 +20,10 @@
 
 .welcome-content { width: 100%; max-width: 480px; flex: 0 0 auto; }
 .welcome-section { width: 100%; }
+.welcome-section + .welcome-section { margin-top: 22px; }
+.welcome-section[hidden] { display: none !important; }
+button.action-item { width: 100%; text-align: left; }
+.recent-item .action-description { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .section-title { margin: 0 0 8px; padding: 0 12px; font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: none; letter-spacing: 0; border: 0; }
 .action-list { display: flex; flex-direction: column; gap: 2px; }
 .action-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: var(--radius-md); color: inherit; text-decoration: none; }
@@ -80,23 +84,47 @@ input:checked + .checkmark::after, input:checked + .settings-checkmark::after {
 .file-tabs.tabs-drop-target { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 50%, transparent); }
 .file-tabs.tabs-drop-hover { background: color-mix(in srgb, var(--accent-color) 14%, var(--header-bg)); box-shadow: inset 0 0 0 1px var(--accent-color); }
 
+.breadcrumbs {
+  flex-shrink: 0; display: flex; align-items: center; gap: 1px; min-width: 0; height: 28px; padding: 0 8px;
+  overflow: hidden; color: var(--text-muted); font-size: 12px;
+  background: var(--editor-bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  margin-bottom: calc(var(--gap) * -1);
+}
+.breadcrumbs[hidden] { display: none !important; }
+body.zen .breadcrumbs { display: none !important; }
+#editor-main:has(.editors-row.is-split) > .breadcrumbs { margin-bottom: 0; border-radius: var(--radius-lg); }
+#editor-main:has(.breadcrumbs:not([hidden])) > .editors-row:not(.is-split) { border-top-left-radius: 0; border-top-right-radius: 0; }
+.breadcrumbs button { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 22px; padding: 0 5px; border-radius: var(--radius-sm); color: inherit; font-size: 12px; }
+.breadcrumbs button:hover { background: var(--hover-color); color: var(--text-color); }
+.breadcrumbs button.bc-current { color: var(--text-color); cursor: default; }
+.breadcrumbs button.bc-current:hover { background: transparent; }
+.breadcrumbs .bc-sym { color: var(--text-color); }
+.breadcrumbs .bc-sep { opacity: .45; padding: 0 1px; user-select: none; }
+.bracket-mark { position: absolute; z-index: 3; pointer-events: none; border-radius: 2px; background: color-mix(in srgb, var(--accent-color) 35%, transparent); }
+.bracket-mark.unmatched { background: color-mix(in srgb, var(--danger-color) 40%, transparent); }
+#editor.link-cursor, #editor-right.link-cursor { cursor: pointer; }
+
 /* ───────── Editor island ───────── */
 .editors-row {
   flex: 1; min-height: 0; width: 100%; position: relative;
   display: flex; overflow: hidden;
   background: var(--editor-bg); border-radius: var(--radius-lg);
 }
-.editors-row.is-split > .editor-pane, .editors-row.is-split > #editor-container, .editors-row.is-split > #editor-container-right { flex: 1 1 0; width: auto; min-width: 120px; }
+.editors-row.is-split { background: transparent; box-shadow: none; }
+.editors-row.is-split > .editor-pane, .editors-row.is-split > #editor-container, .editors-row.is-split > #editor-container-right,
+.editors-row.is-split > #notebook-host, .editors-row.is-split > #browser-host { flex: 1 1 0; width: auto; min-width: 160px; border-radius: var(--radius-lg); background: var(--editor-bg); overflow: hidden; }
 .editor-pane { min-width: 0; }
 
 #editor-container, .editor-container {
   flex: 1 1 auto; position: relative; width: 100%; min-height: 0;
   display: flex; flex-direction: column; overflow: hidden; background: transparent;
 }
-#editor-container-right { flex: 1 1 0; min-width: 120px; border-left: 1px solid var(--border-color); }
+#editor-container-right { flex: 1 1 0; min-width: 160px; border-left: 0; }
 
-.split-resizer { width: var(--gap); flex-shrink: 0; cursor: col-resize; background: var(--window-bg); }
-.split-resizer:hover { background: var(--accent-color); }
+.split-resizer { position: relative; width: var(--gap); flex-shrink: 0; cursor: col-resize; touch-action: none; background: transparent; }
+.split-resizer::before { content: ''; position: absolute; top: 12px; bottom: 12px; left: 50%; width: 2px; margin-left: -1px; border-radius: 2px; background: transparent; transition: background-color .15s; }
+.split-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: -4px; right: -4px; }
+.split-resizer:hover::before, .split-resizer.dragging::before { background: var(--accent-color); }
 .editors-row:not(.is-split) #left-pane-header { display: none; }
 .pane-header { position: relative; height: var(--ctl-h-sm); padding: 0 8px 0 12px; display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: 12px; }
 .pane-close-btn { width: 20px; height: 20px; border-radius: var(--radius-sm); color: var(--text-muted); font-size: 14px; }
@@ -186,8 +214,13 @@ body.is-dragging-tab .split-drop-zone, .split-drop-zone.active { display: flex; 
 .editors-row.is-split .pane-focused > .pane-header::after { background: var(--accent-color); }
 .pane-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Markdown preview lives in the right pane as its own tab */
-.md-preview-body { flex: 1; min-height: 0; overflow: auto; padding: 18px 26px 40px; font-size: 14.5px; line-height: 1.7; user-select: text; }
+/* Markdown preview: the right island, same split as FgSNotes (editor | gap | preview) */
+.editors-row.md-split > #editor-container-right { background: var(--card-bg); }
+.md-preview-body { flex: 1; min-height: 0; overflow: auto; padding: 8px clamp(20px, 3vw, 48px) 96px; font-size: 14.5px; line-height: 1.7; user-select: text; color: var(--text-color); }
+.plugin-host { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radius-lg); background: var(--editor-bg); }
+.plugin-host[hidden] { display: none !important; }
+.plugin-view-body { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.plugin-view-body[hidden] { display: none !important; }
 .md-preview-body[hidden] { display: none; }
 .markdown-body h1, .markdown-body h2 { padding-bottom: 0.3em; border-bottom: 1px solid var(--border-color); }
 .markdown-body h1 { font-size: 1.8em; } .markdown-body h2 { font-size: 1.45em; } .markdown-body h3 { font-size: 1.2em; }

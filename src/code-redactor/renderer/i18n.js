@@ -31,6 +31,7 @@ const dict = {
     'welcome.newFileDesc': 'Создать пустой файл',
     'welcome.open': 'Открыть…',
     'welcome.openDesc': 'Открыть файл или папку',
+    'welcome.recent': 'Недавние',
     'welcome.clone': 'Клонировать репозиторий…',
     'welcome.cloneDesc': 'Скоро',
     'status.terminal': 'Терминал',
@@ -164,6 +165,7 @@ const dict = {
     'welcome.newFileDesc': 'Create an empty file',
     'welcome.open': 'Open…',
     'welcome.openDesc': 'Open a file or folder',
+    'welcome.recent': 'Recent',
     'welcome.clone': 'Clone repository…',
     'welcome.cloneDesc': 'Coming soon',
     'status.terminal': 'Terminal',
@@ -285,7 +287,7 @@ const knownEn = Object.fromEntries(Object.keys(dict.ru).map((key) => [dict.ru[ke
 Object.assign(knownEn, looseEn);
 const originalText = new WeakMap();
 const originalAttrs = new WeakMap();
-const skipLoose = 'script, style, pre, code, [contenteditable], #tabs-list, .file-name, .search-line-text, .search-file-name, .search-file-dir, .git-log, .git-output, .run-name, .run-cmd, .ext-name, .ext-desc, .nb-md-preview, .nb-output, .nb-toc-item, .nb-var-val, .msg-text, .msg-body, .think-body, .msg-files, .msg-who, .msg-foot, .history-open strong, .terminal-output';
+const skipLoose = 'script, style, pre, code, [contenteditable], #tabs-list, .file-name, .search-line-text, .search-file-name, .search-file-dir, .git-log, .git-output, .run-name, .run-cmd, .ext-name, .ext-desc, .nb-md-preview, .nb-output, .nb-toc-item, .nb-var-val, .msg-text, .msg-body, .think-body, .msg-files, .msg-who, .msg-foot, .history-open strong, .terminal-output, .md-preview-body, .plugin-view-body, .breadcrumbs, .recent-item';
 
 function eligible(el) {
   return el && !el.closest(skipLoose);

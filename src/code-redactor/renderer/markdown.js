@@ -2,15 +2,18 @@
  * Markdown: live preview next to the editor, formatting shortcuts, list continuation, tables, outline and HTML export.
  */
 import { state } from './state.js';
-import { isEditorTab, isPreviewTab } from './tab-model.js';
+import { isEditorTab } from './tab-model.js';
 import { escapeHtml, sanitizeHtml } from './utils.js';
-import { openTabInSplit, closeTab, updateTabsList } from './tabs-api.js';
+import { updateTabsList } from './tabs-api.js';
 import { autoIndentEnabled } from './smart-edit.js';
 import { getLang, onLangChange } from './i18n.js';
 
 const DELAY = 120;
+const RATIO_KEY = 'frogee.splitRatio';
 let timer = 0;
 let syncing = false;
+let seenTabId = null; // last editor tab we reacted to; a window focus must not look like a file switch
+let lastText = null;
 
 const ed = () => document.getElementById('editor');
 const body = () => document.getElementById('md-preview-body');
@@ -53,8 +56,8 @@ function stats(text) {
 function updateStats() {
   const el = document.getElementById('status-words');
   const btn = document.getElementById('md-preview-btn');
-  const on = isMarkdownTab();
-  if (btn) { btn.hidden = !on; btn.classList.toggle('active', !!rightPreview()); }
+  const on = isMarkdownTab() || !!state.mdPreview?.open;
+  if (btn) { btn.hidden = !on; btn.classList.toggle('active', !!state.mdPreview?.open); }
   if (!el) return;
   el.hidden = !on;
   if (!on) return;
@@ -65,54 +68,140 @@ function updateStats() {
 }
 onLangChange(updateStats);
 
-function rightPreview() {
-  const tab = state.splitView ? state.currentTabs[state.rightTabIndex] : null;
-  return isPreviewTab(tab) ? tab : null;
+function sourceTab() {
+  return state.currentTabs.find((t) => t.id === state.mdPreview?.sourceId) || null;
 }
 
-/** Called by the right pane when it shows a preview tab. */
-export function renderPreview() {
-  const preview = rightPreview();
-  const el = body();
-  if (!preview || !el) return;
-  const source = state.currentTabs.find((t) => t.id === preview.sourceId);
+/** The preview column is on screen: an editor tab is in front and the user left the preview open. */
+export function previewOwnsPane() {
   const active = state.currentTabs[state.activeTabIndex];
-  const text = source && source === active ? ed().value : (source?.content || '');
-  const top = el.scrollTop;
-  el.innerHTML = renderMarkdownHtml(text, source?.filePath);
+  return !!(state.mdPreview?.open && sourceTab() && isEditorTab(active) && !state.terminalInEditor);
+}
+
+/** Scroll stays linked only while the preview shows the file that is actually being edited. */
+function previewFollowsActive() {
+  const active = state.currentTabs[state.activeTabIndex];
+  return !!(previewOwnsPane() && active && active.id === state.mdPreview.sourceId);
+}
+
+function ensureSplitRatio() {
+  const right = document.getElementById('editor-container-right');
+  const left = document.getElementById('editor-container');
+  if (!right || right.style.flex) return;
+  let ratio = 0.5;
+  try {
+    const n = Number(localStorage.getItem(RATIO_KEY));
+    if (n >= 0.25 && n <= 0.75) ratio = n;
+  } catch { /* keep the half split */ }
+  if (left) left.style.flex = `${ratio} 1 0px`;
+  right.style.flex = `${1 - ratio} 1 0px`;
+}
+
+/** Show or hide the side preview without touching a code split that is underneath it. */
+export function syncMarkdownPane() {
+  const row = document.getElementById('editors-row');
+  const right = document.getElementById('editor-container-right');
+  const resizer = document.getElementById('split-resizer');
+  const previewBody = body();
+  const rightBody = document.querySelector('#editor-container-right > .editor-body');
+  const closeSplitBtn = document.getElementById('close-split-btn');
+  const owns = previewOwnsPane();
+  row?.classList.toggle('md-split', owns);
+  if (!owns) {
+    if (previewBody) previewBody.hidden = true;
+    if (!state.splitView) {
+      if (right) right.style.display = 'none';
+      if (resizer) resizer.style.display = 'none';
+      if (closeSplitBtn) closeSplitBtn.style.display = 'none';
+      row?.classList.remove('is-split');
+    } else if (rightBody) rightBody.style.display = '';
+    updateStats();
+    return;
+  }
+  if (rightBody) rightBody.style.display = 'none';
+  if (previewBody) previewBody.hidden = false;
+  if (right) right.style.display = 'flex';
+  if (resizer) resizer.style.display = 'block';
+  if (closeSplitBtn) closeSplitBtn.style.display = 'inline-flex';
+  const browserHost = document.getElementById('browser-host');
+  if (browserHost && !isEditorTab(state.currentTabs[state.activeTabIndex])) browserHost.style.display = 'none';
+  else if (browserHost && previewOwnsPane()) browserHost.style.display = 'none';
+  row?.classList.add('is-split');
+  const left = document.getElementById('editor-container');
+  if (left && left.style.display === 'none') { left.style.display = 'flex'; left.style.minHeight = '0'; }
+  const title = document.getElementById('right-pane-title');
+  const source = sourceTab();
+  if (title) title.textContent = source ? `${getLang() === 'en' ? 'Preview' : 'Просмотр'} · ${source.name}` : (getLang() === 'en' ? 'Preview' : 'Просмотр');
+  ensureSplitRatio();
+  renderPreview();
+  updateStats();
+}
+
+/** Called by the right pane when it shows the Markdown preview. */
+export function renderPreview() {
+  const el = body();
+  const source = sourceTab();
+  if (!state.mdPreview?.open || !el || !source) return;
+  const active = state.currentTabs[state.activeTabIndex];
+  const text = source === active ? (ed()?.value ?? source.content ?? '') : (source.content || '');
+  const sameSource = el.dataset.source === String(source.id);
+  if (text === lastText && sameSource) return;
+  const top = sameSource ? el.scrollTop : 0;
+  lastText = text;
+  el.dataset.source = String(source.id);
+  el.innerHTML = text.trim() ? renderMarkdownHtml(text, source.filePath) : '';
   el.scrollTop = top;
   window.dispatchEvent(new CustomEvent('frogee:preview', { detail: el })); // plugins decorate the preview here
 }
 
-export function isPreviewOpen() { return !!rightPreview(); }
+export function isPreviewOpen() { return previewFollowsActive(); }
 
-/** Opens the preview of the current Markdown file as its own tab beside the editor; again — closes it. */
+export function closeMarkdownPreview() {
+  state.mdPreview = { open: false, sourceId: null };
+  seenTabId = null;
+  lastText = null;
+  const el = body();
+  if (el) { el.hidden = true; el.innerHTML = ''; delete el.dataset.source; }
+  document.getElementById('editors-row')?.classList.remove('md-split');
+  const rightBody = document.querySelector('#editor-container-right > .editor-body');
+  if (state.splitView && rightBody) rightBody.style.display = '';
+  syncMarkdownPane();
+  updateStats();
+}
+
+/** Opens the preview of the current Markdown file beside the editor; again — closes it. */
 export function toggleMarkdownPreview(force) {
+  if (force === false || (state.mdPreview?.open && force !== true)) {
+    if (state.mdPreview?.open) closeMarkdownPreview();
+    return;
+  }
   const source = state.currentTabs[state.activeTabIndex];
   if (!isMarkdownTab(source)) return;
-  const index = state.currentTabs.findIndex((t) => isPreviewTab(t) && t.sourceId === source.id);
-  const shown = index >= 0 && state.splitView && state.rightTabIndex === index;
-  if (shown && force !== true) { closeTab(index); setTimeout(updateStats, 0); return; }
-  if (force === false) return;
-  if (index >= 0) { openTabInSplit(index); return; }
-  state.currentTabs.push({ id: Date.now() + Math.random(), kind: 'preview', name: `${getLang() === 'en' ? 'Preview' : 'Просмотр'} ${source.name}`, content: '', sourceId: source.id, modified: false });
-  openTabInSplit(state.currentTabs.length - 1);
-  setTimeout(updateStats, 0);
+  state.mdPreview = { open: true, sourceId: source.id };
+  seenTabId = source.id;
+  lastText = null;
+  syncMarkdownPane();
+}
+
+function noteActiveFile() {
+  const active = state.currentTabs[state.activeTabIndex];
+  if (!state.mdPreview?.open || !active || active.id === seenTabId) return;
+  seenTabId = active.id;
+  // Another Markdown file takes the preview over. A code file, a terminal or another window does not.
+  if (isMarkdownTab(active)) {
+    state.mdPreview.sourceId = active.id;
+    lastText = null;
+  } else if (!sourceTab()) {
+    state.mdPreview = { open: false, sourceId: null };
+  }
 }
 
 function schedule() {
   updateStats();
-  const preview = rightPreview();
-  if (!preview) return;
-  const active = state.currentTabs[state.activeTabIndex];
-  // The preview follows whichever Markdown file is in front.
-  if (isMarkdownTab(active) && active.id !== preview.sourceId && !state.currentTabs.some((t) => isPreviewTab(t) && t.sourceId === active.id)) {
-    preview.sourceId = active.id;
-    preview.name = `${getLang() === 'en' ? 'Preview' : 'Просмотр'} ${active.name}`;
-    updateTabsList();
-  }
+  noteActiveFile();
+  if (!state.mdPreview?.open) return;
   clearTimeout(timer);
-  timer = setTimeout(renderPreview, DELAY);
+  timer = setTimeout(syncMarkdownPane, DELAY);
 }
 
 /* ── editing helpers ── */
@@ -299,13 +388,26 @@ export function setupMarkdown() {
   el.addEventListener('change', (e) => {
     const box = e.target.closest('input[type="checkbox"][data-task]');
     if (!box) return;
+    const source = sourceTab();
+    if (!source) return;
+    const active = state.currentTabs[state.activeTabIndex];
+    const area = source === active ? ed() : null;
+    const original = area ? area.value : (source.content || '');
     const idx = Number(box.dataset.task);
     let n = -1;
-    const next = ed().value.replace(/^(\s*(?:[-*+]|\d+\.)\s+)\[([ xX])\]/gm, (m, pre) => (++n === idx ? `${pre}[${box.checked ? 'x' : ' '}]` : m));
-    const top = ed().scrollTop;
-    ed().value = next;
-    ed().scrollTop = top;
-    ed().dispatchEvent(new Event('input', { bubbles: true }));
+    const next = original.replace(/^(\s*(?:[-*+]|\d+\.)\s+)\[([ xX])\]/gm, (m, pre) => (++n === idx ? `${pre}[${box.checked ? 'x' : ' '}]` : m));
+    if (area) {
+      const top = area.scrollTop;
+      area.value = next;
+      area.scrollTop = top;
+      area.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      source.content = next;
+      source.modified = true;
+      lastText = null;
+      updateTabsList();
+      renderPreview();
+    }
   });
   el.addEventListener('click', (e) => {
     const a = e.target.closest('a[href]');

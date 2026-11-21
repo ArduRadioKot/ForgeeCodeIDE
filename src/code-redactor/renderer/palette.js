@@ -25,8 +25,8 @@ import { configCommands } from './run-configs.js';
 import { toggleMarkdownPreview, formatTable, insertTable } from './markdown.js';
 import { extensionPaletteCommands } from './ext-contrib.js';
 import { runtimePaletteCommands } from './vscode-bridge.js';
-import { workbenchCommands } from './workbench.js';
 import { getLang, t, uiText } from './i18n.js';
+import { recentPaletteItems, jumpToBracket, expandSelection, shrinkSelection } from './nav-extras.js';
 
 const dom = getDom();
 let overlay = null;
@@ -38,7 +38,9 @@ let active = 0;
 let mode = 'commands';
 let returnFocus = null;
 let viewRevision = 0;
-const searchModes = ['files', 'commands', 'symbols'];
+const searchModes = ['all', 'files', 'commands', 'symbols', 'text'];
+let textTimer = null;
+let textQuery = null;
 let fileCache = { root: null, at: 0, files: [] };
 
 const RUNNERS = {
@@ -76,9 +78,11 @@ function ensureOverlay() {
   overlay.hidden = true;
   overlay.innerHTML = `<div class="palette" role="dialog" aria-modal="true">
     <div class="palette-scopes" role="group">
+      <button type="button" data-scope="all"></button>
       <button type="button" data-scope="files"></button>
-      <button type="button" data-scope="commands"></button>
       <button type="button" data-scope="symbols"></button>
+      <button type="button" data-scope="commands"></button>
+      <button type="button" data-scope="text"></button>
     </div>
     <input class="palette-input" type="text" spellcheck="false" autocomplete="off">
     <div class="palette-list" role="listbox"></div>
@@ -106,7 +110,7 @@ function ensureOverlay() {
     if (e.key === 'Tab' && e.ctrlKey && searchModes.includes(mode)) {
       e.preventDefault();
       const i = searchModes.indexOf(mode);
-      changeScope(searchModes[(i + (e.shiftKey ? 2 : 1)) % searchModes.length]);
+      changeScope(searchModes[(i + (e.shiftKey ? searchModes.length - 1 : 1)) % searchModes.length]);
     } else if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
     else if (e.key === 'Enter') { e.preventDefault(); choose(shown[active]); }
@@ -149,6 +153,10 @@ function refresh() {
     paint();
     return;
   }
+  if (mode === 'text') {
+    searchText(raw);
+    return;
+  }
   if (mode === 'files' && raw.startsWith(':')) {
     const n = parseInt(raw.slice(1), 10);
     shown = [{ label: Number.isFinite(n) ? `${uiText('Перейти к строке')} ${n}` : uiText('Введите номер строки'), run: () => Number.isFinite(n) && goToEditorLine(n) }];
@@ -168,7 +176,7 @@ function refresh() {
 function paint() {
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   list.innerHTML = shown.length
-    ? shown.map((it, i) => `<div class="palette-item${i === active ? ' active' : ''}" data-i="${i}" role="option" aria-selected="${i === active}"><span class="palette-label">${esc(it.label)}</span>${it.detail ? `<span class="palette-detail">${esc(it.detail)}</span>` : ''}${it.key ? `<kbd>${esc(it.key)}</kbd>` : ''}</div>`).join('')
+    ? shown.map((it, i) => `<div class="palette-item${i === active ? ' active' : ''}" data-i="${i}" role="option" aria-selected="${i === active}">${it.kind ? `<span class="palette-kind" data-kind="${esc(it.kind)}">${esc(kindLabel(it.kind))}</span>` : ''}<span class="palette-label">${esc(it.label)}</span>${it.detail ? `<span class="palette-detail">${esc(it.detail)}</span>` : ''}${it.key ? `<kbd>${esc(it.key)}</kbd>` : ''}</div>`).join('')
     : `<div class="palette-empty">${getLang() === 'en' ? 'No results' : 'Ничего не найдено'}</div>`;
   list.querySelector('.palette-item.active')?.scrollIntoView({ block: 'nearest' });
 }
@@ -181,7 +189,9 @@ function open(nextMode, placeholder, nextItems, foot, query = '') {
   const scopes = overlay.querySelector('.palette-scopes');
   scopes.hidden = !searchModes.includes(nextMode);
   scopes.setAttribute('aria-label', en ? 'Search categories' : 'Категории поиска');
-  const labels = en ? { files: 'Files', commands: 'Actions', symbols: 'Symbols' } : { files: 'Файлы', commands: 'Действия', symbols: 'Символы' };
+  const labels = en
+    ? { all: 'All', files: 'Files', commands: 'Actions', symbols: 'Symbols', text: 'Text' }
+    : { all: 'Всё', files: 'Файлы', commands: 'Действия', symbols: 'Символы', text: 'Текст' };
   for (const node of scopes.children) {
     node.textContent = labels[node.dataset.scope];
     node.setAttribute('aria-pressed', String(node.dataset.scope === nextMode));
@@ -189,6 +199,7 @@ function open(nextMode, placeholder, nextItems, foot, query = '') {
   overlay.querySelector('.palette').setAttribute('aria-label', en ? 'Quick search' : 'Быстрый поиск');
   mode = nextMode;
   items = nextItems;
+  textQuery = null;
   active = 0;
   input.value = query;
   input.placeholder = placeholder;
@@ -201,6 +212,8 @@ function open(nextMode, placeholder, nextItems, foot, query = '') {
 
 function changeScope(scope) {
   const query = input.value;
+  if (scope === 'all') openSearchEverywhere(query);
+  if (scope === 'text') openTextSearch(query);
   if (scope === 'files') openQuickOpen(query);
   if (scope === 'commands') openCommandPalette(query);
   if (scope === 'symbols') openSymbols(query);
@@ -283,10 +296,10 @@ function buildCommands() {
     ...extra,
     ...fromExt,
     ...fromRuntime,
-    ...workbenchCommands(),
     cmd('Файл: новый файл', createNewFile, 'Ctrl+N'),
     cmd('Файл: новый ноутбук', createNewNotebook),
     cmd('Файл: открыть…', openFileOrFolder, 'Ctrl+O'),
+    ...recentPaletteItems(),
     cmd('Файл: сохранить', saveFile, 'Ctrl+S'),
     cmd('Файл: сохранить как…', saveFileAs, 'Ctrl+Shift+S'),
     cmd('Файл: закрыть вкладку', () => state.activeTabIndex >= 0 && closeTab(state.activeTabIndex), 'Ctrl+W'),
@@ -299,6 +312,9 @@ function buildCommands() {
     cmd('Правка: найти в файле', openFindBar, 'Ctrl+F'),
     cmd('Правка: найти и заменить', openReplaceBar, 'Ctrl+Alt+F'),
     cmd('Правка: перейти к строке…', openGoToLine, 'Ctrl+G'),
+    cmd('Правка: перейти к парной скобке', () => jumpToBracket(), 'Ctrl+Shift+\\'),
+    cmd('Правка: расширить выделение', () => expandSelection(), 'Shift+Alt+→'),
+    cmd('Правка: сузить выделение', () => shrinkSelection(), 'Shift+Alt+←'),
     cmd('Правка: поиск по проекту', () => switchActivity('search'), 'Ctrl+Shift+F'),
     cmd('Вид: терминал', toggleTerminal, 'Ctrl+`'),
     cmd('Вид: AI-чат', toggleChat),
@@ -381,6 +397,9 @@ function buildCommands() {
       cmd('Ноутбук: добавить текстовую ячейку', () => runNotebookCommand(tab, 'add-md')),
     );
   }
+  for (const provider of commandProviders) {
+    try { list.push(...provider().map((c) => cmd(c.label, c.run, c.key))); } catch (err) { console.error('[palette]', err); }
+  }
   return list.map((c, i) => ({ ...c, order: i }));
 }
 
@@ -408,7 +427,7 @@ SYMBOL_RULES.ts = SYMBOL_RULES.jsx = SYMBOL_RULES.tsx = SYMBOL_RULES.mjs = SYMBO
 SYMBOL_RULES.scss = SYMBOL_RULES.css;
 const NOT_METHODS = new Set(['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'else']);
 
-function extractSymbols(text, name) {
+export function extractSymbols(text, name) {
   const ext = (/\.([a-z0-9]+)$/i.exec(name || '') || [])[1]?.toLowerCase() || '';
   const rules = SYMBOL_RULES[ext];
   if (!rules) return [];
@@ -599,3 +618,110 @@ export function setupPaletteButtons() {
 }
 
 export { updateStatusBar };
+
+// ───────── commands from other modules ─────────
+
+const commandProviders = [];
+/** Another module adds its commands to the palette (the window shell, plugins…). */
+export function registerPaletteCommands(provider) { commandProviders.push(provider); }
+
+// ───────── Search Everywhere (double Shift) ─────────
+
+function kindLabel(kind) {
+  const en = getLang() === 'en';
+  return ({ file: en ? 'File' : 'Файл', tab: en ? 'Tab' : 'Вкладка', symbol: en ? 'Symbol' : 'Символ', action: en ? 'Action' : 'Действие',
+    text: en ? 'Text' : 'Текст', window: en ? 'Window' : 'Окно', recent: en ? 'Project' : 'Проект' })[kind] || kind;
+}
+
+function currentSymbols() {
+  const secondary = document.getElementById('editor-right');
+  const right = state.splitView && (state.focusedPane === 'right' || document.activeElement === secondary);
+  const tab = right ? state.currentTabs[state.rightTabIndex] : activeTab();
+  const area = right ? secondary : dom.editor;
+  return isEditorTab(tab) && area ? extractSymbols(area.value, tab.name) : [];
+}
+
+/** One list over files, open tabs, symbols of the active file and actions, like IntelliJ's Search Everywhere. */
+export async function openSearchEverywhere(query = '') {
+  const en = getLang() === 'en';
+  const tabs = state.currentTabs.filter((tab) => tab && tab.kind !== 'terminal').map((tab, i) => ({
+    kind: 'tab', label: tab.name, detail: tab.filePath ? relative(tab.filePath) : '', search: tab.name, order: -200 + i,
+    run: () => switchToTab(state.currentTabs.indexOf(tab)),
+  }));
+  const symbols = currentSymbols().map((it) => ({ ...it, kind: 'symbol', order: -100 + (it.order || 0) / 1e5 }));
+  const actions = buildCommands().map((c) => ({ ...c, kind: 'action', order: 1000 + c.order }));
+  const base = [...tabs, ...symbols, ...actions];
+  const revision = open('all', en ? 'Search everywhere: files, symbols, actions' : 'Искать везде: файлы, символы, действия', base,
+    en ? 'Double Shift. Ctrl+Tab switches the category' : 'Двойной Shift. Ctrl+Tab переключает категорию', typeof query === 'string' ? query : '');
+  if (!state.currentFolder) return;
+  try {
+    const files = await loadFiles();
+    if (viewRevision !== revision) return;
+    const known = new Set(state.currentTabs.map((tab) => tab.filePath).filter(Boolean));
+    items = [...base, ...files.filter((f) => !known.has(f.path)).map((file, index) => ({
+      kind: 'file', label: file.rel.split(/[\\/]/).pop(), detail: file.rel, search: file.rel, order: 100 + index / 1e5,
+      run: () => openSearchFile(file.path),
+    }))];
+    refresh();
+  } catch { /* the list keeps what it has */ }
+}
+
+function relative(file) {
+  const root = state.currentFolder;
+  return root && file.startsWith(root) ? file.slice(root.length).replace(/^[\\/]/, '') : file;
+}
+
+export function openTextSearch(query = '') {
+  const en = getLang() === 'en';
+  open('text', en ? 'Find text in the project' : 'Найти текст в проекте', [],
+    state.currentFolder ? (en ? 'Type at least 2 characters' : 'Введите хотя бы 2 символа') : (en ? 'Open a project folder first' : 'Сначала откройте папку проекта'),
+    typeof query === 'string' ? query : '');
+}
+
+function searchText(raw) {
+  const query = raw.trim();
+  if (query === textQuery) { paint(); return; }
+  textQuery = query;
+  clearTimeout(textTimer);
+  if (query.length < 2 || !state.currentFolder) { shown = []; paint(); return; }
+  const revision = viewRevision;
+  textTimer = setTimeout(async () => {
+    const res = await window.electronAPI.searchInFiles(state.currentFolder, query, { caseSensitive: false }).catch(() => null);
+    if (revision !== viewRevision || textQuery !== query) return;
+    const found = [];
+    for (const file of res?.results || []) {
+      let lastLine = -1;
+      for (const m of file.matches) {
+        if (found.length >= 200) break;
+        if (m.line === lastLine) continue;
+        lastLine = m.line;
+        found.push({ kind: 'text', label: m.text.trim().slice(0, 140), detail: `${file.file}:${m.line}`, run: () => openSearchFileAtLine(file.fullPath, m.line) });
+      }
+    }
+    shown = found;
+    active = 0;
+    overlay.querySelector('.palette-foot').textContent = getLang() === 'en' ? `${found.length} matches` : `Совпадений: ${found.length}`;
+    paint();
+  }, 220);
+}
+
+/** A list of anything for other modules (Recent files, tool windows). */
+export function openPicker(placeholder, list, foot = '') {
+  open('picker', placeholder, list.map((it, i) => ({ order: i, ...it })), foot);
+}
+
+/** Double Shift opens Search Everywhere: two Shift presses with nothing else in between. */
+export function setupDoubleShift() {
+  let last = 0;
+  let clean = false;
+  document.addEventListener('keydown', (e) => { if (e.key !== 'Shift') clean = false; else if (!e.repeat) clean = true; }, true);
+  document.addEventListener('keyup', (e) => {
+    if (e.key !== 'Shift' || !clean) { if (e.key !== 'Shift') last = 0; return; }
+    const now = Date.now();
+    if (now - last < 380) {
+      last = 0;
+      if (overlay && !overlay.hidden && mode === 'all') closePalette();
+      else openSearchEverywhere();
+    } else last = now;
+  }, true);
+}

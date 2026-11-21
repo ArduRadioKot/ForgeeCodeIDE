@@ -27,6 +27,8 @@ function setConfigs(list) {
   saveAllConfig();
 }
 
+export function selectConfig(id) { select(id); }
+
 function select(id) {
   (state.runSelected ||= {})[keyOf()] = id;
   saveAllConfig();

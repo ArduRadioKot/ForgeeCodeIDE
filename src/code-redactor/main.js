@@ -164,6 +164,8 @@ function createWindow(secondary = false) {
     // A translucent native window: the page stays opaque until Liquid Glass makes its background transparent.
     // Without a system blur the window is a plain themed one (a transparent colour would show black or white).
     backgroundColor: nativeBlur ? '#00000000' : windowColor(),
+    // macOS: the toolbar is the title bar (IntelliJ new UI); the traffic lights sit on its left end.
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden', trafficLightPosition: { x: 16, y: 14 } } : {}),
     ...(nativeBlur ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
     webPreferences: {
       additionalArguments: [`--frogee-native-blur=${nativeBlur ? 1 : 0}`, `--frogee-secondary=${secondary ? 1 : 0}`],

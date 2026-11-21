@@ -32,7 +32,7 @@ export function applyImageSurface(show) {
   if (!h) return;
   if (show) {
     h.style.display = 'flex';
-    ['editor-container', 'editor-container-right', 'split-resizer', 'terminal-editor-host', 'notebook-host', 'browser-host'].forEach((id) => {
+    ['editor-container', 'editor-container-right', 'split-resizer', 'terminal-editor-host', 'notebook-host', 'browser-host', 'plugin-host'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });

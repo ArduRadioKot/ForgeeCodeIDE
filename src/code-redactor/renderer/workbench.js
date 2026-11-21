@@ -1,6 +1,5 @@
 import { state } from './state.js';
-import { getLang, onLangChange } from './i18n.js';
-import { icon } from './glyphs.js';
+import { getLang } from './i18n.js';
 import { addContextFiles, toggleChat } from './chat.js';
 import { createTab, setFocusedPane, switchToTab } from './tabs.js';
 import { goToEditorLine, loadFolderContents, refreshExplorerTree } from './explorer.js';
@@ -18,11 +17,7 @@ const bytes = (value) => JSON.stringify(value, null, 2);
 const lines = (text) => text.split('\n');
 const breakpoints = new Map();
 const sections = new Map();
-let dock;
-let current;
-let trigger;
-let returnFocus;
-let fitDock;
+let opener = null;
 let debugStatus;
 let debugConnected = false;
 let debugGeneration = 0;
@@ -584,211 +579,41 @@ const tools = [
 ];
 let debugUiApi;
 
-export function workbenchCommands() {
-  return tools.map(([key, en, ru]) => ({ label: tr(en, ru), run: () => openWorkbench(key) }));
+/** Title of a developer tool, in the interface language. */
+export function workbenchTitle(key) {
+  const tool = tools.find(([name]) => name === key);
+  return tool ? tr(tool[1], tool[2]) : key;
 }
 
-function hideWorkbench({ restoreFocus = true } = {}) {
-  if (!dock || dock.hidden) return;
-  dock.hidden = true;
-  trigger.classList.remove('active');
-  trigger.setAttribute('aria-expanded', 'false');
-  if (restoreFocus) {
-    const origin = returnFocus?.isConnected && returnFocus.getClientRects().length ? returnFocus : trigger;
-    origin.focus({ preventScroll: true });
-  }
-  returnFocus = null;
+/**
+ * The panel of one developer tool. The tools used to share a dock with tabs; now each one lives where it belongs
+ * (Database and HTTP on the right, Debugger at the bottom, New/Remote project in dialogs…), placed by ide-shell.js.
+ */
+export function workbenchPanel(key) {
+  return sections.get(key)?.panel || null;
 }
 
-export function openWorkbench(key = current || 'project', preserveFocus = false) {
-  const selected = sections.get(key);
-  if (!dock || !selected) return;
-  if (dock.hidden && !dock.contains(document.activeElement)) returnFocus = document.activeElement;
-  current = key;
-  dock.hidden = false;
-  fitDock();
-  trigger.classList.add('active');
-  trigger.setAttribute('aria-expanded', 'true');
-  for (const [name, { panel, tab }] of sections) {
-    const active = name === key;
-    tab.setAttribute('aria-selected', String(active));
-    tab.tabIndex = active ? 0 : -1;
-    tab.classList.toggle('active', active);
-    panel.hidden = !active;
-  }
-  if (!preserveFocus) selected.tab.focus({ preventScroll: true });
-}
+/** ide-shell.js tells where to show a tool. */
+export function setWorkbenchOpener(fn) { opener = fn; }
 
-function configureDock(dock, grip, placement, workspace, toolbar, localize) {
-  const layoutKey = 'frogee.workbench.layout.v1';
-  let preference;
-  try { preference = JSON.parse(localStorage.getItem(layoutKey) || '{}'); } catch {}
-  const sizing = {
-    preferred: preference?.preferred === 'bottom' ? 'bottom' : 'right',
-    right: Number.isFinite(preference?.right) ? preference.right : 380,
-    bottom: Number.isFinite(preference?.bottom) ? preference.bottom : 285,
-  };
-  const remember = () => {
-    try { localStorage.setItem(layoutKey, JSON.stringify(sizing)); } catch {}
-  };
-  const siblings = ['activity-panel', 'activity-resizer', 'chat-panel', 'chat-resizer']
-    .map((id) => document.getElementById(id)).filter(Boolean);
-  let direction;
-  let limit;
-  function fit() {
-    if (dock.hidden) return;
-    const occupied = siblings.reduce((sum, item) => sum + item.offsetWidth, 0);
-    const spare = toolbar.clientWidth - occupied - 36;
-    direction = sizing.preferred === 'bottom' || spare < 650 ? 'bottom' : 'right';
-    const anchor = direction === 'right' ? toolbar : workspace;
-    if (dock.parentElement !== anchor) {
-      const focused = dock.contains(document.activeElement) ? document.activeElement : null;
-      if (direction === 'right') anchor.append(dock);
-      else toolbar.after(dock);
-      focused?.focus({ preventScroll: true });
-    }
-    limit = direction === 'right' ? Math.min(600, spare - 340) : Math.max(150, Math.floor(workspace.clientHeight * 0.52));
-    const min = direction === 'right' ? 300 : 150;
-    const value = Math.min(limit, Math.max(min, sizing[direction]));
-    dock.dataset.placement = direction;
-    dock.style.setProperty('--wb-size', `${value}px`);
-    placement.setAttribute('aria-pressed', String(sizing.preferred === 'bottom'));
-    grip.setAttribute('aria-orientation', direction === 'right' ? 'vertical' : 'horizontal');
-    grip.setAttribute('aria-valuemin', min);
-    grip.setAttribute('aria-valuemax', limit);
-    grip.setAttribute('aria-valuenow', value);
-    localize(sizing.preferred);
-  }
-  placement.addEventListener('click', () => {
-    sizing.preferred = sizing.preferred === 'right' ? 'bottom' : 'right';
-    fit();
-    remember();
-  });
-  grip.addEventListener('keydown', (event) => {
-    const larger = direction === 'right' ? 'ArrowLeft' : 'ArrowUp';
-    const smaller = direction === 'right' ? 'ArrowRight' : 'ArrowDown';
-    if (![larger, smaller].includes(event.key)) return;
-    event.preventDefault();
-    sizing[direction] = Number(grip.getAttribute('aria-valuenow')) + (event.key === larger ? 24 : -24);
-    fit();
-    sizing[direction] = Number(grip.getAttribute('aria-valuenow'));
-    remember();
-  });
-  let drag;
-  grip.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
-    const axis = direction === 'right' ? 'clientX' : 'clientY';
-    drag = { axis, direction, from: event[axis], size: Number(grip.getAttribute('aria-valuenow')) };
-    grip.setPointerCapture(event.pointerId);
-    event.preventDefault();
-  });
-  grip.addEventListener('pointermove', (event) => {
-    if (!drag || drag.direction !== direction) return;
-    sizing[direction] = drag.size + drag.from - event[drag.axis];
-    fit();
-  });
-  grip.addEventListener('lostpointercapture', () => {
-    if (!drag) return;
-    sizing[direction] = Number(grip.getAttribute('aria-valuenow'));
-    drag = null;
-    remember();
-  });
-  const observer = new ResizeObserver(fit);
-  observer.observe(workspace);
-  siblings.forEach((item) => observer.observe(item));
-  return fit;
+export function openWorkbench(key = 'project', preserveFocus = false) {
+  if (!sections.has(key)) return;
+  opener?.(key, { preserveFocus });
 }
 
 export function setupWorkbench() {
-  if (dock) return;
-  const workspace = document.getElementById('workspace');
-  const toolbar = document.getElementById('workspace-main');
-  if (!workspace || !toolbar) return;
-  dock = element('aside', null, 'workbench panel-bubble');
-  dock.id = 'developer-workbench';
-  dock.hidden = true;
-  const grip = element('div', null, 'wb-grip');
-  grip.setAttribute('role', 'separator');
-  grip.tabIndex = 0;
-  dock.append(grip);
-  const header = group(dock, 'wb-header');
-  const title = element('strong', tr('Developer tools', 'Инструменты разработки'));
-  const headerActions = group(header);
-  const placement = button('', () => {}, 'settings-btn ghost wb-placement');
-  const close = button('', () => hideWorkbench(), 'activity-btn');
-  close.innerHTML = icon('close', 16);
-  header.prepend(title);
-  headerActions.append(placement, close);
-  const tabs = group(dock, 'wb-tabs');
-  tabs.setAttribute('role', 'tablist');
-  tabs.addEventListener('keydown', (event) => {
-    const keys = [...sections.keys()];
-    const index = keys.indexOf(current);
-    const next = { Home: 0, End: keys.length - 1, ArrowLeft: (index + keys.length - 1) % keys.length, ArrowRight: (index + 1) % keys.length }[event.key];
-    if (next === undefined) return;
-    event.preventDefault();
-    openWorkbench(keys[next]);
-  });
+  if (sections.size) return;
   for (const [key, en, ru, setup] of tools) {
-    const tab = button(tr(en, ru), () => openWorkbench(key), 'settings-nav-btn');
-    tab.id = `wb-tab-${key}`;
-    tab.setAttribute('role', 'tab');
-    tab.setAttribute('aria-selected', 'false');
-    tab.setAttribute('aria-controls', `wb-panel-${key}`);
-    tab.tabIndex = -1;
-    tabs.append(tab);
     const panel = element('section', null, 'wb-section');
     panel.id = `wb-panel-${key}`;
-    panel.setAttribute('role', 'tabpanel');
-    panel.setAttribute('aria-labelledby', tab.id);
-    panel.hidden = true;
+    panel.dataset.tool = key;
     const status = element('p', '', 'wb-status');
     status.setAttribute('role', 'status');
     const api = setup(panel);
     if (key === 'dap') debugUiApi = api;
     panel.append(status);
-    dock.append(panel);
-    sections.set(key, { panel, tab, en, ru });
+    sections.set(key, { panel, en, ru });
   }
-  trigger = button('', () => dock.hidden ? openWorkbench() : hideWorkbench(), 'sidebar-btn');
-  trigger.setAttribute('aria-controls', dock.id);
-  trigger.setAttribute('aria-expanded', 'false');
-  trigger.innerHTML = icon('window', 20);
-  const chatButton = button('MCP', () => openWorkbench('mcp'), 'chat-header-btn wb-mcp');
-  const localizeChrome = () => {
-    title.textContent = tr('Developer tools', 'Инструменты разработки');
-    dock.setAttribute('aria-label', title.textContent);
-    tabs.setAttribute('aria-label', title.textContent);
-    trigger.title = title.textContent;
-    trigger.setAttribute('aria-label', title.textContent);
-    close.setAttribute('aria-label', tr('Close developer tools', 'Закрыть инструменты'));
-    close.title = close.getAttribute('aria-label');
-    grip.setAttribute('aria-label', tr('Resize developer tools', 'Изменить размер панели инструментов'));
-    chatButton.title = tr('MCP tools', 'Инструменты MCP');
-    for (const { tab, en, ru } of sections.values()) tab.textContent = tr(en, ru);
-  };
-  const localizePlacement = (preference) => {
-    placement.textContent = preference === 'bottom' ? tr('Bottom', 'Снизу') : tr('Right', 'Справа');
-    placement.title = preference === 'bottom' ? tr('Prefer docking on the right', 'Закреплять справа') : tr('Dock at the bottom', 'Закрепить снизу');
-  };
-  toolbar.append(dock);
-  fitDock = configureDock(dock, grip, placement, workspace, toolbar, localizePlacement);
-  localizeChrome();
-  onLangChange(() => { localizeChrome(); fitDock(); });
-  document.getElementById('extensions-btn')?.after(trigger);
-  document.querySelector('.chat-header-right')?.prepend(chatButton);
-  const welcome = button('', () => openWorkbench('project'), 'action-item wb-welcome-action');
-  const welcomeIcon = element('span', null, 'action-icon');
-  welcomeIcon.innerHTML = icon('folder', 18);
-  const welcomeLabel = element('span', null, 'action-title');
-  const setWelcomeLabel = () => { welcomeLabel.textContent = tr('New project from a template', 'Новый проект из шаблона'); };
-  setWelcomeLabel();
-  welcome.append(welcomeIcon, welcomeLabel);
-  document.getElementById('new-file-action')?.after(welcome);
-  onLangChange(setWelcomeLabel);
-  dock.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') close.click();
-  });
   window.electronAPI.onWorkbenchDebug((snapshot) => {
     debugStatus = snapshot;
     if (snapshot.state === 'ended') debugConnected = false;

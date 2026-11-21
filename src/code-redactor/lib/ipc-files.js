@@ -10,13 +10,18 @@ function safeRemoveHandler(channel) {
   } catch {}
 }
 
+// Build output, dependencies and caches: searching them is slow and can exhaust memory (a packaged app in dist/ is gigabytes).
+const SKIP_DIRS = new Set(['node_modules', 'dist', 'out', 'target', '__pycache__', 'venv', 'env', 'bower_components', 'Pods', 'DerivedData']);
+const SEARCH_MAX_FILE = 2 * 1024 * 1024;
+const SEARCH_MAX_MATCHES = 5000;
+
 async function getAllFiles(dirPath, arrayOfFiles = []) {
   const files = await fs.readdir(dirPath, { withFileTypes: true });
 
   for (const file of files) {
     const filePath = path.join(dirPath, file.name);
 
-    if (file.isDirectory() && !file.name.startsWith('.') && file.name !== 'node_modules') {
+    if (file.isDirectory() && !file.name.startsWith('.') && !SKIP_DIRS.has(file.name)) {
       arrayOfFiles = await getAllFiles(filePath, arrayOfFiles);
     } else if (file.isFile()) {
       arrayOfFiles.push(filePath);
@@ -330,9 +335,14 @@ function registerFileIpc(getMainWindow) {
         regex = new RegExp(escapedQuery, caseSensitive ? 'g' : 'gi');
       }
 
+      let total = 0;
       for (const filePath of filteredFiles) {
+        if (total >= SEARCH_MAX_MATCHES) break;
         try {
+          const stat = await fs.stat(filePath);
+          if (stat.size > SEARCH_MAX_FILE) continue;
           const content = await fs.readFile(filePath, 'utf8');
+          if (content.slice(0, 8000).includes('\0')) continue; // binary file
           const lines = content.split('\n');
           const fileMatches = [];
 
@@ -340,9 +350,10 @@ function registerFileIpc(getMainWindow) {
             const matches = [...line.matchAll(regex)];
             if (matches.length > 0) {
               matches.forEach(match => {
+                total++;
                 fileMatches.push({
                   line: lineNumber + 1,
-                  text: line.trim(),
+                  text: line.trim().slice(0, 400),
                   matchIndex: match.index,
                   matchText: match[0]
                 });

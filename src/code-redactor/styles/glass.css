@@ -30,7 +30,7 @@
 .lg > .split-drop-zone, .lg > .terminal-resize, .lg > .find-bar { position: absolute; }
 
 /* Islands */
-[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.activity-panel, .chat-panel, .terminal-panel, .file-tabs, .editors-row, .welcome-page) {
+[data-liquid-glass]:not([data-liquid-glass="off"]) :is(.activity-panel, .chat-panel, .terminal-panel, .file-tabs, .breadcrumbs, .editors-row, .welcome-page) {
   background: color-mix(in srgb, var(--card-bg) calc(var(--lg-island, .68) * 100%), transparent);
   box-shadow: inset 0 .5px 0 rgb(var(--lg-rim-rgb, 255 255 255) / .07), inset 0 0 0 .5px rgb(var(--lg-rim-rgb, 255 255 255) / .04);
 }
@@ -39,6 +39,11 @@
 [data-liquid-glass]:not([data-liquid-glass="off"]) :is(.browser-stage) { background: color-mix(in srgb, var(--code-bg) 70%, transparent); }
 [data-liquid-glass]:not([data-liquid-glass="off"]) :is(.nb-cell-main, .nb-output, .palette-input, .search-results, .debug-output) { background: color-mix(in srgb, var(--code-bg) 70%, transparent); }
 [data-liquid-glass]:not([data-liquid-glass="off"]) .split-resizer { background: transparent; }
+[data-liquid-glass]:not([data-liquid-glass="off"]) .editors-row.is-split { background: transparent; box-shadow: none; }
+[data-liquid-glass]:not([data-liquid-glass="off"]) .editors-row.is-split > :is(#editor-container, #editor-container-right, #notebook-host, #browser-host) {
+  background: color-mix(in srgb, var(--card-bg) calc(var(--lg-island, .68) * 100%), transparent);
+  box-shadow: inset 0 .5px 0 rgb(var(--lg-rim-rgb, 255 255 255) / .07), inset 0 0 0 .5px rgb(var(--lg-rim-rgb, 255 255 255) / .04);
+}
 
 /* Controls: hover is a soft glass fill with a thin rim, press compresses it. */
 [data-liquid-glass]:not([data-liquid-glass="off"]) :is(.sidebar-btn, .icon-btn, .tool-btn, .tab-close, .new-tab-btn, .activity-btn, .chat-header-btn, .browser-btn, .nb-btn:not(.nb-btn-primary), .nb-icon-btn):hover:not(:disabled):not(:active) {

@@ -16,13 +16,17 @@ export function isPreviewTab(tab) {
   return !!(tab && tab.kind === 'preview');
 }
 
+export function isPluginTab(tab) {
+  return !!(tab && tab.kind === 'plugin');
+}
+
 export function isImageTab(tab) {
   return !!(tab && tab.kind === 'image');
 }
 
 /** Tabs that edit text in the main textarea (everything that is not a special surface). */
 export function isEditorTab(tab) {
-  return !!(tab && tab.kind !== 'terminal' && tab.kind !== 'notebook' && tab.kind !== 'browser' && tab.kind !== 'preview' && tab.kind !== 'image');
+  return !!(tab && tab.kind !== 'terminal' && tab.kind !== 'notebook' && tab.kind !== 'browser' && tab.kind !== 'preview' && tab.kind !== 'image' && tab.kind !== 'plugin');
 }
 
 export function isNotebookPath(filePathOrName) {

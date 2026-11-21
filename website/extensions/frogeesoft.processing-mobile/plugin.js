@@ -3191,7 +3191,7 @@ function createProcessingRuntime(options) {
   const LANDSCAPE_MODES = new Set([0, 6, 8, 11]);
   const PORTRAIT_MODES = new Set([1, 7, 9, 12]);
 
-  let panel = null;
+  let panel = null, panelTab = null;
   let frame = null;
   let running = false;
   let landscape = false;
@@ -3221,9 +3221,9 @@ function createProcessingRuntime(options) {
   const STRIPE_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.4"/><path d="M10.5 18.5h3"/><path d="M10 8.5l-1.6 1.8L10 12M14 8.5l1.6 1.8L14 12"/></svg>';
 
   api.addStyle(`
-    .pm-panel{position:fixed;z-index:9500;right:12px;top:52px;bottom:12px;width:var(--pm-w,440px);min-width:340px;max-width:calc(100vw - 80px);display:flex;flex-direction:column;color:var(--text-color);background:var(--card-bg);border:1px solid var(--border-color);border-radius:var(--radius-lg,12px);box-shadow:0 18px 50px var(--shadow-color,#0006);overflow:hidden;font-size:12.5px}
+    .pm-panel{position:relative;flex:1;width:100%;height:100%;min-width:0;max-width:none;display:flex;flex-direction:column;color:var(--text-color);background:var(--editor-bg,var(--card-bg));border:0;border-radius:0;box-shadow:none;overflow:hidden;font-size:12.5px}
     .pm-panel[hidden]{display:none}
-    .pm-resize{position:absolute;left:0;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:3}
+    .pm-resize{display:none}
     .pm-resize:hover{background:color-mix(in srgb,var(--accent-color) 30%,transparent)}
     .pm-row{display:flex;align-items:center;gap:6px;padding:8px 10px}
     .pm-head{border-bottom:1px solid var(--border-color);padding:8px 8px 8px 14px}
@@ -3310,7 +3310,7 @@ function createProcessingRuntime(options) {
   const screenSize = () => { const d = device(); return landscape ? { width: d.height, height: d.width } : { width: d.width, height: d.height }; };
 
   function mount() {
-    if (panel) { panel.hidden = false; updateFileLabel(); fitPhone(); return; }
+    if (panel && panelTab) { panel.hidden = false; panelTab.focus(); updateFileLabel(); fitPhone(); return; }
     panel = document.createElement('section');
     panel.className = 'pm-panel';
     panel.setAttribute('aria-label', 'Processing Mobile');
@@ -3365,7 +3365,20 @@ function createProcessingRuntime(options) {
         <div class="pm-status" role="status"><i class="pm-dot"></i><span>Готово</span><button type="button" class="pm-btn pm-icon" data-action="clear-log" title="Очистить консоль">${ICON.clear}</button></div>
         <div class="pm-console" role="log" aria-label="Консоль скетча"></div>
       </div>`;
-    document.body.append(panel);
+    panelTab = api.openTab ? api.openTab({
+      key: 'emulator',
+      title: 'Processing Mobile',
+      render(el) { el.append(panel); },
+      onClose() {
+        try { stopSketch(); } catch { /* already stopped */ }
+        stageObserver?.disconnect();
+        stageObserver = null;
+        panel?.remove();
+        panel = null;
+        panelTab = null;
+      },
+    }) : null;
+    if (!panelTab) document.body.append(panel);
     frame = panel.querySelector('iframe');
     panel.addEventListener('click', onClick);
     panel.addEventListener('change', (event) => { if (event.target.matches('[data-field="device"]')) onDeviceChange(); });
@@ -3623,7 +3636,7 @@ function createProcessingRuntime(options) {
     if (!button || button.disabled) return;
     try {
       switch (button.dataset.action) {
-        case 'close': stopSketch(); panel.hidden = true; break;
+        case 'close': if (panelTab) panelTab.close(); else { stopSketch(); panel.hidden = true; } break;
         case 'run': await runSketch(); break;
         case 'stop': stopSketch(); break;
         case 'rotate':

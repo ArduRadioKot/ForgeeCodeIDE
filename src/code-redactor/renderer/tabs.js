@@ -20,9 +20,9 @@ import {
   saveTabs,
   openFileOrFolder,
 } from './editor-api.js';
-import { isTerminalTab, findTerminalTabIndex, isNotebookTab, isNotebookPath, isBrowserTab, isEditorTab, isPreviewTab, isImageTab } from './tab-model.js';
+import { isTerminalTab, findTerminalTabIndex, isNotebookTab, isNotebookPath, isBrowserTab, isEditorTab, isPreviewTab, isImageTab, isPluginTab } from './tab-model.js';
 import { isImagePath, isBinaryPath, createImageTab, applyImageSurface, renderImage, toast } from './image-view.js';
-import { renderPreview } from './markdown.js';
+import { syncMarkdownPane, previewOwnsPane, closeMarkdownPreview } from './markdown.js';
 import { applyBrowserSurface, renderBrowser, destroyBrowser, createBrowserTab } from './browser.js';
 import { registerTabsApi } from './tabs-api.js';
 import {
@@ -62,6 +62,8 @@ function parseTabDragIndex(dataTransfer) {
 export function showWelcomePage() {
   if (dom.welcomePage) dom.welcomePage.style.display = 'flex';
   if (dom.editorTabs) dom.editorTabs.style.display = 'none';
+  const crumbs = document.getElementById('breadcrumbs');
+  if (crumbs) crumbs.hidden = true;
   const editorsRow = document.getElementById('editors-row');
   if (editorsRow) editorsRow.style.display = 'none';
   if (dom.editorContainer) dom.editorContainer.style.display = 'none';
@@ -87,7 +89,7 @@ export function hideWelcomePage() {
   }
   if (!state.terminalInEditor && dom.editorContainer) {
     dom.editorContainer.style.display = 'flex';
-    dom.editorContainer.style.flex = '1';
+    if (!state.splitView && !state.mdPreview?.open) dom.editorContainer.style.flex = '1';
     dom.editorContainer.style.minHeight = '0';
   }
 }
@@ -116,7 +118,7 @@ export function handleWelcomeCheckboxChange() {
 // Функции для работы с активностью
 
 export function restoreTab(name, content = '', filePath = null, kind = 'file') {
-  if (kind === 'terminal' || kind === 'preview') return;
+  if (kind === 'terminal' || kind === 'preview' || kind === 'plugin') return;
   if (kind === 'browser') {
     state.currentTabs.push(createBrowserTab(content || 'about:blank', name));
     return;
@@ -196,7 +198,7 @@ export function isBrowserSplit() {
 export function showTab(index) {
   const tab = state.currentTabs[index];
   const rightFocused = state.splitView && state.focusedPane === 'right' && state.rightTabIndex >= 0;
-  if (rightFocused && isEditorTab(tab) && !isBrowserSplit()) {
+  if (rightFocused && isEditorTab(tab) && !isBrowserSplit() && !previewOwnsPane()) {
     openTabInSplit(index);
   } else if (rightFocused && isBrowserTab(tab)) {
     openTabInSplit(index);
@@ -217,7 +219,12 @@ export function switchToTab(index) {
   if (index < 0 || index >= state.currentTabs.length) return;
   const tab = state.currentTabs[index];
   if (!tab) return;
-  if (isPreviewTab(tab)) { openTabInSplit(index); return; }
+  if (isPreviewTab(tab)) {
+    if (tab.sourceId) state.mdPreview = { open: true, sourceId: tab.sourceId };
+    syncMarkdownPane();
+    return;
+  }
+  if (!isPluginTab(tab)) applyPluginSurface(false);
   if (!isImageTab(tab)) applyImageSurface(false);
   if (isImageTab(tab)) {
     // A picture takes the whole editor area.
@@ -243,6 +250,24 @@ export function switchToTab(index) {
     } else if (isEditorTab(prev) && dom.editor && !state.terminalInEditor) {
       prev.content = dom.editor.value;
     }
+  }
+
+  if (isPluginTab(tab)) {
+    state.activeTabIndex = index;
+    if (state.splitView) setSplitView(false);
+    applyNotebookSurface(false);
+    applyBrowserSurface(false);
+    applyImageSurface(false);
+    if (state.terminalInEditor) {
+      state.terminalInEditor = false;
+      applyTerminalPlacement();
+    }
+    hideWelcomePage();
+    applyPluginSurface(true, tab);
+    updateTabsList();
+    updateTabTitle();
+    updateStatusBar();
+    return;
   }
 
   // Picking another browser tab while a browser is open beside the code replaces the browser pane.
@@ -320,7 +345,7 @@ export function switchToTab(index) {
   applyNotebookSurface(false);
   if (dom.editorContainer) {
     dom.editorContainer.style.display = 'flex';
-    dom.editorContainer.style.flex = '1';
+    if (!state.splitView && !state.mdPreview?.open) dom.editorContainer.style.flex = '1';
   }
   if (dom.editor) {
     dom.editor.value = tab.content || '';
@@ -337,6 +362,7 @@ export function switchToTab(index) {
     setSplitView(true);
     renderRightPane();
   }
+  syncMarkdownPane();
 }
 
 function showTabMenu(event, index) {
@@ -445,6 +471,16 @@ export function closeTab(index) {
     return;
   }
 
+  if (isPluginTab(tab)) {
+    if (tab.closing) return;
+    tab.closing = true;
+    const done = tab.onClose;
+    tab.onClose = null;
+    try { done?.(); } catch { /* the plugin is leaving anyway */ }
+    tab.element?.remove();
+    tab.element = null;
+  }
+
   // A preview goes away with the file it shows.
   if (!isPreviewTab(tab)) {
     const pv = state.currentTabs.findIndex((t) => isPreviewTab(t) && t.sourceId === tab.id);
@@ -459,6 +495,10 @@ export function closeTab(index) {
     if (!confirm(getLang() === 'en' ? `File "${tab.name}" is not saved. Close it?` : `Файл "${tab.name}" не сохранен. Закрыть?`)) {
       return;
     }
+  }
+
+  if (state.mdPreview?.open && state.mdPreview.sourceId === tab.id) {
+    state.mdPreview = { open: false, sourceId: null };
   }
 
   if (state.splitView && state.rightTabIndex === index) {
@@ -487,6 +527,7 @@ export function closeTab(index) {
     updateTabsList();
     updateTabTitle();
     updateStatusBar();
+    syncMarkdownPane();
   }
 
   saveTabs();
@@ -497,16 +538,18 @@ export function updateTabsList() {
   dom.tabsList.innerHTML = '';
 
   state.currentTabs.forEach((tab, index) => {
+    if (isPreviewTab(tab)) return;
     const tabElement = document.createElement('div');
     const isLeft = index === state.activeTabIndex;
     const isRight = state.splitView && index === state.rightTabIndex && (isEditorTab(tab) || isBrowserTab(tab) || isPreviewTab(tab));
     const isTerm = isTerminalTab(tab);
     const isNb = isNotebookTab(tab);
     const isBr = isBrowserTab(tab);
-    tabElement.className = `tab-item${isLeft ? ' active' : ''}${isRight ? ' split-active' : ''}${isTerm ? ' terminal-tab-item' : ''}${isNb ? ' notebook-tab-item' : ''}${isBr ? ' browser-tab-item' : ''}${tab.missing ? ' tab-missing' : ''}`;
+    const isPlugin = isPluginTab(tab);
+    tabElement.className = `tab-item${isLeft ? ' active' : ''}${isRight ? ' split-active' : ''}${isTerm ? ' terminal-tab-item' : ''}${isNb ? ' notebook-tab-item' : ''}${isBr ? ' browser-tab-item' : ''}${isPlugin ? ' plugin-tab-item' : ''}${tab.missing ? ' tab-missing' : ''}`;
     tabElement.draggable = true;
     tabElement.dataset.index = String(index);
-    tabElement.dataset.kind = isTerm ? 'terminal' : (isNb ? 'notebook' : (isBr ? 'browser' : 'file'));
+    tabElement.dataset.kind = isTerm ? 'terminal' : (isNb ? 'notebook' : (isBr ? 'browser' : (isPlugin ? 'plugin' : 'file')));
     tabElement.innerHTML = `
       <span class="tab-name">${escapeHtml(tab.name)}${tab.modified ? ' *' : ''}</span>
       ${isRight ? '<span class="tab-pane-badge" title="Справа">R</span>' : ''}
@@ -640,15 +683,11 @@ export function openTabInSplit(index) {
     return;
   }
   if (isPreviewTab(tab)) {
-    // The preview sits beside the file it shows.
-    const source = state.currentTabs.findIndex((t) => t.id === tab.sourceId);
-    if (source < 0) { closeTab(index); return; }
-    state.rightTabIndex = index;
-    state.splitView = true;
+    // The preview is a side pane, not a second file. Switching tabs must not jump back to its source.
+    if (!tab.sourceId || !state.currentTabs.some((t) => t.id === tab.sourceId)) { closeTab(index); return; }
+    state.mdPreview = { open: true, sourceId: tab.sourceId };
     hideWelcomePage();
-    if (state.activeTabIndex !== source) switchToTab(source);
-    setSplitView(true);
-    renderRightPane();
+    syncMarkdownPane();
     updateTabsList();
     return;
   }
@@ -703,11 +742,8 @@ export function openTabInSplit(index) {
   }
   hideWelcomePage();
   setSplitView(true);
-  // Гарантировать видимость левой панели
-  if (dom.editorContainer) {
-    dom.editorContainer.style.display = 'flex';
-    dom.editorContainer.style.flex = '1';
-  }
+  applySplitRatio(readSplitRatio(), false);
+  if (dom.editorContainer) dom.editorContainer.style.display = 'flex';
   if (state.activeTabIndex >= 0 && isEditorTab(state.currentTabs[state.activeTabIndex]) && dom.editor) {
     dom.editor.value = state.currentTabs[state.activeTabIndex].content || '';
   }
@@ -717,20 +753,44 @@ export function openTabInSplit(index) {
   updateSyntaxHighlight();
 }
 
-/** Lays out the second pane: another editor, or the browser host (the webview must never be re-parented). */
+const RATIO_KEY = 'frogee.splitRatio';
+function readSplitRatio() {
+  try {
+    const n = Number(localStorage.getItem(RATIO_KEY));
+    if (n >= 0.25 && n <= 0.75) return n;
+  } catch { /* default half */ }
+  return 0.5;
+}
+function splitPaneEls() {
+  const firstId = isNotebookTab(state.currentTabs[state.activeTabIndex]) ? 'notebook-host' : 'editor-container';
+  const secondId = isBrowserSplit() && !previewOwnsPane() ? 'browser-host' : 'editor-container-right';
+  return [document.getElementById(firstId), document.getElementById(secondId)];
+}
+function applySplitRatio(ratio, persist) {
+  const r = Math.min(0.75, Math.max(0.25, Number(ratio) || 0.5));
+  if (persist) { try { localStorage.setItem(RATIO_KEY, String(r)); } catch { /* storage full */ } }
+  const [first, second] = splitPaneEls();
+  if (first) first.style.flex = `${r} 1 0px`;
+  if (second) second.style.flex = `${1 - r} 1 0px`;
+}
+
+/** Lays out the second pane: another editor, the Markdown preview, or the browser host. */
 function layoutSplit() {
   const right = document.getElementById('editor-container-right');
   const resizer = document.getElementById('split-resizer');
   const closeSplitBtn = document.getElementById('close-split-btn');
   const editorsRow = document.getElementById('editors-row');
   const browserHost = document.getElementById('browser-host');
-  const browserSide = isBrowserSplit();
-  if (right) right.style.display = state.splitView && !browserSide ? 'flex' : 'none';
-  if (resizer) resizer.style.display = state.splitView ? 'block' : 'none';
-  if (closeSplitBtn) closeSplitBtn.style.display = state.splitView ? 'inline-flex' : 'none';
+  const previewSide = previewOwnsPane();
+  const browserSide = isBrowserSplit() && !previewSide;
+  const showSplit = state.splitView || previewSide;
+  if (right) right.style.display = showSplit && !browserSide ? 'flex' : 'none';
+  if (resizer) resizer.style.display = showSplit ? 'block' : 'none';
+  if (closeSplitBtn) closeSplitBtn.style.display = showSplit ? 'inline-flex' : 'none';
   if (editorsRow) {
-    editorsRow.classList.toggle('is-split', state.splitView);
+    editorsRow.classList.toggle('is-split', showSplit);
     editorsRow.classList.toggle('browser-split', browserSide);
+    editorsRow.classList.toggle('md-split', previewSide);
   }
   // A notebook on the left owns that pane: the text editor must stay hidden (hideWelcomePage re-shows it).
   const front = state.currentTabs[state.activeTabIndex];
@@ -749,38 +809,44 @@ function layoutSplit() {
 }
 
 export function setSplitView(enabled) {
+  const was = state.splitView;
   state.splitView = !!enabled;
-  layoutSplit();
   if (!state.splitView) {
     state.rightTabIndex = -1;
     state.focusedPane = 'left';
     document.getElementById('editor-container')?.classList.remove('pane-focused');
-    // Forget a dragged ratio so the next split starts 50/50.
-    ['editor-container', 'editor-container-right', 'browser-host', 'notebook-host'].forEach((id) => { const el = document.getElementById(id); if (el) { el.style.flex = ''; if (id === 'notebook-host' || id === 'browser-host') el.style.width = ''; } });
-    const active = state.currentTabs[state.activeTabIndex];
-    if (dom.editorContainer && !isNotebookTab(active) && !isBrowserTab(active) && !isTerminalTab(active)) {
-      dom.editorContainer.style.display = 'flex';
-      dom.editorContainer.style.flex = '1';
+    // The Markdown preview keeps the divider; only a real code split gives the editor the whole row.
+    if (!previewOwnsPane()) {
+      ['editor-container', 'editor-container-right', 'browser-host', 'notebook-host'].forEach((id) => { const el = document.getElementById(id); if (el) { el.style.flex = ''; if (id === 'notebook-host' || id === 'browser-host') el.style.width = ''; } });
+      const active = state.currentTabs[state.activeTabIndex];
+      if (dom.editorContainer && !isNotebookTab(active) && !isBrowserTab(active) && !isTerminalTab(active) && !isPluginTab(active)) {
+        dom.editorContainer.style.display = 'flex';
+        dom.editorContainer.style.flex = '1';
+      }
     }
   }
+  layoutSplit();
+  if (state.splitView && !was) applySplitRatio(readSplitRatio(), false);
+  if (previewOwnsPane()) syncMarkdownPane();
 }
 
 export function renderRightPane() {
+  if (previewOwnsPane()) { syncMarkdownPane(); return; }
   const editorRight = document.getElementById('editor-right');
   const title = document.getElementById('right-pane-title');
   if (!state.splitView || state.rightTabIndex < 0 || !state.currentTabs[state.rightTabIndex]) return;
   if (!editorRight) return;
   const tab = state.currentTabs[state.rightTabIndex];
-  const previewing = isPreviewTab(tab);
   const rightBody = document.querySelector('#editor-container-right > .editor-body');
   const previewBody = document.getElementById('md-preview-body');
-  if (rightBody) rightBody.style.display = previewing ? 'none' : '';
-  if (previewBody) previewBody.hidden = !previewing;
-  if (previewing) {
-    if (title) title.textContent = 'Просмотр';
-    renderPreview();
+  if (isPreviewTab(tab)) {
+    if (tab.sourceId) state.mdPreview = { open: true, sourceId: tab.sourceId };
+    syncMarkdownPane();
     return;
   }
+  if (rightBody) rightBody.style.display = '';
+  if (previewBody) previewBody.hidden = true;
+  document.getElementById('editors-row')?.classList.remove('md-split');
   if (isBrowserTab(tab)) {
     layoutSplit();
     renderBrowser(tab);
@@ -928,14 +994,18 @@ export function setupSplitUi() {
   document.getElementById('split-right-btn')?.addEventListener('click', () => {
     if (state.activeTabIndex >= 0) openTabInSplit(state.activeTabIndex);
   });
-  document.getElementById('close-split-btn')?.addEventListener('click', () => {
+  const closeSplit = () => {
+    if (state.mdPreview?.open && previewOwnsPane()) {
+      closeMarkdownPreview();
+      if (state.splitView) renderRightPane();
+      updateTabsList();
+      return;
+    }
     setSplitView(false);
     updateTabsList();
-  });
-  document.getElementById('close-right-pane-btn')?.addEventListener('click', () => {
-    setSplitView(false);
-    updateTabsList();
-  });
+  };
+  document.getElementById('close-split-btn')?.addEventListener('click', closeSplit);
+  document.getElementById('close-right-pane-btn')?.addEventListener('click', closeSplit);
 
   const editorRight = document.getElementById('editor-right');
   if (editorRight) {
@@ -949,6 +1019,7 @@ export function setupSplitUi() {
     document.getElementById('left-pane-header')?.addEventListener('mousedown', () => { setFocusedPane('left'); dom.editor?.focus(); });
     document.getElementById('right-pane-header')?.addEventListener('mousedown', (e) => {
       if (e.target.closest('button')) return;
+      if (previewOwnsPane()) return;
       setFocusedPane('right');
       editorRight.focus();
     });
@@ -981,28 +1052,101 @@ export function setupSplitUi() {
 
   const resizer = document.getElementById('split-resizer');
   if (resizer) {
-    let dragging = false;
-    resizer.addEventListener('mousedown', (e) => {
-      dragging = true;
+    resizer.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      if (!state.splitView && !previewOwnsPane()) return;
+      resizer.setPointerCapture(e.pointerId);
+      resizer.classList.add('dragging');
       document.body.classList.add('resizing-panel');
       e.preventDefault();
     });
-    document.addEventListener('mousemove', (e) => {
-      if (!dragging || !state.splitView) return;
+    resizer.addEventListener('pointermove', (e) => {
+      if (!resizer.hasPointerCapture(e.pointerId)) return;
       const row = document.getElementById('editors-row');
       if (!row) return;
       const rect = row.getBoundingClientRect();
-      const ratio = Math.min(0.8, Math.max(0.2, (e.clientX - rect.left) / rect.width));
-      const second = document.getElementById(isBrowserSplit() ? 'browser-host' : 'editor-container-right');
-      const first = document.getElementById(isNotebookTab(state.currentTabs[state.activeTabIndex]) ? 'notebook-host' : 'editor-container');
-      if (first) first.style.flex = String(ratio);
-      if (second) second.style.flex = String(1 - ratio);
+      applySplitRatio((e.clientX - rect.left) / Math.max(1, rect.width), false);
     });
-    document.addEventListener('mouseup', () => {
-      dragging = false;
+    const stopDrag = (e) => {
+      if (e && resizer.hasPointerCapture(e.pointerId)) resizer.releasePointerCapture(e.pointerId);
+      if (!resizer.classList.contains('dragging')) return;
+      resizer.classList.remove('dragging');
       document.body.classList.remove('resizing-panel');
-    });
+      const grow = parseFloat(splitPaneEls()[0]?.style.flex);
+      if (grow > 0) applySplitRatio(grow, true);
+    };
+    resizer.addEventListener('pointerup', stopDrag);
+    resizer.addEventListener('pointercancel', stopDrag);
+    resizer.addEventListener('dblclick', () => applySplitRatio(0.5, true));
   }
+}
+
+function applyPluginSurface(show, tab) {
+  const host = document.getElementById('plugin-host');
+  if (!host) return;
+  if (!show) {
+    host.hidden = true;
+    host.style.display = 'none';
+    host.querySelectorAll('.plugin-view-body').forEach((el) => { el.hidden = true; });
+    return;
+  }
+  for (const id of ['editor-container', 'editor-container-right', 'split-resizer', 'terminal-editor-host', 'notebook-host', 'browser-host', 'image-host']) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+  document.getElementById('editors-row')?.classList.remove('is-split', 'md-split', 'browser-split');
+  host.hidden = false;
+  host.style.display = 'flex';
+  host.querySelectorAll('.plugin-view-body').forEach((el) => { el.hidden = el !== tab?.element; });
+  if (tab?.element) {
+    tab.element.hidden = false;
+    tab.element.dispatchEvent(new CustomEvent('plugin-view-show'));
+  }
+}
+
+/** A tab whose content is an element drawn by a plugin. The same key brings the existing tab forward. */
+export function openPluginTab({ key, title, element, onClose } = {}) {
+  const pluginKey = String(key || title || 'plugin');
+  const handleFor = (tab) => ({
+    id: tab.id,
+    element: tab.element,
+    close() {
+      const i = state.currentTabs.indexOf(tab);
+      if (i >= 0) closeTab(i);
+    },
+    focus() {
+      const i = state.currentTabs.indexOf(tab);
+      if (i >= 0) switchToTab(i);
+    },
+    setTitle(text) {
+      tab.name = String(text || tab.name);
+      updateTabsList();
+      if (state.currentTabs[state.activeTabIndex] === tab) updateTabTitle();
+    },
+  });
+  const existing = state.currentTabs.findIndex((t) => isPluginTab(t) && t.pluginKey === pluginKey);
+  if (existing >= 0) {
+    hideWelcomePage();
+    switchToTab(existing);
+    return { ...handleFor(state.currentTabs[existing]), created: false };
+  }
+  const el = element || document.createElement('div');
+  el.classList.add('plugin-view-body');
+  const tab = {
+    id: Date.now() + Math.random(),
+    kind: 'plugin',
+    name: String(title || 'Плагин'),
+    pluginKey,
+    element: el,
+    onClose,
+    content: '',
+    modified: false,
+  };
+  state.currentTabs.push(tab);
+  document.getElementById('plugin-host')?.appendChild(el);
+  hideWelcomePage();
+  switchToTab(state.currentTabs.length - 1);
+  return { ...handleFor(tab), created: true, element: el };
 }
 
 export function updateTabTitle() {
@@ -1025,4 +1169,5 @@ registerTabsApi({
   setSplitView,
   setFocusedPane,
   isBrowserSplit,
+  openPluginTab,
 });

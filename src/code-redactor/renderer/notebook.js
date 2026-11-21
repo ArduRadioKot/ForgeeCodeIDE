@@ -161,6 +161,8 @@ export function applyNotebookSurface(show) {
     if (right) right.style.display = 'none';
     if (splitResizer) splitResizer.style.display = 'none';
     if (termHost) termHost.style.display = 'none';
+    const pluginHost = document.getElementById('plugin-host');
+    if (pluginHost) pluginHost.hidden = true;
   } else if (host) {
     host.style.display = 'none';
     host.innerHTML = '';
@@ -287,6 +289,33 @@ function outputToHtml(outputs) {
     }
   }
   return chunks.join('');
+}
+
+const INVERT_KEY = 'frogee.nbInvert';
+const themeIsDark = () => document.documentElement.dataset.theme !== 'light' && !document.body.classList.contains('light-theme');
+function invertPref() {
+  try {
+    const saved = localStorage.getItem(INVERT_KEY);
+    if (saved === '1' || saved === '0') return saved === '1';
+  } catch { /* private mode */ }
+  return themeIsDark();
+}
+function applyNotebookInvert(host = getNotebookHost()) {
+  if (!host) return;
+  const on = invertPref();
+  host.classList.toggle('nb-invert', on);
+  host.querySelector('[data-nb-action="invert"]')?.classList.toggle('active', on);
+}
+let invertWatch = false;
+function watchNotebookInvert() {
+  if (invertWatch) return;
+  invertWatch = true;
+  const follow = () => {
+    try { if (localStorage.getItem(INVERT_KEY) != null) return; } catch { return; }
+    applyNotebookInvert();
+  };
+  new MutationObserver(follow).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  new MutationObserver(follow).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 }
 
 const ICONS = {
@@ -1229,6 +1258,7 @@ export async function renderNotebook(tab) {
     </div>
     <div class="nb-toolbar-group">
       <button type="button" class="nb-btn nb-btn-icon" data-nb-action="clear-all" title="Очистить все выводы">${ICONS.eraser}</button>
+      <button type="button" class="nb-btn${invertPref() ? ' active' : ''}" data-nb-action="invert" title="Инверсия цвета: в тёмной теме чёрные записи становятся белыми">Инверсия</button>
       <button type="button" class="nb-btn nb-btn-icon" data-nb-action="side-toc" title="Оглавление">${ICONS.list}</button>
       <button type="button" class="nb-btn" data-nb-action="side-vars" title="Переменные">{x}</button>
     </div>
@@ -1239,6 +1269,8 @@ export async function renderNotebook(tab) {
       <button type="button" class="nb-btn nb-btn-icon" data-nb-action="refresh-envs" title="Обновить список интерпретаторов">${ICONS.restart}</button>
     </div>`;
   host.appendChild(toolbar);
+  applyNotebookInvert(host);
+  watchNotebookInvert();
 
   const body = document.createElement('div');
   body.className = 'nb-body';
@@ -1281,6 +1313,11 @@ export async function renderNotebook(tab) {
     else if (action === 'interrupt') interruptKernel(tab);
     else if (action === 'restart') restartKernel(tab);
     else if (action === 'clear-all') clearOutputs(tab, nb.cells);
+    else if (action === 'invert') {
+      const next = !invertPref();
+      try { localStorage.setItem(INVERT_KEY, next ? '1' : '0'); } catch { /* private mode */ }
+      applyNotebookInvert(host);
+    }
     else if (action === 'side-toc' || action === 'side-vars') {
       const want = action === 'side-toc' ? 'toc' : 'vars';
       sess.side = sess.side === want ? null : want;

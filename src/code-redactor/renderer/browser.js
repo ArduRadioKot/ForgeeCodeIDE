@@ -53,7 +53,7 @@ export function applyBrowserSurface(show) {
   if (!host) return;
   if (show) {
     host.style.display = 'flex';
-    for (const id of ['editor-container', 'editor-container-right', 'split-resizer', 'terminal-editor-host', 'notebook-host']) {
+    for (const id of ['editor-container', 'editor-container-right', 'split-resizer', 'terminal-editor-host', 'notebook-host', 'plugin-host']) {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     }
