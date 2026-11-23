@@ -39,7 +39,7 @@ async function ensureConfigDir() {
 function getDefaultConfig() {
   return {
     fontSize: '14',
-    theme: 'dark',
+    theme: 'custom:vsx-frogeesoft-frogee-theme-frogeesoft-dark',
     tabSize: '4',
     defaultAiProvider: 'ollama',
     currentAiProvider: 'ollama',

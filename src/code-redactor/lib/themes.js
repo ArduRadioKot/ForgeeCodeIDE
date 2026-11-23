@@ -6,7 +6,7 @@ const os = require('os');
 
 const USER_DIR = path.join(os.homedir(), 'Documents', 'FrogeeCodeIDE', 'themes');
 const BUNDLED_DIR = path.join(__dirname, '..', 'themes');
-const SEED_MARKER = '.seeded-v1';
+const SEED_MARKER = '.seeded-v2';
 
 const COLOR_KEYS = new Set(['window-bg', 'card-bg', 'header-bg', 'code-bg', 'editor-bg', 'text-color', 'text-muted', 'text-faint', 'border-color', 'hover-color', 'active-bg', 'accent-color', 'accent-text', 'link-color', 'selection', 'success-color', 'warning-color', 'danger-color', 'shadow-color', 'scrim']);
 const SYNTAX_KEYS = new Set(['keyword', 'string', 'number', 'comment', 'function', 'type', 'field', 'tag', 'attr', 'heading', 'annotation']);
@@ -35,14 +35,9 @@ function sanitizeTheme(raw, fallbackName) {
   };
 }
 
-/** First run: create the folder and drop the Dracula example in so there is something to copy from. */
+/** Create the folder and copy any missing bundled themes (never overwrite user edits). */
 async function ensureUserDir() {
   await fs.mkdir(USER_DIR, { recursive: true });
-  const marker = path.join(USER_DIR, SEED_MARKER);
-  try {
-    await fs.access(marker);
-    return;
-  } catch { /* not seeded yet */ }
   try {
     const files = (await fs.readdir(BUNDLED_DIR)).filter((f) => f.endsWith('.json'));
     for (const file of files) {
@@ -51,7 +46,8 @@ async function ensureUserDir() {
     }
     await fs.copyFile(path.join(BUNDLED_DIR, 'README.md'), path.join(USER_DIR, 'README.md')).catch(() => {});
   } catch { /* bundled themes missing: nothing to seed */ }
-  await fs.writeFile(marker, '1').catch(() => {});
+  const marker = path.join(USER_DIR, SEED_MARKER);
+  try { await fs.access(marker); } catch { await fs.writeFile(marker, '2').catch(() => {}); }
 }
 
 async function readThemeDir(dir, source) {

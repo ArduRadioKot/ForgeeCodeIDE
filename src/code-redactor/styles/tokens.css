@@ -4,39 +4,40 @@
 :root {
   color-scheme: dark;
 
-  --window-bg: #17181a;
-  --card-bg: #27282c;
-  --header-bg: #27282c;
-  --code-bg: #1f2023;
-  --editor-bg: #27282c;
-  --text-color: #dfe1e5;
-  --text-muted: #8c9097;
-  --text-faint: #6f737a;
-  --border-color: #393b41;
-  --hover-color: #313339;
-  --active-bg: #3c3f46;
+  /* Default = FrogeeSoft Dark (see themes/vsx-frogeesoft-frogee-theme-frogeesoft-dark.json) */
+  --window-bg: #0d120f;
+  --card-bg: #0d120f;
+  --header-bg: #090c0a;
+  --code-bg: #090c0a;
+  --editor-bg: #090c0a;
+  --text-color: #f1f5ef;
+  --text-muted: #98a398;
+  --text-faint: #4b564d;
+  --border-color: #1f2a22;
+  --hover-color: #161d18;
+  --active-bg: #161d18;
   --accent-color: #21aabe;
-  --accent-text: #fff;
+  --accent-text: #061316;
   --accent-soft: color-mix(in srgb, var(--accent-color) 22%, transparent);
-  --link-color: color-mix(in srgb, var(--accent-color) 68%, #fff);
-  --selection: color-mix(in srgb, var(--accent-color) 42%, transparent);
-  --success-color: var(--accent-color); /* "ok" states use the accent, not green */
-  --warning-color: #e0bb73;
-  --danger-color: var(--text-color); /* errors are neutral: weight and wording carry the meaning, not red */
+  --link-color: #21aabe;
+  --selection: #21aabe40;
+  --success-color: #7ce36f;
+  --warning-color: #e6c07b;
+  --danger-color: #ff6e66;
   --shadow-color: #0009;
   --scrim: #0000008c;
 
-  --syn-keyword: #cf8e6d;
-  --syn-string: color-mix(in srgb, var(--accent-color) 85%, #fff);
-  --syn-number: #2aacb8;
-  --syn-comment: #7a7e85;
-  --syn-function: #7c9cf5;
-  --syn-type: #e0bb73;
-  --syn-field: #c77dbb;
-  --syn-tag: #d5b778;
-  --syn-attr: #bcbec4;
-  --syn-heading: #7c9cf5;
-  --syn-annotation: #b3ae60;
+  --syn-keyword: #5fd0df;
+  --syn-string: #9bd28f;
+  --syn-number: #e6c07b;
+  --syn-comment: #6b7a6e;
+  --syn-function: #f1f5ef;
+  --syn-type: #e6c07b;
+  --syn-field: #b5c4b8;
+  --syn-tag: #5fd0df;
+  --syn-attr: #c7e3a7;
+  --syn-heading: #21aabe;
+  --syn-annotation: #e6a07b;
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -73,36 +74,39 @@
 
 body.light-theme {
   color-scheme: light;
-  --window-bg: #e8ebf1;
-  --card-bg: #ffffff;
-  --header-bg: #ffffff;
-  --code-bg: #f4f6fa;
-  --editor-bg: #ffffff;
-  --text-color: #27282e;
-  --text-muted: #6c707e;
-  --text-faint: #9a9ea8;
-  --border-color: #e1e4ec;
-  --hover-color: #f0f2f7;
-  --active-bg: #e2e7f2;
-  --link-color: color-mix(in srgb, var(--accent-color) 78%, #000);
-  --selection: color-mix(in srgb, var(--accent-color) 26%, transparent);
-  --success-color: var(--accent-color);
-  --warning-color: #9e6a03;
-  --danger-color: var(--text-color);
+  /* Default light = FrogeeSoft Light */
+  --window-bg: #eef2e9;
+  --card-bg: #eef2e9;
+  --header-bg: #f8faf4;
+  --code-bg: #f8faf4;
+  --editor-bg: #f8faf4;
+  --text-color: #121713;
+  --text-muted: #4f5a50;
+  --text-faint: #9aa69b;
+  --border-color: #d6ded3;
+  --hover-color: #e4eade;
+  --active-bg: #e4eade;
+  --accent-color: #147889;
+  --accent-text: #ffffff;
+  --link-color: #147889;
+  --selection: #14788930;
+  --success-color: #2e8a3c;
+  --warning-color: #a35f00;
+  --danger-color: #e8482c;
   --shadow-color: #1d233a33;
   --scrim: #1d233a59;
 
-  --syn-keyword: #0033b3;
-  --syn-string: color-mix(in srgb, var(--accent-color) 80%, #000);
-  --syn-number: #1750eb;
-  --syn-comment: #8c8c8c;
-  --syn-function: #00627a;
-  --syn-type: #7a5a00;
-  --syn-field: #871094;
-  --syn-tag: #0033b3;
-  --syn-attr: #174ad4;
-  --syn-heading: #0033b3;
-  --syn-annotation: #9e880d;
+  --syn-keyword: #0f6a7a;
+  --syn-string: #2e7a3c;
+  --syn-number: #a35f00;
+  --syn-comment: #7d8a7f;
+  --syn-function: #121713;
+  --syn-type: #8a5a00;
+  --syn-field: #3e4a40;
+  --syn-tag: #0f6a7a;
+  --syn-attr: #3f6b1f;
+  --syn-heading: #147889;
+  --syn-annotation: #a3501f;
 }
 
 body.compact-ui {

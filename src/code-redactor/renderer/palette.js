@@ -18,6 +18,7 @@ import { toggleTerminal, setTerminalVisible, ensureTerminalStarted } from './ter
 import { toggleChat } from './chat.js';
 import { switchActivity, setActivityVisible, openSearchFile, openSearchFileAtLine, goToEditorLine } from './explorer.js';
 import { applyThemeClass } from './appearance.js';
+import { DEFAULT_DARK, DEFAULT_LIGHT } from './themes.js';
 import { runNotebookCommand } from './notebook.js';
 import { toggleGlass, attachGlassTo } from './glass.js';
 import { problemItems, goToProblem } from './diagnostics.js';
@@ -254,7 +255,7 @@ export async function runCurrentFile(opts) {
 }
 
 export function toggleTheme() {
-  const next = document.body.classList.contains('light-theme') ? 'dark' : 'light';
+  const next = document.body.classList.contains('light-theme') ? DEFAULT_DARK : DEFAULT_LIGHT;
   if (dom.themeSelect) dom.themeSelect.value = next;
   applyThemeClass(next);
   saveAllConfig();

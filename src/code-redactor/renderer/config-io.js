@@ -20,7 +20,7 @@ import { setConfigSaver } from './save-hook.js';
 
 import { syncAgentSettings } from './agents.js';
 import { applyGlass } from './glass.js';
-import { loadCustomThemes } from './themes.js';
+import { loadCustomThemes, normalizeThemeValue, DEFAULT_DARK } from './themes.js';
 import { applyFonts, syncFontControls } from './fonts.js';
 const dom = getDom();
 const DESIGN_VERSION = 3;
@@ -45,8 +45,9 @@ export async function initializeApp() {
 
     if (dom.fontSizeSelect) dom.fontSizeSelect.value = config.fontSize || '14';
     if (dom.themeSelect) {
-      dom.themeSelect.value = config.theme || 'dark';
-      if (dom.themeSelect.value !== (config.theme || 'dark')) dom.themeSelect.value = 'dark'; // custom theme was deleted
+      const wanted = normalizeThemeValue(config.theme);
+      dom.themeSelect.value = wanted;
+      if (dom.themeSelect.value !== wanted) dom.themeSelect.value = DEFAULT_DARK; // custom theme was deleted
     }
     if (dom.tabSizeSelect) dom.tabSizeSelect.value = config.tabSize || '4';
     applyEditorAppearance(false);
@@ -139,7 +140,7 @@ export async function initializeApp() {
       setTerminalVisible(true, false);
     }
 
-    applyThemeClass(dom.themeSelect ? dom.themeSelect.value : 'dark');
+    applyThemeClass(dom.themeSelect ? normalizeThemeValue(dom.themeSelect.value) : DEFAULT_DARK);
     applyGlass();
 
     // Every start is a clean workspace: the tabs of the last session are not brought back (reading them all made the start slow).
@@ -204,7 +205,7 @@ export async function saveAllConfig() {
     const config = {
       designVersion: DESIGN_VERSION,
       fontSize: dom.fontSizeSelect ? dom.fontSizeSelect.value : '14',
-      theme: dom.themeSelect ? dom.themeSelect.value : 'dark',
+      theme: dom.themeSelect ? normalizeThemeValue(dom.themeSelect.value) : DEFAULT_DARK,
       tabSize: dom.tabSizeSelect ? dom.tabSizeSelect.value : '4',
       defaultAiProvider: state.defaultAiProvider,
       currentAiProvider: state.currentAiProvider,

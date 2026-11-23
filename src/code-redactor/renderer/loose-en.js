@@ -104,6 +104,8 @@ export const looseEn = {
   'Сброс': 'Reset',
   'Сбросить масштаб': 'Reset zoom',
   'Светлая': 'Light',
+  'Светлая (старая)': 'Light (classic)',
+  'Тёмная (старая)': 'Dark (classic)',
   'Свои темы': 'Custom themes',
   'Свой провайдер': 'Custom provider',
   'Сервер': 'Server',

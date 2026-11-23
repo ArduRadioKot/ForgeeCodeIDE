@@ -5,7 +5,30 @@ import { getLang, uiText } from './i18n.js';
 
 const applied = new Set();
 
-const BUNDLED_FALLBACK = ['dracula'];
+const DEFAULT_DARK = 'custom:vsx-frogeesoft-frogee-theme-frogeesoft-dark';
+const DEFAULT_LIGHT = 'custom:vsx-frogeesoft-frogee-theme-frogeesoft-light';
+const BUNDLED_FALLBACK = [
+  'vsx-frogeesoft-frogee-theme-frogeesoft-dark',
+  'vsx-frogeesoft-frogee-theme-frogeesoft-light',
+  'classic-dark',
+  'classic-light',
+  'dracula',
+];
+const PINNED_THEME_IDS = new Set([
+  'vsx-frogeesoft-frogee-theme-frogeesoft-dark',
+  'vsx-frogeesoft-frogee-theme-frogeesoft-light',
+  'classic-dark',
+  'classic-light',
+]);
+
+export { DEFAULT_DARK, DEFAULT_LIGHT };
+
+/** Map legacy built-in dark/light to FrogeeSoft defaults. */
+export function normalizeThemeValue(theme) {
+  if (theme === 'dark' || !theme) return DEFAULT_DARK;
+  if (theme === 'light') return DEFAULT_LIGHT;
+  return theme;
+}
 const COLOR_KEYS = ['window-bg', 'card-bg', 'header-bg', 'code-bg', 'editor-bg', 'text-color', 'text-muted', 'text-faint', 'border-color', 'hover-color', 'active-bg', 'accent-color', 'accent-text', 'link-color', 'selection', 'success-color', 'warning-color', 'danger-color', 'shadow-color', 'scrim'];
 const SYNTAX_KEYS = ['keyword', 'string', 'number', 'comment', 'function', 'type', 'field', 'tag', 'attr', 'heading', 'annotation'];
 const TERMINAL_KEYS = ['background', 'foreground', 'cursor', 'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite'];
@@ -76,13 +99,14 @@ export function findCustomTheme(value) {
 export function fillThemeSelect() {
   const select = document.getElementById('theme-select');
   if (!select) return;
-  const current = select.value;
+  const current = normalizeThemeValue(select.value);
   select.querySelector('#custom-themes-group')?.remove();
-  if (state.customThemes.length) {
+  const extras = state.customThemes.filter((theme) => !PINNED_THEME_IDS.has(theme.id));
+  if (extras.length) {
     const group = document.createElement('optgroup');
     group.id = 'custom-themes-group';
     group.label = 'Свои темы';
-    for (const theme of state.customThemes) {
+    for (const theme of extras) {
       const option = document.createElement('option');
       option.value = `custom:${theme.id}`;
       option.textContent = theme.name;
