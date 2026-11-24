@@ -156,9 +156,14 @@ function openMenu(opener, entries) {
 
 // ───────────────────────── API handed to a plugin ─────────────────────────
 
+function editorTab() {
+  return state.currentTabs[state.splitView && state.focusedPane === 'right' ? state.rightTabIndex : state.activeTabIndex];
+}
+
 function textEditor() {
-  const tab = state.currentTabs[state.activeTabIndex];
-  return isEditorTab(tab) ? document.getElementById('editor') : null;
+  if (!isEditorTab(editorTab())) return null;
+  const id = state.splitView && state.focusedPane === 'right' ? 'editor-right' : 'editor';
+  return document.getElementById(id);
 }
 function needEditor() {
   const area = textEditor();
@@ -184,7 +189,7 @@ function makeApi(file, run) {
     replace(from, to, text) { const area = needEditor(); area.focus(); area.setRangeText(String(text), from, to, 'end'); changed(area); },
     // name, path and language of the open file (null when no text file is open)
     file: () => {
-      const tab = state.currentTabs[state.activeTabIndex];
+      const tab = editorTab();
       return isEditorTab(tab) ? { name: tab.name, path: tab.filePath || null, extension: (/\.([^.\\/]+)$/.exec(tab.name || '') || [])[1] || '' } : null;
     },
   };
@@ -219,6 +224,18 @@ function makeApi(file, run) {
       layout();
       track(() => { buttons.splice(buttons.indexOf(entry), 1); layout(); });
     },
+    addCommand({ title, run: action }) {
+      if (typeof action !== 'function') return;
+      run.commands.push({
+        label: String(title || file),
+        detail: getLang() === 'en' ? 'Plugin' : 'Плагин',
+        run: async () => {
+          if (running.get(file) !== run) return;
+          try { await action(editor); }
+          catch (error) { toast(error.message || String(error)); }
+        },
+      });
+    },
     // A tab in the editor. render(element, tab) runs once; the same key brings that tab forward.
     // tab: { close(), focus(), setTitle(text), element, created }.
     openTab({ key = file, title, render, onClose } = {}) {
@@ -226,7 +243,7 @@ function makeApi(file, run) {
       if (tab?.created && render) {
         try { render(tab.element, tab); } catch (err) { console.error(`[plugin ${file}]`, err); toast(err.message || String(err)); }
       }
-      if (tab) track(() => tab.close());
+      if (tab?.created) track(() => tab.close());
       return tab;
     },
     editor,
@@ -245,7 +262,7 @@ function makeApi(file, run) {
 
 async function start(file) {
   if (running.has(file)) return;
-  const run = { cleanups: [], preview: [], change: [], tab: [], error: '' };
+  const run = { cleanups: [], preview: [], change: [], tab: [], commands: [], error: '' };
   running.set(file, run);
   try {
     const text = await window.electronAPI.readPlugin(file);
@@ -256,18 +273,18 @@ async function start(file) {
       run.cleanups.push(() => window.electronAPI.stopIsolatedPlugin(file).catch(() => {}));
       const specs = await window.electronAPI.startIsolatedPlugin(file, text);
       if (running.get(file) !== run) return;
-      specs.forEach((spec, index) => api.addButton({
+      specs.forEach((spec, index) => api[spec.kind === 'command' ? 'addCommand' : 'addButton']({
         title: spec.title,
         icon: Object.hasOwn(ICONS, spec.icon) ? spec.icon : 'sparkles',
         run: async () => {
           try {
             const area = textEditor();
-            const tab = state.currentTabs[state.activeTabIndex];
+            const tab = editorTab();
             const input = { index, text: api.editor.get(), selection: api.editor.cursor(), file: api.editor.file() };
             const result = await window.electronAPI.runIsolatedPlugin(file, input);
             if (running.get(file) !== run) return;
             if (result.text !== input.text) {
-              if (!area || tab !== state.currentTabs[state.activeTabIndex] || area.value !== input.text) {
+              if (!area || area !== textEditor() || tab !== editorTab() || area.value !== input.text) {
                 throw new Error(getLang() === 'en' ? 'The active file changed while the plugin was running.' : 'Активный файл изменился во время выполнения плагина.');
               }
               api.editor.set(result.text);
@@ -282,6 +299,10 @@ async function start(file) {
     run.error = err?.message || String(err);
     console.error(`[plugin ${file}]`, err);
   }
+}
+
+export function pluginPaletteCommands() {
+  return [...running.values()].flatMap((plugin) => plugin.commands);
 }
 
 function stop(file) {

@@ -10,6 +10,7 @@ const listeners = new Set();
 
 const dict = {
   ru: {
+    'tabs.editor': 'Вкладки редактора',
     'sidebar.explorer': 'Проект',
     'sidebar.search': 'Поиск',
     'sidebar.git': 'Git',
@@ -144,6 +145,7 @@ const dict = {
     'bg.hint': 'Диапазон прозрачности UI: 0.4–1. URL изображения необязателен; для CSS используйте формат url(...).',
   },
   en: {
+    'tabs.editor': 'Editor tabs',
     'sidebar.explorer': 'Explorer',
     'sidebar.search': 'Search',
     'sidebar.git': 'Git',

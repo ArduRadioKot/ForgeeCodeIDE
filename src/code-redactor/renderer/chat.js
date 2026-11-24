@@ -1,3 +1,4 @@
+import { paintAgentThread } from './agent-thread.js';
 import { state } from './state.js';
 import { getDom } from './dom.js';
 import { saveAllConfig } from './save-hook.js';
@@ -9,10 +10,8 @@ import { getLang, onLangChange } from './i18n.js';
 const dom = getDom();
 
 const AGENT_BY_PROVIDER = { 'claude-code': 'claude', codex: 'codex' };
-const AGENT_MODELS = {
-  'claude-code': [['', 'По умолчанию']],
-  codex: [['', 'По умолчанию']],
-};
+const isProjectAgent = (provider) => provider === 'opencode' || Object.hasOwn(AGENT_BY_PROVIDER, provider);
+const tr = (ru, en) => getLang() === 'en' ? en : ru;
 const PROVIDER_NAMES = { ollama: 'Ollama', bionic: 'Bionic', openrouter: 'OpenRouter', opencode: 'OpenCode', 'claude-code': 'Claude Code', codex: 'Codex' };
 const customOf = (key) => (String(key).startsWith('custom:') ? (state.customProviders || []).find((p) => `custom:${p.id}` === key) : null);
 const providerLabel = (key) => PROVIDER_NAMES[key] || customOf(key)?.name || 'AI';
@@ -98,9 +97,14 @@ async function openAsNewFile(text, lang) {
 
 export function handleAiProviderChange() {
   if (!dom.aiProviderSelect) return;
+  if (state.isTyping) {
+    dom.aiProviderSelect.value = state.currentAiProvider;
+    return;
+  }
   state.currentAiProvider = dom.aiProviderSelect.value;
   if (dom.openRouterSection) dom.openRouterSection.style.display = state.currentAiProvider === 'openrouter' ? 'block' : 'none';
   state.currentAiModel = state.modelByProvider?.[state.currentAiProvider] || '';
+  updateAgentControls();
   refreshModelSelectForProvider().catch((err) => console.error(err));
   saveAllConfig();
 }
@@ -167,7 +171,7 @@ export async function refreshModelSelectForProvider() {
   }
 
   if (AGENT_BY_PROVIDER[provider]) {
-    fillSelect(AGENT_MODELS[provider], keep);
+    updateAgentControls();
     return;
   }
 
@@ -186,10 +190,12 @@ export async function refreshModelSelectForProvider() {
   }
 
   if (provider === 'opencode') {
+    const directory = state.currentFolder;
     const baseUrl = document.getElementById('opencode-url')?.value || state.opencodeBaseUrl || 'http://127.0.0.1:4096';
     state.opencodeBaseUrl = baseUrl;
     fillSelect([['', 'Загрузка моделей OpenCode…', true]], '');
-    const res = await window.electronAPI.opencodeModels({ baseUrl, directory: state.currentFolder || null });
+    const res = await window.electronAPI.opencodeModels({ baseUrl, directory: directory || null });
+    if (provider !== state.currentAiProvider || directory !== state.currentFolder || baseUrl !== state.opencodeBaseUrl) return;
     if (!res.success || !res.models?.length) {
       fillSelect([['', res.error ? `OpenCode: ${res.error}` : 'Нет моделей (запустите opencode serve)', true], ['__settings', 'Открыть настройки…']], '');
       updateOpenCodeStatus(res.success ? 'empty' : 'error');
@@ -287,51 +293,127 @@ export function updateOpenRouterStatus(status) {
 const STORE = 'frogee.chats.v1';
 const WIDTH_KEY = 'frogee.chat.width';
 const DEFAULT_WIDTH = 380;
-const MIN_WIDTH = 300;
+const MIN_WIDTH = 250;
 const WIDE = 640;
 let chats = [];
 let chat = null;
+let workspace = null;
 let editingIndex = -1;
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const snippet = (text, n = 40) => { const flat = String(text).replace(/\s+/g, ' ').trim(); return flat.length > n ? flat.slice(0, n) + '…' : flat; };
 
+function readChats() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE));
+    return Array.isArray(saved) ? saved : null;
+  } catch { return null; }
+}
+
 function loadChats() {
-  try { chats = JSON.parse(localStorage.getItem(STORE)) || []; } catch { chats = []; }
-  if (!Array.isArray(chats)) chats = [];
+  chats = readChats() || [];
   // A conversation from before the history existed becomes the first saved chat.
   if (!chats.length && Array.isArray(state.chatHistory) && state.chatHistory.length) {
     chats.push({
       id: uid(), title: snippet(state.chatHistory.find((m) => m.sender === 'user')?.content || 'Диалог'), updated: Date.now(),
       messages: state.chatHistory.filter((m) => m.content).map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content, thinking: m.thinking || '', stats: m.stats || '', who: m.who || '' })),
     });
+    saveChats();
   }
 }
 
-function saveChats() {
-  if (chat && chat.messages.length && !chats.includes(chat)) chats.unshift(chat);
-  chats = chats.filter((x) => x.messages.length).sort((a, b) => b.updated - a.updated).slice(0, 30);
+function saveChats(removedId) {
+  chats = (readChats() || chats).filter((item) => item.messages?.length && item.id !== removedId && item.id !== chat?.id);
+  if (chat && chat.messages.length && chat.id !== removedId) chats.push(chat);
+  chats.sort((a, b) => b.updated - a.updated);
+  chats = chats.slice(0, 30);
   let json = JSON.stringify(chats);
   while (json.length > 2e6 && chats.length > 1) { chats.pop(); json = JSON.stringify(chats); }
   try { localStorage.setItem(STORE, json); } catch { /* storage full: the chat keeps working until the app is closed */ }
 }
 
 function newChat() {
-  chat = { id: uid(), title: 'Новый чат', updated: Date.now(), messages: [] };
+  chat = { id: uid(), workspace, title: 'Новый чат', updated: Date.now(), messages: [] };
   editingIndex = -1;
 }
 
 function ensureChat() {
   if (chat) return;
   loadChats();
-  chat = chats[0] || null;
+  workspace = state.currentFolder || '';
+  chat = chats.find((item) => item.workspace === workspace) || null;
   if (!chat) newChat();
+  restoreProvider();
+}
+
+function resetComposer() {
+  dom.userInput.value = '';
+  dom.userInput.style.height = 'auto';
+  state.contextFiles = [];
+  renderAttachments();
+}
+
+function restoreProvider() {
+  const provider = chat.provider;
+  if (provider && Array.from(dom.aiProviderSelect.options).some((option) => option.value === provider)) {
+    state.currentAiProvider = provider;
+    state.currentAiModel = chat.model ?? state.modelByProvider?.[provider] ?? '';
+  }
+  updateAgentControls();
+  if (state.chatVisible) refreshModelSelectForProvider().catch(() => {});
+}
+
+function syncWorkspace() {
+  const next = state.currentFolder || '';
+  if (!chat || next === workspace) return;
+  if (state.isTyping) {
+    stopChatResponse();
+    return;
+  }
+  workspace = next;
+  chats = readChats() || chats;
+  newChat();
+  chat = chats.find((item) => item.workspace === workspace) || chat;
+  resetComposer();
+  showHistory(false);
+  restoreProvider();
+  renderChat();
+}
+
+function updateAgentControls() {
+  const cli = Object.hasOwn(AGENT_BY_PROVIDER, state.currentAiProvider);
+  const projectAgent = isProjectAgent(state.currentAiProvider);
+  const modelField = document.getElementById('chat-agent-model');
+  modelField.hidden = !cli;
+  dom.aiModelSelect.hidden = cli;
+  modelField.placeholder = tr('Модель', 'Model');
+  modelField.title = tr('Оставьте поле пустым для модели по умолчанию', 'Leave empty to use the CLI default model');
+  modelField.setAttribute('aria-label', modelField.placeholder);
+  if (cli && document.activeElement !== modelField) modelField.value = state.currentAiModel;
+  const access = document.getElementById('chat-agent-access');
+  access.hidden = !cli;
+  access.value = chat?.access || state.agentAccess;
+  access.title = tr('Доступ агента', 'Agent access');
+  access.querySelector('[value="read"]').textContent = tr('Чтение', 'Read only');
+  access.querySelector('[value="edit"]').textContent = tr('Правки проекта', 'Edit project');
+  document.getElementById('chat-think-btn').hidden = projectAgent;
+  const project = document.getElementById('chat-project');
+  project.hidden = !projectAgent;
+  const folder = state.currentFolder || '';
+  project.textContent = folder.split(/[\\/]/).filter(Boolean).at(-1) || folder || tr('Откройте папку проекта', 'Open a project folder');
+  project.title = folder;
+  if (dom.chatMessages?.querySelector('.chat-empty')) {
+    dom.chatMessages.querySelector('.chat-empty').remove();
+    renderEmptyState();
+  }
 }
 
 // ───────────────────────── panel ─────────────────────────
 
 export function toggleChat() {
   state.chatVisible = !state.chatVisible;
+  document.getElementById('workspace-main').classList.toggle('chat-open', state.chatVisible);
+  dom.chatBtn.setAttribute('aria-pressed', String(state.chatVisible));
   if (state.chatVisible) {
     dom.chatPanel.style.display = 'flex';
     document.getElementById('chat-resizer')?.style.setProperty('display', 'block');
@@ -340,7 +422,8 @@ export function toggleChat() {
     loadChatHistory();
     updateContextChip();
     renderAttachments();
-    refreshModelSelectForProvider().catch(() => {});
+    updateAgentControls();
+    if (!state.isTyping) refreshModelSelectForProvider().catch(() => {});
     dom.userInput.focus();
   } else {
     dom.chatPanel.style.display = 'none';
@@ -362,7 +445,8 @@ export function handleTextareaResize() {
 }
 
 export function setChatStatus(type, text) {
-  dom.chatStatus.textContent = text;
+  dom.chatStatus.textContent = type === 'ready' ? '' : text;
+  dom.chatStatus.title = dom.chatStatus.textContent;
   dom.chatStatus.className = `chat-status ${type}`;
 }
 
@@ -370,42 +454,80 @@ function chatWidth() {
   try { return Number(localStorage.getItem(WIDTH_KEY)) || DEFAULT_WIDTH; } catch { return DEFAULT_WIDTH; }
 }
 
+function chatWidthBounds() {
+  const stage = document.getElementById('workspace-main');
+  const projectPanel = document.getElementById('activity-panel');
+  const dividerSpace = 2 * (parseFloat(getComputedStyle(stage).columnGap) || 0);
+  const free = stage.clientWidth - (projectPanel.offsetWidth || 0) - dividerSpace;
+  const max = Math.max(150, Math.floor(Math.min(free * 0.75, free - 260)));
+  return { min: Math.min(MIN_WIDTH, max), max };
+}
+
 function applyChatWidth(value, persist) {
-  const stage = document.getElementById('main-layout');
-  const max = stage ? Math.max(MIN_WIDTH, stage.clientWidth * 0.65) : 720;
-  const width = Math.round(Math.min(max, Math.max(MIN_WIDTH, value)));
+  const { min, max } = chatWidthBounds();
+  const width = Math.round(Math.min(max, Math.max(min, value)));
   dom.chatPanel.style.width = `${width}px`;
+  const handle = document.getElementById('chat-resizer');
+  handle.setAttribute('aria-valuemin', min);
+  handle.setAttribute('aria-valuemax', max);
+  handle.setAttribute('aria-valuenow', width);
   const wide = document.getElementById('chat-wide-btn');
-  if (wide) { const isWide = width >= WIDE - 8; wide.title = isWide ? 'Свернуть' : 'Развернуть'; wide.classList.toggle('active', isWide); }
-  if (persist) { try { localStorage.setItem(WIDTH_KEY, String(width)); } catch { /* ignore */ } }
+  if (wide) {
+    const isWide = value > DEFAULT_WIDTH && width >= Math.min(max, WIDE) - 8;
+    wide.title = isWide ? tr('Свернуть', 'Restore width') : tr('Развернуть', 'Expand');
+    wide.classList.toggle('active', isWide);
+    wide.setAttribute('aria-pressed', String(isWide));
+    wide.disabled = max <= DEFAULT_WIDTH;
+  }
+  if (persist) { try { localStorage.setItem(WIDTH_KEY, String(value)); } catch { /* ignore */ } }
   return width;
 }
 
 function setupChatResizer() {
   const handle = document.getElementById('chat-resizer');
   if (!handle) return;
-  let dragging = false;
-  handle.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; dragging = true; handle.setPointerCapture(e.pointerId); handle.classList.add('dragging'); document.body.classList.add('resizing'); e.preventDefault(); });
+  let dragging = null;
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
+    dragging = { x: e.clientX, width: dom.chatPanel.offsetWidth, scale };
+    handle.setPointerCapture(e.pointerId);
+    handle.classList.add('dragging');
+    document.body.classList.add('resizing');
+    e.preventDefault();
+  });
   handle.addEventListener('pointermove', (e) => {
     if (!dragging) return;
-    const right = dom.chatPanel.getBoundingClientRect().right;
-    applyChatWidth(right - e.clientX, false);
+    applyChatWidth(dragging.width + (dragging.x - e.clientX) / dragging.scale, false);
   });
   const stop = () => {
     if (!dragging) return;
-    dragging = false;
+    dragging = null;
     handle.classList.remove('dragging');
     document.body.classList.remove('resizing');
-    applyChatWidth(dom.chatPanel.getBoundingClientRect().width, true);
+    applyChatWidth(dom.chatPanel.offsetWidth, true);
   };
   handle.addEventListener('pointerup', stop);
   handle.addEventListener('pointercancel', stop);
+  handle.addEventListener('lostpointercapture', stop);
+  handle.addEventListener('keydown', (event) => {
+    const { min, max } = chatWidthBounds();
+    const width = dom.chatPanel.offsetWidth;
+    const next = { ArrowLeft: width + 24, ArrowRight: width - 24, Home: min, End: max }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    applyChatWidth(Math.max(min, Math.min(max, next)), true);
+  });
   handle.addEventListener('dblclick', () => applyChatWidth(DEFAULT_WIDTH, true));
   document.getElementById('chat-wide-btn')?.addEventListener('click', () => {
-    const now = dom.chatPanel.getBoundingClientRect().width;
-    applyChatWidth(now >= WIDE - 8 ? DEFAULT_WIDTH : WIDE, true);
+    const wide = document.getElementById('chat-wide-btn').classList.contains('active');
+    applyChatWidth(wide ? DEFAULT_WIDTH : WIDE, true);
   });
-  window.addEventListener('resize', () => { if (state.chatVisible) applyChatWidth(chatWidth(), false); });
+  const observer = new ResizeObserver(() => {
+    if (state.chatVisible && !dragging) applyChatWidth(chatWidth(), false);
+  });
+  observer.observe(document.getElementById('workspace-main'));
+  observer.observe(document.getElementById('activity-panel'));
 }
 
 function updateContextChip() {
@@ -466,10 +588,14 @@ function scrollToBottom(force = false) {
 function renderEmptyState() {
   if (!dom.chatMessages || dom.chatMessages.querySelector('.message')) return;
   if (dom.chatMessages.querySelector('.chat-empty')) return;
-  const provider = providerLabel(state.currentAiProvider);
   const box = document.createElement('div');
   box.className = 'chat-empty';
-  box.innerHTML = `<p>${escapeHtml(provider)}${state.currentAiModel ? ' · ' + escapeHtml(state.currentAiModel) : ''}</p><p class="chat-empty-hint">Открытый файл передаётся как контекст. Другие файлы можно прикрепить кнопкой со скрепкой или из проводника.</p>`;
+  const prompt = isProjectAgent(state.currentAiProvider) && !state.currentFolder
+    ? tr('Откройте папку проекта, чтобы запустить агента.', 'Open a project folder to run the agent.')
+    : tr('Задайте вопрос или опишите задачу для агента.', 'Ask a question or describe a task for the agent.');
+  const text = document.createElement('p');
+  text.textContent = prompt;
+  box.append(text);
   dom.chatMessages.appendChild(box);
 }
 
@@ -481,17 +607,16 @@ function modelLabel() {
 const EDIT_ICON = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5l2 2L6 12l-2.8.8L4 10z"/></svg>';
 const RETRY_ICON = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 1 1-1.6-3.7"/><path d="M13 2.5v3h-3"/></svg>';
 
-function fillAiMessage(el, answer, thinking, stats) {
-  const body = el.querySelector('.msg-body');
-  body.innerHTML = renderMd(answer);
-  enhanceCode(body);
-  const think = el.querySelector('.msg-think');
-  if (thinking) {
-    think.hidden = false;
-    think.querySelector('.think-body').textContent = thinking;
-  }
-  const foot = el.querySelector('.msg-foot');
-  if (foot) foot.textContent = stats || '';
+function paintReply(el, source, live = false) {
+  const thread = el.querySelector('.agent-thread');
+  paintAgentThread(thread, source, {
+    live,
+    renderAnswer(body, text) {
+      body.innerHTML = renderMd(text);
+      enhanceCode(body);
+    },
+  });
+  el.querySelector('.msg-foot').textContent = source.stats || '';
 }
 
 /** One message of the open chat as a DOM element. `index` is its place in chat.messages. */
@@ -513,16 +638,16 @@ function buildMessage(message, index) {
   el.innerHTML = `<div class="msg-meta"><span class="msg-who"></span><span class="msg-actions">
       <button type="button" data-msg="copy" title="Скопировать ответ">${COPY_ICON}</button>
       <button type="button" data-msg="retry" title="Ответить заново на этот вопрос">${RETRY_ICON}</button></span></div>
-    <details class="msg-think" hidden><summary>Размышления</summary><div class="think-body"></div></details>
-    <div class="msg-body"></div><div class="msg-foot"></div>`;
+    <div class="agent-thread"></div><div class="msg-foot"></div>`;
   el.querySelector('.msg-who').textContent = message.who || modelLabel();
-  fillAiMessage(el, message.content || '', message.thinking || '', message.stats || '');
+  paintReply(el, { ...message, answer: message.content });
   if (message.error) el.classList.add('is-error');
   return el;
 }
 
 function renderChat() {
   ensureChat();
+  updateAgentControls();
   dom.chatMessages.innerHTML = '';
   chat.messages.forEach((m, i) => dom.chatMessages.appendChild(buildMessage(m, i)));
   renderEmptyState();
@@ -555,15 +680,14 @@ export function saveChatHistory() { persistChat(); }
 
 export function loadChatHistory() {
   ensureChat();
-  renderChat();
+  if (!state.isTyping) renderChat();
 }
 
 export function clearChatHistory() {
-  if (state.isTyping) stopChatResponse();
+  if (state.isTyping) return;
   ensureChat();
-  if (chat.messages.length) saveChats();
   newChat();
-  state.agentSessions = {};
+  resetComposer();
   showHistory(false);
   renderChat();
   dom.userInput?.focus();
@@ -577,22 +701,42 @@ function showHistory(show) {
   box.hidden = !show;
   document.getElementById('chat-messages').hidden = show;
   document.querySelector('.chat-composer').hidden = show;
-  document.getElementById('chat-history-btn')?.classList.toggle('active', show);
-  if (show) renderHistoryList();
+  const button = document.getElementById('chat-history-btn');
+  button.classList.toggle('active', show);
+  button.setAttribute('aria-pressed', String(show));
+  const filter = document.getElementById('chat-history-filter');
+  document.getElementById('chat-heading').textContent = show ? tr('История чатов', 'Chat history') : tr('AI-чат', 'AI chat');
+  if (show) {
+    filter.value = '';
+    renderHistoryList();
+    filter.focus();
+  }
 }
 
 function renderHistoryList() {
-  const box = document.getElementById('chat-history');
-  const list = chats.filter((x) => x.messages.length);
+  const box = document.getElementById('chat-history-list');
+  const filter = document.getElementById('chat-history-filter');
+  filter.placeholder = tr('Поиск по чатам…', 'Search chats…');
+  filter.setAttribute('aria-label', filter.placeholder);
+  const query = filter.value.trim().toLocaleLowerCase();
+  chats = readChats() || chats;
+  const list = chats.filter((x) => x.messages.length && (x.workspace === workspace || x.workspace === undefined)
+    && (!query || [x.title, providerLabel(x.provider), ...x.messages.map((message) => message.content)]
+      .some((value) => String(value || '').toLocaleLowerCase().includes(query))));
   const ago = (time) => { const m = Math.round((Date.now() - time) / 60000); return getLang() === 'en' ? (m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} hr ago` : new Date(time).toLocaleDateString('en-US')) : (m < 1 ? 'только что' : m < 60 ? `${m} мин назад` : m < 1440 ? `${Math.round(m / 60)} ч назад` : new Date(time).toLocaleDateString('ru-RU')); };
   box.innerHTML = list.length ? list.map((x) => `
     <div class="history-row${chat && x.id === chat.id ? ' current' : ''}">
-      <button type="button" class="history-open" data-open="${x.id}"><strong>${escapeHtml(getLang() === 'en' && x.title === 'Новый чат' ? 'New chat' : x.title)}</strong><small>${ago(x.updated)} · ${getLang() === 'en' ? 'messages' : 'сообщений'}: ${x.messages.length}</small></button>
-      <button type="button" class="chat-header-btn" data-delete="${x.id}" title="Удалить чат">${icon('close', 12)}</button>
-    </div>`).join('') : '<p class="history-empty">Сохранённых чатов пока нет.</p>';
+      <button type="button" class="history-open" data-open="${escapeHtml(x.id)}"><strong>${escapeHtml(getLang() === 'en' && x.title === 'Новый чат' ? 'New chat' : x.title)}</strong><small>${ago(x.updated)} · ${escapeHtml(x.workspace === undefined ? tr('Без проекта', 'Legacy chat') : (x.provider ? providerLabel(x.provider) : tr('Сообщений', 'Messages') + ' ' + x.messages.length))}</small></button>
+      <button type="button" class="chat-header-btn" data-delete="${escapeHtml(x.id)}" title="${tr('Удалить чат', 'Delete chat')}">${icon('close', 12)}</button>
+    </div>`).join('') : `<p class="history-empty">${query ? tr('Чаты не найдены.', 'No matching chats.') : tr('В этом проекте ещё нет чатов.', 'No chats in this project yet.')}</p>`;
 }
 
-onLangChange(() => { if (document.getElementById('chat-history')?.hidden === false) renderHistoryList(); });
+onLangChange(() => {
+  updateAgentControls();
+  const historyOpen = document.getElementById('chat-history')?.hidden === false;
+  document.getElementById('chat-heading').textContent = historyOpen ? tr('История чатов', 'Chat history') : tr('AI-чат', 'AI chat');
+  if (historyOpen) renderHistoryList();
+});
 
 // ───────────────────────── sending ─────────────────────────
 
@@ -623,12 +767,15 @@ function filesBlock(files) {
 }
 
 function agentContext(files) {
-  const tab = state.currentTabs[state.activeTabIndex];
+  const right = state.splitView && state.focusedPane === 'right';
+  const tab = state.currentTabs[right ? state.rightTabIndex : state.activeTabIndex];
   const english = getLang() === 'en';
   let ctx = '';
-  if (state.attachContext && isEditorTab(tab) && tab.filePath) {
+  const root = workspace.replace(/\\/g, '/').replace(/\/+$/, '');
+  const current = tab?.filePath?.replace(/\\/g, '/');
+  if (state.attachContext && isEditorTab(tab) && current?.startsWith(root + '/')) {
     ctx += `\n\n${english ? '[FrogeeCodeIDE context] Open file:' : '[Контекст FrogeeCodeIDE] Открытый файл:'} ${tab.filePath}`;
-    const ed = dom.editor;
+    const ed = right ? document.getElementById('editor-right') : dom.editor;
     if (ed && ed.selectionEnd > ed.selectionStart) ctx += `\n${english ? 'Selected text:' : 'Выделенный фрагмент:'}\n\`\`\`\n${ed.value.slice(ed.selectionStart, ed.selectionEnd).slice(0, 6000)}\n\`\`\``;
   }
   const paths = (files || []).filter((f) => f.path).map((f) => f.path);
@@ -659,35 +806,30 @@ function setBusy(busy) {
   dom.stopBtn.style.display = busy ? 'flex' : 'none';
   dom.sendBtn.style.display = busy ? 'none' : 'flex';
   dom.sendBtn.disabled = busy;
+  dom.aiProviderSelect.disabled = busy;
+  dom.aiModelSelect.disabled = busy;
+  for (const id of ['chat-agent-model', 'chat-agent-access', 'clear-chat-btn', 'chat-history-btn']) document.getElementById(id).disabled = busy;
+  dom.stopBtn.disabled = false;
+}
+
+function resumePrompt(history) {
+  const prior = history.slice(0, -1);
+  if (!prior.length) return '';
+  return `Previous conversation (for context):\n${JSON.stringify(prior)}\n\nLatest user request:\n`;
 }
 
 function beginStream(index) {
   const el = dom.chatMessages.querySelector(`.message.ai[data-index="${index}"]`) || buildMessage(chat.messages[index], index);
   el.classList.add('streaming');
   if (!el.parentElement) dom.chatMessages.appendChild(el);
-  stream = { el, index, raw: '', thinking: '', userToggled: false, collapsed: false };
-  el.querySelector('.msg-think')?.addEventListener('toggle', () => { if (stream && !stream.programmatic) stream.userToggled = true; });
+  stream = { el, raw: '', thinking: '', activity: [], timeline: [] };
   return stream;
 }
 
 function paintStream() {
   renderFrame = 0;
   if (!stream) return;
-  const { el, raw, thinking } = stream;
-  const body = el.querySelector('.msg-body');
-  body.innerHTML = renderMd(raw);
-  enhanceCode(body);
-  if (thinking) {
-    const think = el.querySelector('.msg-think');
-    think.hidden = false;
-    think.querySelector('.think-body').textContent = thinking;
-    // Reasoning stays open while it is the only output, then folds away once the answer starts.
-    stream.programmatic = true;
-    if (!raw && !stream.userToggled) think.open = true;
-    else if (raw && !stream.collapsed && !stream.userToggled) { think.open = false; stream.collapsed = true; }
-    stream.programmatic = false;
-    think.querySelector('summary').textContent = raw ? 'Размышления' : 'Думает…';
-  }
+  paintReply(stream.el, { ...stream, answer: stream.raw }, true);
   scrollToBottom();
 }
 
@@ -703,7 +845,7 @@ async function runChat() {
   dom.chatMessages.querySelector('.chat-empty')?.remove();
   dom.chatMessages.appendChild(buildMessage(reply, index));
   state.chatStick = true;
-  setChatStatus('typing', 'Отвечает…');
+  setChatStatus('typing', tr('Отвечает…', 'Working…'));
   setBusy(true);
   beginStream(index);
   scrollToBottom(true);
@@ -711,18 +853,27 @@ async function runChat() {
   try {
     let response;
     const agent = AGENT_BY_PROVIDER[provider];
+    const cwd = workspace;
+    const access = chat.access || state.agentAccess;
+    const baseUrl = String(state.opencodeBaseUrl || 'http://127.0.0.1:4096').trim().replace(/\/$/, '');
+    const bin = state.agentPaths?.[agent] || '';
+    const sessionKey = agent ? JSON.stringify([provider, bin, access]) : JSON.stringify([provider, baseUrl]);
+    const sessionId = chat.session?.key === sessionKey ? chat.session.id : undefined;
+    const context = sessionId ? '' : resumePrompt(history);
+    chat.provider = provider;
+    if (!sessionId) delete chat.session;
     if (agent) {
-      if (!state.currentFolder) throw new Error('Откройте папку проекта - агент работает в её контексте');
+      if (!cwd) throw new Error(tr('Откройте папку проекта для запуска агента.', 'Open a project folder to run the agent.'));
+      chat.access = access;
       response = await window.electronAPI.agentSend({
-        agent, prompt: question.content + agentContext(question.files), cwd: state.currentFolder, model: state.currentAiModel || '',
-        mode: state.agentAccess, sessionId: state.agentSessions[agent] || undefined, bin: state.agentPaths?.[agent] || undefined,
+        agent, prompt: context + question.content + agentContext(question.files), cwd, model: state.currentAiModel || '',
+        mode: access, sessionId, bin,
       });
-      if (response?.sessionId) state.agentSessions[agent] = response.sessionId;
     } else if (provider === 'opencode') {
-      if (!state.currentFolder) throw new Error('Откройте папку проекта - OpenCode работает в контексте workspace');
+      if (!cwd) throw new Error(tr('Откройте папку проекта для запуска OpenCode.', 'Open a project folder to run OpenCode.'));
       if (!state.currentAiModel) throw new Error('Выберите модель OpenCode');
-      response = await window.electronAPI.sendMessage(question.content + filesBlock(question.files), state.currentAiModel, {
-        provider, directory: state.currentFolder, baseUrl: state.opencodeBaseUrl || document.getElementById('opencode-url')?.value || 'http://127.0.0.1:4096',
+      response = await window.electronAPI.sendMessage(context + question.content + filesBlock(question.files), state.currentAiModel, {
+        provider, directory: cwd, baseUrl, sessionId,
       });
     } else {
       if (!state.currentAiModel) await refreshModelSelectForProvider().catch(() => {}); // the list may still be loading
@@ -734,10 +885,16 @@ async function runChat() {
       });
     }
 
+    chat.model = state.currentAiModel;
+    if (response?.sessionId) chat.session = { key: sessionKey, id: response.sessionId };
+    reply.activity = (response?.activity || stream.activity)
+      .map((step) => ['running', 'pending'].includes(step.status) ? { ...step, status: 'stopped' } : step);
+    reply.timeline = (response?.timeline || stream.timeline || []).map((row) => ['running', 'pending'].includes(row.status) ? { ...row, status: row.type === 'tool' || response?.aborted ? 'stopped' : 'done' } : row);
     if (response && response.success === false) throw new Error(response.error || 'Ошибка AI');
-    reply.content = response?.answer || '';
-    reply.thinking = response?.thinking || '';
-    reply.stats = response?.stats ? `${response.stats.tokens} ${getLang() === 'en' ? 'tokens' : 'токенов'} · ${(response.stats.ms / 1000).toFixed(1)} ${getLang() === 'en' ? 's' : 'с'}` : '';
+    reply.content = response?.answer ?? stream.raw;
+    reply.thinking = response?.thinking ?? stream.thinking;
+    reply.stats = response?.aborted ? tr('Остановлено', 'Stopped') : response?.stats
+      ? `${response.stats.tokens} ${tr('токенов', 'tokens')} · ${(response.stats.ms / 1000).toFixed(1)} ${tr('с', 's')}` : '';
     reply.who = modelLabel();
     cancelAnimationFrame(renderFrame);
     renderFrame = 0;
@@ -745,9 +902,7 @@ async function runChat() {
       stream.el.classList.remove('streaming');
       stream.el.dataset.raw = reply.content;
       stream.el.dataset.thinking = reply.thinking;
-      fillAiMessage(stream.el, reply.content, reply.thinking, reply.stats);
-      const think = stream.el.querySelector('.msg-think');
-      if (think && reply.content && !stream.userToggled) think.open = false; // reasoning folds away once there is an answer
+      paintReply(stream.el, { ...reply, answer: reply.content });
       stream.el.querySelector('.msg-who').textContent = reply.who;
     }
   } catch (error) {
@@ -757,29 +912,34 @@ async function runChat() {
     if (provider === 'opencode' || /opencode/i.test(error.message || '')) errorMsg += '\n\nOpenCode: запустите `opencode serve` (кнопка в настройках AI), откройте папку проекта и выберите модель.';
     reply.content = stream?.raw || reply.content;
     reply.thinking = stream?.thinking || reply.thinking;
+    reply.activity ||= (stream?.activity || []).map((step) => ['running', 'pending'].includes(step.status) ? { ...step, status: 'stopped' } : step);
+    reply.timeline ||= (stream?.timeline || []).map((row) => ['running', 'pending'].includes(row.status) ? { ...row, status: 'stopped' } : row);
     reply.error = errorMsg;
-    reply.who = 'Ошибка';
+    reply.who = tr('Ошибка', 'Error');
     cancelAnimationFrame(renderFrame);
     renderFrame = 0;
     if (stream) {
       stream.el.classList.remove('streaming');
       stream.el.classList.add('is-error');
-      stream.el.querySelector('.msg-who').textContent = 'Ошибка';
-      fillAiMessage(stream.el, (reply.content ? reply.content + '\n\n' : '') + errorMsg, reply.thinking, '');
+      stream.el.querySelector('.msg-who').textContent = reply.who;
+      paintReply(stream.el, { ...reply, answer: reply.content });
     }
-    setChatStatus('error', 'Ошибка');
+    setChatStatus('error', tr('Ошибка', 'Error'));
   } finally {
     stream = null;
     setBusy(false);
     persistChat();
-    if (dom.chatStatus.classList.contains('typing')) setChatStatus('ready', 'Готов');
-    else setTimeout(() => setChatStatus('ready', 'Готов'), 2500);
+    const ready = () => setChatStatus('ready', tr('Готов', 'Ready'));
+    if (dom.chatStatus.classList.contains('typing')) ready();
+    else setTimeout(() => { if (!state.isTyping) ready(); }, 2500);
+    syncWorkspace();
   }
 }
 
 /** Add a user question (with the files waiting in the composer) and get the answer. */
 async function sendQuestion(text, files) {
   ensureChat();
+  chat.workspace = workspace;
   const message = { role: 'user', content: text, files: files && files.length ? files.map((f) => ({ name: f.name, path: f.path, content: f.content, truncated: f.truncated })) : undefined };
   chat.messages.push(message);
   dom.chatMessages.querySelector('.chat-empty')?.remove();
@@ -789,6 +949,7 @@ async function sendQuestion(text, files) {
 }
 
 export async function handleChatSubmit() {
+  syncWorkspace();
   const message = dom.userInput.value.trim();
   if (!message || state.isTyping) return;
   const files = state.contextFiles || [];
@@ -806,6 +967,7 @@ async function resendFrom(index, text) {
   const original = chat.messages[index];
   const files = original?.role === 'user' ? original.files : chat.messages[index - 1]?.files;
   chat.messages = chat.messages.slice(0, original?.role === 'user' ? index : index - 1);
+  delete chat.session;
   editingIndex = -1;
   renderChat();
   await sendQuestion(text, files);
@@ -837,7 +999,24 @@ function startEdit(index) {
 
 export function setupChatStreamListener() {
   setupChatResizer();
-  ensureChat();
+  updateAgentControls();
+  const modelField = document.getElementById('chat-agent-model');
+  modelField.addEventListener('change', () => {
+    state.currentAiModel = modelField.value.trim();
+    modelField.value = state.currentAiModel;
+    rememberModel();
+    saveAllConfig();
+  });
+  document.getElementById('chat-agent-access').addEventListener('change', (event) => {
+    ensureChat();
+    chat.access = event.target.value;
+    if (chat.messages.length) saveChats();
+  });
+  window.addEventListener('frogee:agent-access', updateAgentControls);
+  window.addEventListener('frogee:workspace', () => {
+    syncWorkspace();
+    updateAgentControls();
+  });
   dom.chatMessages?.addEventListener('scroll', () => {
     const nearBottom = dom.chatMessages.scrollHeight - dom.chatMessages.scrollTop - dom.chatMessages.clientHeight < 60;
     state.chatStick = nearBottom;
@@ -879,21 +1058,30 @@ export function setupChatStreamListener() {
     renderAttachments();
   });
   document.getElementById('chat-history-btn')?.addEventListener('click', () => showHistory(document.getElementById('chat-history').hidden));
+  document.getElementById('chat-history-filter')?.addEventListener('input', renderHistoryList);
   document.getElementById('chat-history')?.addEventListener('click', (e) => {
+    if (state.isTyping) return;
     const del = e.target.closest('[data-delete]');
     if (del) {
-      chats = chats.filter((x) => x.id !== del.dataset.delete);
-      if (chat && chat.id === del.dataset.delete) newChat();
-      saveChats();
+      if (chat?.id === del.dataset.delete) {
+        newChat();
+        resetComposer();
+      }
+      saveChats(del.dataset.delete);
       renderHistoryList();
       renderChat();
       return;
     }
     const open = e.target.closest('[data-open]');
-    if (open && !state.isTyping) {
-      chat = chats.find((x) => x.id === open.dataset.open) || chat;
+    if (open) {
+      const selected = chats.find((x) => x.id === open.dataset.open);
+      if (!selected) return;
+      if (selected.id !== chat?.id) resetComposer();
+      chat = selected;
+      restoreProvider();
       showHistory(false);
       renderChat();
+      dom.userInput?.focus();
     }
   });
   // Files dropped on the chat become context
@@ -914,11 +1102,16 @@ export function setupChatStreamListener() {
       if (!stream) return;
       stream.raw = data.fullMessage ?? stream.raw;
       if (typeof data.thinking === 'string') stream.thinking = data.thinking;
+      if (Array.isArray(data.activity)) stream.activity = data.activity;
+      if (Array.isArray(data.timeline)) stream.timeline = data.timeline;
       if (!renderFrame) renderFrame = requestAnimationFrame(paintStream);
     });
   }
 }
 
 export function stopChatResponse() {
-  window.electronAPI.abortRequest().catch(() => {});
+  if (!state.isTyping || dom.stopBtn.disabled) return;
+  dom.stopBtn.disabled = true;
+  setChatStatus('typing', tr('Останавливается…', 'Stopping…'));
+  window.electronAPI.abortRequest().catch(() => { dom.stopBtn.disabled = false; });
 }

@@ -100,27 +100,25 @@ function registerAiIpc() {
     return opencode.listModels(baseUrl || config.opencodeBaseUrl, directory || null);
   });
 
-  ipcMain.handle('opencode-send', async (event, payload = {}) => {
-    const config = await loadConfig().catch(() => ({}));
-    const baseUrl = payload.baseUrl || config.opencodeBaseUrl;
-    const directory = payload.directory || null;
-    const result = await opencode.sendMessage(baseUrl, directory, {
-      model: payload.model,
-      text: payload.message || payload.text,
-      sessionId: payload.sessionId || config.opencodeSessionId || null,
-      onChunk: (content, fullMessage) => {
-        try {
-          event.sender.send('stream-update', { content, fullMessage });
-        } catch {}
-      }
-    });
-    if (result.sessionId) {
-      try {
-        await saveConfig({ opencodeSessionId: result.sessionId });
-      } catch {}
+  async function sendOpenCode(event, { baseUrl, directory, model, text, sessionId }) {
+    const controller = new AbortController();
+    const untrack = track(controller, event.sender.id);
+    try {
+      const config = await loadConfig().catch(() => ({}));
+      return await opencode.sendMessage(baseUrl || config.opencodeBaseUrl, directory || null, {
+        model, text, sessionId, signal: controller.signal,
+        onChunk: (content, fullMessage, extra) => {
+          if (!event.sender.isDestroyed()) event.sender.send('stream-update', { content, fullMessage, ...(extra || {}) });
+        },
+      });
+    } finally {
+      untrack();
     }
-    return result;
-  });
+  }
+
+  ipcMain.handle('opencode-send', (event, payload = {}) => sendOpenCode(event, {
+    ...payload, text: payload.message || payload.text,
+  }));
 
   ipcMain.handle('send-message', async (event, message, model, options = false) => {
     try {
@@ -128,26 +126,10 @@ function registerAiIpc() {
       const opts = typeof options === 'object' && options ? options : { provider: options ? 'openrouter' : 'ollama' };
       const provider = opts.provider || (opts.useOpenRouter ? 'openrouter' : 'ollama');
 
-      if (provider === 'opencode') {
-        const config = await loadConfig().catch(() => ({}));
-        const result = await opencode.sendMessage(opts.baseUrl || config.opencodeBaseUrl, opts.directory || null, {
-          model,
-          text: message,
-          sessionId: opts.sessionId || config.opencodeSessionId || null,
-          onChunk: (content, fullMessage) => {
-            try {
-              event.sender.send('stream-update', { content, fullMessage });
-            } catch {}
-          }
-        });
-        if (result.sessionId) {
-          try { await saveConfig({ opencodeSessionId: result.sessionId }); } catch {}
-        }
-        return result;
-      }
-      const config = await loadConfig().catch(() => ({}));
+      if (provider === 'opencode') return await sendOpenCode(event, { ...opts, text: message, model });
+
       const controller = new AbortController();
-      const untrack = track(controller);
+      const untrack = track(controller, event.sender.id);
       let answer = '';
       let thinking = '';
       const push = (extra) => { try { event.sender.send('stream-update', { fullMessage: answer, thinking, ...extra }); } catch {} };
@@ -159,6 +141,7 @@ function registerAiIpc() {
         onThinking: (text) => { thinking += text; push({ thinkingDelta: text }); },
       };
       try {
+        const config = await loadConfig().catch(() => ({}));
         let result;
         if (provider === 'openrouter') {
           const key = getOpenRouterApiKey();

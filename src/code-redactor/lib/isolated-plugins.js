@@ -26,13 +26,15 @@ function pluginWorker(source) {
     },
     replace: (from, to, text) => { content = content.slice(0, from) + String(text) + content.slice(to); },
   });
+  function addAction(kind, { title, icon, run }) {
+    if (typeof run !== 'function' || actions.length >= 30) return;
+    info.push({ kind, title: String(title || 'Plugin').slice(0, 120), icon: String(icon || '').slice(0, 20) });
+    actions.push(run);
+  }
   const api = Object.freeze({
     version: 1, app: 'FrogeeCodeIDE',
-    addButton({ title, icon, run }) {
-      if (typeof run !== 'function' || actions.length >= 30) return;
-      info.push({ title: String(title || 'Plugin').slice(0, 120), icon: String(icon || '').slice(0, 20) });
-      actions.push(run);
-    },
+    addButton: (spec) => addAction('button', spec),
+    addCommand: (spec) => addAction('command', spec),
     notify(text) { if (notices.length < 10) notices.push(String(text).slice(0, 500)); },
     editor,
   });
@@ -127,6 +129,7 @@ function registerIsolatedPlugins() {
       session.pending = false;
       if (!Array.isArray(result.buttons)) throw new Error('Invalid plugin registration.');
       return result.buttons.slice(0, 30).map((spec) => ({
+        kind: spec?.kind === 'command' ? 'command' : 'button',
         title: typeof spec?.title === 'string' ? spec.title.slice(0, 120) : 'Plugin',
         icon: typeof spec?.icon === 'string' ? spec.icon.slice(0, 20) : '',
       }));

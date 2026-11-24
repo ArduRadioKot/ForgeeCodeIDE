@@ -90,7 +90,11 @@ export function setupAgents() {
   const access = document.getElementById('agent-access');
   if (access) {
     access.value = state.agentAccess;
-    access.addEventListener('change', () => { state.agentAccess = access.value; saveAllConfig(); });
+    access.addEventListener('change', () => {
+      state.agentAccess = access.value;
+      window.dispatchEvent(new Event('frogee:agent-access'));
+      saveAllConfig();
+    });
   }
   for (const agent of Object.keys(NAMES)) {
     const input = document.getElementById(`agent-path-${agent}`);
@@ -119,4 +123,5 @@ export function syncAgentSettings() {
     const input = document.getElementById(`agent-path-${agent}`);
     if (input) input.value = state.agentPaths?.[agent] || '';
   }
+  window.dispatchEvent(new Event('frogee:agent-access'));
 }

@@ -3,18 +3,28 @@
 
 /* ───────── main toolbar ───────── */
 .main-toolbar {
-  flex-shrink: 0; height: var(--bar-h); margin: calc(var(--gap) * -1) calc(var(--gap) * -1) 0;
-  padding: 0 6px 0 6px;
+  --mt-button-w: 32px;
+  flex-shrink: 0; height: var(--bar-h);
+  margin: calc(var(--gap) * -1) calc(var(--gap) * -1) 0;
+  padding: 0 calc(var(--gap) + (var(--stripe-w) * var(--ui-scale) - var(--mt-button-w)) / 2) 0 8px;
   display: flex; align-items: center; gap: 2px;
   -webkit-app-region: drag; user-select: none;
-  color: var(--text-color); font-size: 13px; zoom: var(--ui-scale);
+  color: var(--text-color); font-size: 13px;
 }
-.main-toolbar.mac { padding-left: 80px; }
+body.compact-ui .main-toolbar { --mt-button-w: 28px; }
+#app-shell.platform-mac { padding-top: 0; }
+#app-shell.platform-mac .main-toolbar {
+  height: var(--native-titlebar-height, 44px);
+  margin-top: 0;
+  padding-left: 84px;
+}
 .main-toolbar button { -webkit-app-region: no-drag; }
 .mt-group { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.mt-drag { flex: 1; align-self: stretch; min-width: 24px; }
+.mt-project-group, .mt-run-group { flex: 0 1 auto; }
+.mt-utility-group { flex: none; }
+.mt-drag { flex: 1; align-self: stretch; min-width: 16px; }
 .mt-widget {
-  height: 30px; min-width: 0; max-width: 260px; padding: 0 6px 0 8px;
+  height: 30px; min-width: 36px; max-width: min(245px, 24vw); padding: 0 6px 0 8px;
   display: inline-flex; align-items: center; gap: 7px;
   border-radius: var(--radius-md); color: var(--text-color); font-weight: 500;
 }
@@ -29,7 +39,7 @@
   background: linear-gradient(135deg, hsl(var(--hue, 190) 62% 52%), hsl(calc(var(--hue, 190) + 40) 58% 42%));
 }
 .mt-tool {
-  width: 32px; height: 30px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: var(--mt-button-w); height: 30px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--radius-md); color: var(--text-muted);
 }
 .mt-tool:hover, .mt-tool.active { color: var(--text-color); }
@@ -37,7 +47,7 @@
 .mt-run { color: #5fb865; }
 .mt-run:hover { color: #6fd075; }
 .mt-debug:hover, .mt-debug.active { color: #e5a14a; }
-.mt-sep { width: 1px; height: 16px; margin: 0 6px; background: var(--border-color); }
+.mt-sep { flex: none; width: 1px; height: 16px; margin: 0 6px; background: var(--border-color); }
 body.compact-ui .mt-widget, body.compact-ui .mt-tool { height: 24px; }
 
 /* ───────── popup menu ───────── */
@@ -71,7 +81,14 @@ body.compact-ui .mt-widget, body.compact-ui .mt-tool { height: 24px; }
   content: attr(data-badge); position: absolute; top: 3px; right: 2px; min-width: 14px; height: 14px; padding: 0 3px;
   border-radius: 7px; background: var(--warning-color); color: #1b1b1b; font-size: 9px; font-weight: 700; line-height: 14px; text-align: center;
 }
-body.zen .right-stripe, body.zen .main-toolbar .mt-group { visibility: hidden; }
+body.zen .right-stripe, body.zen .main-toolbar :is(.mt-group, .mt-sep) { visibility: hidden; }
+
+/* The frame is a step darker than the islands, and each island keeps a hairline so adjacent panels stay distinct. */
+#app-shell.ide-shell { background: color-mix(in srgb, var(--window-bg) 84%, #000); }
+body.light-theme #app-shell.ide-shell { background: color-mix(in srgb, var(--window-bg) 93%, #000); }
+.ide-shell :is(.activity-panel, .chat-panel, .terminal-panel, #right-tool, #bottom-tool, #editor-main.panel-bubble) {
+  border: 1px solid var(--border-color);
+}
 
 /* ───────── editor: one island, tabs inside it (no separate tab plate) ───────── */
 .ide-shell #editor-main.panel-bubble {
@@ -165,6 +182,9 @@ body.zen .right-stripe, body.zen .main-toolbar .mt-group { visibility: hidden; }
 .tool-row-action { flex-shrink: 0; height: 22px; padding: 0 8px; border-radius: var(--radius-sm); color: var(--link-color); font-size: 11.5px; opacity: 0; }
 .tool-row:hover .tool-row-action, .tool-row-action:focus-visible { opacity: 1; }
 .tool-row-action:hover { background: var(--accent-soft, var(--active-bg)); }
+.bookmark-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bookmark-remove { flex: none; opacity: .75; }
+.bookmark-remove:is(:hover, :focus-visible) { opacity: 1; }
 .todo-tag { flex-shrink: 0; min-width: 44px; padding: 0 5px; border-radius: var(--radius-xs); background: color-mix(in srgb, var(--accent-color) 16%, transparent); color: var(--link-color); font: 600 10px/16px var(--mono-font); text-align: center; }
 .todo-tag[data-tag="FIXME"], .todo-tag[data-tag="XXX"] { background: color-mix(in srgb, #e5534b 18%, transparent); color: #e5786f; }
 .todo-tag[data-tag="HACK"] { background: color-mix(in srgb, #e5a14a 18%, transparent); color: #e5a14a; }

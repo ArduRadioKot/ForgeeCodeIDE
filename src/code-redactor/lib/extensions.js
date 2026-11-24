@@ -11,6 +11,8 @@ const fsp = fs.promises;
 const path = require('path');
 const os = require('os');
 const zlib = require('zlib');
+const { readOpenIdeaPackage, packageFile, MAX_WASM } = require('./openidea-package');
+const { runOpenIdea, stopOpenIdea } = require('./openidea-host');
 
 const API = 'https://open-vsx.org/api';
 const ROOT = path.join(os.homedir(), 'Documents', 'FrogeeCodeIDE');
@@ -341,6 +343,7 @@ async function readMeta(dir) {
 
 /** Fill languages/grammars/commands/main from package.json for older installs. */
 async function enrichDeclarative(dir, meta) {
+  if (meta.openidea || meta.source === 'openidea') return meta;
   const needsDeclarative = !(Array.isArray(meta?.languages) && Array.isArray(meta?.grammars) && Array.isArray(meta?.commands));
   const needsMain = meta && meta.main === undefined && meta.hasCode;
   if (!meta || (!needsDeclarative && !needsMain && meta.main !== undefined)) {
@@ -419,7 +422,7 @@ async function listInstalled() {
   await fsp.mkdir(EXT_DIR, { recursive: true });
   const out = [];
   for (const ent of await fsp.readdir(EXT_DIR, { withFileTypes: true })) {
-    if (!ent.isDirectory()) continue;
+    if (!ent.isDirectory() || ent.name.startsWith('.')) continue;
     const dir = path.join(EXT_DIR, ent.name);
     let meta = await readMeta(dir);
     if (!meta) continue;
@@ -433,6 +436,7 @@ async function removeExtension(id) {
   if (!ID_RE.test(String(id))) throw new Error('Неизвестное расширение');
   const dir = path.join(EXT_DIR, id);
   const meta = await readMeta(dir);
+  stopOpenIdea(id);
   for (const file of meta?.themeFiles || []) {
     const full = insideDir(THEMES_DIR, file);
     if (full) await fsp.rm(full, { force: true });
@@ -481,7 +485,7 @@ async function finishInstall(dir, caps, desc) {
     const file = insideDir(dir, t.path);
     if (!file) continue;
     try {
-      const theme = convertTheme(await readTheme(file), { label: t.label || t.id || desc.displayName, uiTheme: t.uiTheme, author: String(desc.author || desc.namespace) });
+      const theme = t.content || convertTheme(await readTheme(file), { label: t.label || t.id || desc.displayName, uiTheme: t.uiTheme, author: String(desc.author || desc.namespace) });
       const fileName = `vsx-${slug(desc.id)}-${slug(t.label || t.id || path.basename(t.path, '.json'))}.json`;
       await fsp.writeFile(path.join(THEMES_DIR, fileName), JSON.stringify(theme, null, 2));
       themeFiles.push(fileName);
@@ -580,9 +584,10 @@ async function finishInstall(dir, caps, desc) {
     forFrogee: caps.forFrogee, hasCode: caps.hasCode,
     main: caps.main || '', browser: caps.browser || '',
     activationEvents: caps.activationEvents || [],
-    codeEnabled: !!(desc.codeEnabled && caps.main),
+    codeEnabled: !!(desc.codeEnabled && (caps.main || caps.openidea)),
     source: desc.source, installedAt: new Date().toISOString(),
   };
+  if (caps.openidea) meta.openidea = caps.openidea;
   await fsp.writeFile(path.join(dir, META), JSON.stringify(meta, null, 2));
   return { success: true, extension: meta, problems };
 }
@@ -661,18 +666,78 @@ function frogeeDesc(m, source, icon) {
   };
 }
 
-/** "Установить из папки": a folder with extension.json, from disk. */
+async function installOpenIdeaFolder(src, win) {
+  const { manifest, themes, runtime, files } = await readOpenIdeaPackage(src, parseJsonc);
+  const { id, name, version } = manifest;
+  if (runtime) {
+    const permissions = runtime.capabilities.join(', ') || '—';
+    const answer = await dialog.showMessageBox(win, {
+      type: 'question', buttons: ['Установить', 'Отмена'], defaultId: 0, cancelId: 1,
+      message: `Установить плагин OpenIDEA «${name}»?`,
+      detail: `Доступ к редактору по манифесту: ${permissions}.`,
+    });
+    if (answer.response !== 0) return { success: false, canceled: true };
+  }
+
+  const dir = path.join(EXT_DIR, id);
+  const old = await readMeta(dir);
+  if (old && old.source !== 'openidea') throw new Error('An extension with this ID is already installed: ' + id);
+  await fsp.mkdir(EXT_DIR, { recursive: true });
+  const stage = await fsp.mkdtemp(path.join(EXT_DIR, '.incoming-'));
+  const backup = stage + '-backup';
+  let movedOld = false;
+  try {
+    for (const rel of files) {
+      const from = await packageFile(src, rel, rel === runtime?.wasm ? MAX_WASM : undefined);
+      const to = insideDir(stage, rel);
+      if (!to) throw new Error('Invalid OpenIDEA package path: ' + rel);
+      await fsp.mkdir(path.dirname(to), { recursive: true });
+      await fsp.copyFile(from, to);
+    }
+    const caps = {
+      themes, plugins: [], snippets: [], commands: (runtime?.commands || []).map((c) => ({ command: c.id, title: c.title })),
+      forFrogee: false, hasCode: !!runtime, openidea: runtime,
+    };
+    const desc = {
+      id, name, displayName: name, namespace: id.split('.')[0], version, description: String(manifest.description || ''),
+      source: 'openidea', codeEnabled: !!runtime,
+    };
+    if (old) {
+      await fsp.rename(dir, backup);
+      movedOld = true;
+    }
+    const result = await finishInstall(stage, caps, desc);
+    await fsp.rename(stage, dir);
+    stopOpenIdea(id);
+    for (const file of old?.themeFiles || []) {
+      if (!result.extension.themeFiles.includes(file)) {
+        const full = insideDir(THEMES_DIR, file);
+        if (full) await fsp.rm(full, { force: true }).catch(() => {});
+      }
+    }
+    if (movedOld) await fsp.rm(backup, { recursive: true, force: true }).catch(() => {});
+    return result;
+  } catch (error) {
+    if (movedOld) await fsp.rename(backup, dir).catch(() => {});
+    throw error;
+  } finally {
+    await fsp.rm(stage, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+/** Install either an extension.json or an OpenIDEA plugin.toml directory. */
 async function installFromFolder(win) {
   const picked = await dialog.showOpenDialog(win, {
-    title: 'Папка расширения (с файлом extension.json)',
+    title: 'Папка расширения с extension.json или plugin.toml',
     buttonLabel: 'Установить',
     properties: ['openDirectory'],
   });
   if (picked.canceled || !picked.filePaths[0]) return { success: false, canceled: true };
   const src = picked.filePaths[0];
+  if (fs.existsSync(path.join(src, 'plugin.toml'))) return installOpenIdeaFolder(src, win);
   let raw;
   try { raw = parseJsonc(await fsp.readFile(path.join(src, 'extension.json'), 'utf8')); } catch (err) {
-    throw new Error(err.code === 'ENOENT' ? 'В папке нет extension.json. Выберите папку расширения FrogeeCodeIDE.' : `extension.json не читается: ${err.message}`);
+    throw new Error(err.code === 'ENOENT' ? 'В папке нет extension.json или plugin.toml.' : `extension.json не читается: ${err.message}`);
   }
   const { manifest, caps } = frogeeManifest(raw);
   const desc = frogeeDesc(manifest, 'folder');
@@ -802,7 +867,7 @@ async function loadContributions() {
     for (const g of ext.grammars || []) {
       grammars.push({ ...g, extension: ext.displayName, extensionId: ext.id });
     }
-    for (const c of ext.commands || []) {
+    for (const c of ext.openidea ? [] : (ext.commands || [])) {
       commands.push({ ...c, extension: ext.displayName, extensionId: ext.id });
     }
   }
@@ -814,9 +879,10 @@ async function setCodeEnabled(id, enabled) {
   const dir = path.join(EXT_DIR, id);
   const meta = await readMeta(dir);
   if (!meta) throw new Error('Расширение не установлено');
-  if (enabled && !meta.main) throw new Error('У расширения нет main — запускать нечего');
-  meta.codeEnabled = !!enabled && !!meta.main;
-  meta.hasCode = !!(meta.main || meta.browser);
+  if (enabled && !meta.main && !meta.openidea) throw new Error('У расширения нет точки входа');
+  meta.codeEnabled = !!enabled && !!(meta.main || meta.openidea);
+  meta.hasCode = !!(meta.main || meta.browser || meta.openidea);
+  if (!enabled && meta.openidea) stopOpenIdea(id);
   await fsp.writeFile(path.join(dir, META), JSON.stringify(meta, null, 2));
   return { success: true, extension: meta };
 }
@@ -832,6 +898,13 @@ function registerExtensionsIpc() {
     'extensions-frogee': () => frogeeCatalog(),
     'extensions-remove': async (e, id) => { await removeExtension(id); return { success: true }; },
     'extensions-set-code': (e, { id, enabled } = {}) => setCodeEnabled(id, enabled),
+    'openidea-plugin-run': async ({ sender }, { id, ...request } = {}) => {
+      if (!ID_RE.test(String(id))) throw new Error('Неизвестное расширение');
+      const dir = path.join(EXT_DIR, id);
+      const extension = await readMeta(dir);
+      if (!extension?.openidea || !extension.codeEnabled) throw new Error('Плагин OpenIDEA выключен');
+      return runOpenIdea(sender, extension, dir, request);
+    },
     'extensions-snippets': () => loadSnippets(),
     'extensions-contributions': () => loadContributions(),
     'extensions-open-folder': async () => { await fsp.mkdir(EXT_DIR, { recursive: true }); return shell.openPath(EXT_DIR); },

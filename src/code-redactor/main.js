@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, nativeTheme, Menu } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, nativeTheme, Menu, session } = require('electron');
 const path = require('path');
 const axios = require('axios');
 
@@ -17,6 +17,7 @@ const { registerVscodeHostIpc } = require('./lib/vscode-host');
 const { registerProjectFilesIpc } = require('./lib/project-files');
 const { registerLiveServerIpc, stopAllLiveServers } = require('./lib/liveserver');
 const { registerAgentsIpc, killAgents } = require('./lib/agents');
+const { abortAll } = require('./lib/abort');
 const { registerThemesIpc } = require('./lib/themes');
 const { registerOllamaIpc } = require('./lib/ollama');
 const { registerBionicIpc } = require('./lib/bionic');
@@ -26,6 +27,21 @@ const { registerGitignoreIpc } = require('./lib/gitignore');
 const { registerContextFilesIpc } = require('./lib/context-files');
 const { registerCompletionIpc } = require('./lib/completion');
 const { registerUpdaterIpc } = require('./lib/updater');
+const OPENIDEA_PARTITION = 'frogee-openidea-views';
+const OPENIDEA_VIEW_URL = /^data:text\/html;charset=utf-8;base64,[a-z0-9+/=]+$/i;
+let openIdeaViewSession;
+
+function pluginViewSession() {
+  if (!openIdeaViewSession) {
+    openIdeaViewSession = session.fromPartition(OPENIDEA_PARTITION);
+    openIdeaViewSession.setPermissionRequestHandler((_contents, _permission, done) => done(false));
+    openIdeaViewSession.setPermissionCheckHandler(() => false);
+    openIdeaViewSession.webRequest.onBeforeRequest((details, done) => {
+      done({ cancel: details.resourceType !== 'mainFrame' || !OPENIDEA_VIEW_URL.test(details.url) });
+    });
+  }
+  return openIdeaViewSession;
+}
 
 // `npm start` and the installed app share the name, so they would share one profile. A second process on the same profile
 // waits for the first one's storage lock: every start took ~4 s (the page blocks on its first localStorage read).
@@ -64,6 +80,7 @@ async function checkOllamaRunning() {
 // Glass works inside the app: lenses and frosted panels over the page.
 const nativeBlur = process.platform === 'darwin';
 const windowColor = () => (nativeTheme.shouldUseDarkColors ? '#17181a' : '#e8ebf1');
+const MAC_TITLEBAR_HEIGHT = 44;
 
 // The native blur follows the system appearance, so keep it in step with the app theme.
 ipcMain.on('set-native-theme', (event, theme) => {
@@ -164,11 +181,16 @@ function createWindow(secondary = false) {
     // A translucent native window: the page stays opaque until Liquid Glass makes its background transparent.
     // Without a system blur the window is a plain themed one (a transparent colour would show black or white).
     backgroundColor: nativeBlur ? '#00000000' : windowColor(),
-    // macOS: the toolbar is the title bar (IntelliJ new UI); the traffic lights sit on its left end.
-    ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden', trafficLightPosition: { x: 16, y: 14 } } : {}),
+    // Keep the native titlebar in window coordinates; the editor can scale independently.
+    ...(process.platform === 'darwin' ? {
+      titleBarStyle: 'hidden',
+      titleBarOverlay: { height: MAC_TITLEBAR_HEIGHT, color: '#00000000' },
+      trafficLightPosition: { x: 14, y: (MAC_TITLEBAR_HEIGHT - 12) / 2 },
+    } : {}),
     ...(nativeBlur ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
     webPreferences: {
-      additionalArguments: [`--frogee-native-blur=${nativeBlur ? 1 : 0}`, `--frogee-secondary=${secondary ? 1 : 0}`],
+      additionalArguments: [`--frogee-native-blur=${nativeBlur ? 1 : 0}`, `--frogee-secondary=${secondary ? 1 : 0}`,
+        `--frogee-titlebar-height=${nativeBlur ? MAC_TITLEBAR_HEIGHT : 0}`],
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
@@ -190,11 +212,25 @@ function createWindow(secondary = false) {
     webPreferences.contextIsolation = true;
     webPreferences.webSecurity = true;
     webPreferences.allowRunningInsecureContent = false;
+    if (params.partition === OPENIDEA_PARTITION) {
+      if (!OPENIDEA_VIEW_URL.test(params.src)) { event.preventDefault(); return; }
+      webPreferences.session = pluginViewSession();
+      webPreferences.sandbox = true;
+      webPreferences.webviewTag = false;
+      webPreferences.preload = path.join(__dirname, 'openidea-view-preload.js');
+      return;
+    }
     if (!/^(https?:|file:|about:blank)/i.test(params.src || 'about:blank')) event.preventDefault();
   });
 
   // Pages that try to open a window become a new browser tab inside the IDE.
   win.webContents.on('did-attach-webview', (event, contents) => {
+    if (contents.session === openIdeaViewSession) {
+      contents.on('will-navigate', (navigation) => navigation.preventDefault());
+      contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+      contents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp');
+      return;
+    }
     contents.setWindowOpenHandler(({ url }) => {
       if (/^https?:/i.test(url) && !win.isDestroyed()) {
         win.webContents.send('browser-new-tab', { url });
@@ -207,7 +243,11 @@ function createWindow(secondary = false) {
   Menu.setApplicationMenu(process.platform === 'darwin' ? buildMacMenu() : null);
   windows.add(win);
   win.on('close', () => killSessionsOf(win.webContents));
-  win.on('closed', () => windows.delete(win));
+  const requestOwner = win.webContents.id;
+  win.on('closed', () => {
+    abortAll(requestOwner);
+    windows.delete(win);
+  });
   win.loadFile('index.html');
   return win;
 }
@@ -236,7 +276,7 @@ function registerAllIpc() {
   registerVscodeHostIpc();
   registerProjectFilesIpc();
   registerLiveServerIpc(getMainWindow);
-  registerAgentsIpc(getMainWindow);
+  registerAgentsIpc();
   registerThemesIpc(getMainWindow);
   registerOllamaIpc();
   registerBionicIpc();

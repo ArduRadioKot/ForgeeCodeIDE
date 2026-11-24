@@ -44,7 +44,6 @@ export const state = {
   closedTabs: [],
   agentAccess: 'read',
   agentPaths: { claude: '', codex: '', opencode: '' },
-  agentSessions: {},
   live: null,
   lineNumbersEnabled: true,
   accentColor: '#21aabe',

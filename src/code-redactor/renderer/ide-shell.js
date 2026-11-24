@@ -12,7 +12,7 @@ import { getDom } from './dom.js';
 import { getLang, onLangChange } from './i18n.js';
 import { pathUtils, escapeHtml } from './utils.js';
 import { isEditorTab } from './tab-model.js';
-import { switchActivity, registerActivity, openFolder, openSearchFileAtLine } from './explorer.js';
+import { switchActivity, registerActivity, openFolder, openSearchFile, openSearchFileAtLine } from './explorer.js';
 import { toggleChat } from './chat.js';
 import { toggleTerminal, setTerminalVisible } from './terminal.js';
 import { openBrowserTab } from './browser.js';
@@ -22,6 +22,7 @@ import { problemItems } from './diagnostics.js';
 import { extractSymbols, openSearchEverywhere, openPicker, runCurrentFile, setupDoubleShift, registerPaletteCommands } from './palette.js';
 import { listConfigs, selectedConfig, selectConfig, openRunConfigDialog } from './run-configs.js';
 import { recentPaletteItems } from './nav-extras.js';
+import { bookmarkItems, toggleBookmark } from './bookmarks.js';
 import { workbenchPanel, workbenchTitle, setWorkbenchOpener } from './workbench.js';
 
 const dom = getDom();
@@ -40,7 +41,8 @@ const ICON = {
   mcp: '<path d="M9 3v4M15 3v4"/><rect x="6" y="7" width="12" height="6" rx="2"/><path d="M12 13v3a3 3 0 0 1-3 3H7"/>',
   run: '<path d="M7 4.5v15l12-7.5z"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
-  ai: '<path d="M12 3.5 13.8 9 19.5 10.5 13.8 12.3 12 18 10.2 12.3 4.5 10.5 10.2 9z"/><path d="M18.5 16.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  bookmarks: '<path d="M6 4h12v16l-6-4-6 4z"/>',
+  add: '<path d="M12 5v14M5 12h14"/>',
   branch: '<circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="8" r="2.2"/><path d="M6 8.2v7.6M18 10.2c0 3.5-4 4-9.8 5.6"/>',
   chevron: '<path d="m7 10 5 5 5-5"/>',
   close: '<path d="M6 6l12 12M18 6 6 18"/>',
@@ -142,9 +144,8 @@ function initials(name) {
 function buildToolbar() {
   toolbar = el('header', 'main-toolbar');
   toolbar.id = 'main-toolbar';
-  toolbar.classList.toggle('mac', isMac());
   toolbar.innerHTML = `
-    <div class="mt-group">
+    <div class="mt-group mt-project-group">
       <button type="button" class="mt-widget" id="mt-project" aria-haspopup="menu" aria-expanded="false">
         <span class="mt-avatar"></span><span class="mt-text"></span><span class="mt-chevron">${svg(ICON.chevron, 14)}</span>
       </button>
@@ -153,15 +154,16 @@ function buildToolbar() {
       </button>
     </div>
     <div class="mt-drag"></div>
-    <div class="mt-group">
+    <div class="mt-group mt-run-group">
       <button type="button" class="mt-widget" id="mt-run-config" aria-haspopup="menu" aria-expanded="false">
         <span class="mt-icon">${svg(ICON.file, 16)}</span><span class="mt-text"></span><span class="mt-chevron">${svg(ICON.chevron, 14)}</span>
       </button>
       <button type="button" class="mt-tool mt-run" id="mt-run">${svg(ICON.run, 18)}</button>
       <button type="button" class="mt-tool mt-debug" id="mt-debug">${svg(ICON.debug, 18)}</button>
-      <span class="mt-sep" aria-hidden="true"></span>
+    </div>
+    <span class="mt-sep" aria-hidden="true"></span>
+    <div class="mt-group mt-utility-group">
       <button type="button" class="mt-tool" id="mt-search">${svg(ICON.search, 18)}</button>
-      <button type="button" class="mt-tool" id="mt-ai">${svg(ICON.ai, 18)}</button>
     </div>`;
   const shell = document.getElementById('app-shell');
   shell.prepend(toolbar);
@@ -180,7 +182,6 @@ function buildToolbar() {
   toolbar.querySelector('#mt-run').addEventListener('click', () => runCurrentFile());
   toolbar.querySelector('#mt-debug').addEventListener('click', () => toggleBottom('debug'));
   toolbar.querySelector('#mt-search').addEventListener('click', () => openSearchEverywhere());
-  toolbar.querySelector('#mt-ai').addEventListener('click', () => toggleChat());
   paintToolbar();
 }
 
@@ -209,8 +210,6 @@ function paintToolbar() {
   setTitle(toolbar.querySelector('#mt-run'), cfg ? tr(`Run “${cfg.name}”`, `Запустить «${cfg.name}»`) : tr('Run current file', 'Запустить текущий файл'), 'F5');
   setTitle(toolbar.querySelector('#mt-debug'), tr('Debugger', 'Отладчик'));
   setTitle(toolbar.querySelector('#mt-search'), tr('Search everywhere', 'Искать везде'), tr('Double Shift', 'Двойной Shift'));
-  setTitle(toolbar.querySelector('#mt-ai'), tr('AI chat', 'AI-чат'));
-  toolbar.querySelector('#mt-ai').classList.toggle('active', !!state.chatVisible);
   toolbar.querySelector('#mt-debug').classList.toggle('active', layout.bottom === 'debug');
   const gear = document.getElementById('open-settings-btn');
   if (gear) setTitle(gear, tr('Settings', 'Настройки'), isMac() ? '⌘,' : 'Ctrl+,');
@@ -280,11 +279,12 @@ function runMenu() {
 // ───────────────────────── stripes ─────────────────────────
 
 const RIGHT_TOOLS = ['database', 'http', 'mcp'];
-const BOTTOM_TOOLS = ['problems', 'todo', 'debug'];
+const BOTTOM_TOOLS = ['problems', 'todo', 'bookmarks', 'debug'];
 const titles = {
   structure: () => tr('Structure', 'Структура'),
   problems: () => tr('Problems', 'Проблемы'),
   todo: () => 'TODO',
+  bookmarks: () => tr('Bookmarks', 'Закладки'),
   debug: () => tr('Debugger', 'Отладчик'),
   database: () => tr('Database', 'База данных'),
   http: () => tr('HTTP client', 'HTTP-клиент'),
@@ -416,9 +416,10 @@ function buildBottom() {
   bottomHost = el('section', 'tool-window tool-window-bottom panel-bubble');
   bottomHost.id = 'bottom-tool';
   bottomHost.hidden = true;
-  bottomHost.innerHTML = `<div class="tool-window-header"><div class="tool-window-tabs" role="tablist"></div><div class="tool-window-actions"><button type="button" class="activity-btn" data-tw-refresh>${svg(ICON.refresh, 14)}</button><button type="button" class="activity-btn" data-tw-close>${svg(ICON.close, 14)}</button></div></div><div class="tool-window-body"></div>`;
+  bottomHost.innerHTML = `<div class="tool-window-header"><div class="tool-window-tabs" role="tablist"></div><div class="tool-window-actions"><button type="button" class="activity-btn" data-tw-bookmark hidden>${svg(ICON.add, 14)}</button><button type="button" class="activity-btn" data-tw-refresh>${svg(ICON.refresh, 14)}</button><button type="button" class="activity-btn" data-tw-close>${svg(ICON.close, 14)}</button></div></div><div class="tool-window-body"></div>`;
   bottomHost.querySelector('[data-tw-close]').addEventListener('click', () => showBottom(null));
   bottomHost.querySelector('[data-tw-refresh]').addEventListener('click', () => renderBottom(true));
+  bottomHost.querySelector('[data-tw-bookmark]').addEventListener('click', () => toggleBookmark(true));
   bottomHost.querySelector('.tool-window-tabs').addEventListener('click', (e) => {
     const tab = e.target.closest('[data-tool]');
     if (tab) showBottom(tab.dataset.tool);
@@ -451,12 +452,41 @@ function renderBottom(force) {
   tabs.innerHTML = BOTTOM_TOOLS.map((t) => `<button type="button" role="tab" class="tool-window-tab${t === id ? ' active' : ''}" aria-selected="${t === id}" data-tool="${t}">${escapeHtml(titles[t]())}<span class="tool-window-count" data-count="${t}"></span></button>`).join('');
   bottomHost.querySelector('[data-tw-refresh]').title = tr('Refresh', 'Обновить');
   bottomHost.querySelector('[data-tw-close]').title = tr('Hide', 'Скрыть');
-  bottomHost.querySelector('[data-tw-refresh]').hidden = id === 'debug';
+  bottomHost.querySelector('[data-tw-refresh]').hidden = id === 'debug' || id === 'bookmarks';
+  const addBookmark = bottomHost.querySelector('[data-tw-bookmark]');
+  addBookmark.hidden = id !== 'bookmarks';
+  setTitle(addBookmark, tr('Bookmark current line', 'Добавить закладку на текущей строке'));
   const body = bottomHost.querySelector('.tool-window-body');
   if (id === 'debug') body.replaceChildren(workbenchPanel('dap'));
   if (id === 'problems') renderProblems(body);
   if (id === 'todo') renderTodo(body, force);
+  if (id === 'bookmarks') renderBookmarks(body);
   paintCounts();
+}
+
+function renderBookmarks(body) {
+  const items = bookmarkItems();
+  if (!items.length) {
+    body.replaceChildren(el('div', 'tool-empty', tr('Add a bookmark from a file with Cmd/Ctrl+F2.', 'Добавьте закладку в файле через Cmd/Ctrl+F2.')));
+    return;
+  }
+  const list = el('div', 'tool-list');
+  for (const item of items) {
+    const row = el('div', 'tool-row');
+    const open = el('button', 'tool-row-main');
+    open.type = 'button';
+    open.title = item.detail;
+    open.append(el('span', 'tool-row-label', escapeHtml(item.label)),
+      el('span', 'tool-row-detail bookmark-path', escapeHtml(pathUtils.dirname(item.detail))));
+    open.addEventListener('click', item.run);
+    const remove = el('button', 'activity-btn bookmark-remove', svg(ICON.close, 13));
+    remove.type = 'button';
+    setTitle(remove, tr('Remove bookmark', 'Удалить закладку'));
+    remove.addEventListener('click', item.remove);
+    row.append(open, remove);
+    list.append(row);
+  }
+  body.replaceChildren(list);
 }
 
 function paintCounts() {
@@ -625,15 +655,43 @@ function openTool(key, { preserveFocus } = {}) {
 // ───────────────────────── Recent files (Cmd/Ctrl+E) ─────────────────────────
 
 const recentFiles = [];
+const RECENT_FILES_KEY = 'frogee.recentFiles.v1';
+let lastRecentFile = null;
+
+function readRecentFiles() {
+  try {
+    const records = JSON.parse(localStorage.getItem(RECENT_FILES_KEY));
+    return Array.isArray(records) ? records : [];
+  } catch { return []; }
+}
+
 function trackRecent() {
-  const tab = state.currentTabs[state.activeTabIndex];
+  const tab = state.currentTabs[state.splitView && state.focusedPane === 'right' ? state.rightTabIndex : state.activeTabIndex];
   if (!tab || tab.kind === 'terminal') return;
-  const key = tab.filePath || tab.name;
+  const key = tab.filePath || tab.id;
   const i = recentFiles.indexOf(key);
-  if (i === 0) return;
-  if (i > 0) recentFiles.splice(i, 1);
-  recentFiles.unshift(key);
-  recentFiles.length = Math.min(recentFiles.length, 30);
+  if (i !== 0) {
+    if (i > 0) recentFiles.splice(i, 1);
+    recentFiles.unshift(key);
+    recentFiles.length = Math.min(recentFiles.length, 30);
+  }
+  if (!tab.filePath) return;
+  const folder = state.currentFolder || '';
+  if (folder && recentFileDetail(tab.filePath) === tab.filePath) return;
+  if (lastRecentFile?.path === tab.filePath && lastRecentFile.folder === folder) return;
+  lastRecentFile = { folder, path: tab.filePath };
+  const records = readRecentFiles();
+  if (records[0]?.path === tab.filePath && records[0]?.folder === folder) return;
+  const next = [lastRecentFile, ...records.filter((item) => item.folder !== folder || item.path !== tab.filePath)];
+  try { localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(next.slice(0, 100))); } catch { /* Storage full. */ }
+}
+
+function recentFileDetail(filePath) {
+  const root = state.currentFolder;
+  if (!root) return filePath;
+  const normalizedRoot = root.replace(/[\\/]+$/, '');
+  return filePath.startsWith(normalizedRoot + '/') || filePath.startsWith(normalizedRoot + '\\')
+    ? filePath.slice(normalizedRoot.length + 1) : filePath;
 }
 
 function openRecentFiles() {
@@ -648,12 +706,22 @@ function openRecentFiles() {
     ['database', titles.database(), () => showRight('database')],
     ['http', titles.http(), () => showRight('http')],
   ].map(([id, label, run]) => ({ kind: 'window', label, search: label, run }));
-  const tabs = recentFiles.map((key) => state.currentTabs.findIndex((t) => (t.filePath || t.name) === key)).filter((i) => i >= 0);
-  const rest = state.currentTabs.map((_, i) => i).filter((i) => !tabs.includes(i) && state.currentTabs[i].kind !== 'terminal');
-  const files = [...tabs.slice(1), ...tabs.slice(0, 1), ...rest].map((i) => {
-    const t = state.currentTabs[i];
-    const rel = t.filePath && state.currentFolder && t.filePath.startsWith(state.currentFolder) ? t.filePath.slice(state.currentFolder.length + 1) : (t.filePath || '');
-    return { kind: 'tab', label: t.name, detail: rel, search: `${t.name} ${rel}`, run: () => switchToTab(i) };
+  const openTabs = new Map(state.currentTabs.flatMap((tab, index) => tab.kind === 'terminal' ? [] : [[tab.filePath || tab.id, index]]));
+  const recentPaths = readRecentFiles().filter((item) => item.folder === (state.currentFolder || '')).map((item) => item.path);
+  const keys = [...new Set([...recentFiles.filter((key) => openTabs.has(key)), ...recentPaths, ...openTabs.keys()])];
+  const current = state.currentTabs[state.activeTabIndex];
+  const activeKey = current?.filePath || current?.id;
+  const files = [...keys.filter((key) => key !== activeKey), ...keys.filter((key) => key === activeKey)].map((key) => {
+    const tab = state.currentTabs[openTabs.get(key)];
+    const filePath = tab ? tab.filePath : key;
+    const label = tab?.name || pathUtils.basename(filePath);
+    const detail = filePath ? recentFileDetail(filePath) : '';
+    const run = () => {
+      const index = tab ? state.currentTabs.indexOf(tab) : -1;
+      if (index >= 0) switchToTab(index);
+      else if (filePath) openSearchFile(filePath);
+    };
+    return { kind: tab ? 'tab' : 'file', label, detail, search: `${label} ${detail}`, run };
   });
   openPicker(tr('Recent files and tool windows', 'Недавние файлы и окна инструментов'), [...files, ...windows],
     tr('Cmd/Ctrl+E · Enter opens', 'Cmd/Ctrl+E · Enter открывает'));
@@ -707,7 +775,8 @@ function dragResize(handle, axis, get, set, min, max) {
   let drag = null;
   handle.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
-    drag = { from: axis === 'x' ? e.clientX : e.clientY, size: get() };
+    const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-scale')) || 1;
+    drag = { from: axis === 'x' ? e.clientX : e.clientY, size: get(), scale };
     handle.setPointerCapture(e.pointerId);
     handle.classList.add('dragging');
     document.body.classList.add('resizing');
@@ -716,7 +785,7 @@ function dragResize(handle, axis, get, set, min, max) {
   handle.addEventListener('pointermove', (e) => {
     if (!drag) return;
     const pos = axis === 'x' ? e.clientX : e.clientY;
-    set(Math.max(min, Math.min(max(), drag.size + drag.from - pos)));
+    set(Math.max(min, Math.min(max() / drag.scale, drag.size + (drag.from - pos) / drag.scale)));
   });
   const end = () => {
     if (!drag) return;
@@ -746,15 +815,18 @@ function hookWelcome() {
   action.addEventListener('click', () => openToolDialog('project'));
   after.after(action);
 
-  const chatHead = document.querySelector('.chat-header-right');
-  if (chatHead && !chatHead.querySelector('.chat-mcp-btn')) {
-    const mcp = el('button', 'chat-header-btn chat-mcp-btn', svg(ICON.mcp, 16));
+}
+
+function hookChatTools() {
+  const before = document.querySelector('.composer-right');
+  if (before) {
+    const mcp = el('button', 'composer-chip chat-mcp-btn', svg(ICON.mcp, 13) + '<span>MCP</span>');
     mcp.type = 'button';
     const t = () => { mcp.title = titles.mcp(); mcp.setAttribute('aria-label', titles.mcp()); };
     t();
     onLangChange(t);
     mcp.addEventListener('click', () => showRight('mcp'));
-    chatHead.prepend(mcp);
+    before.before(mcp);
   }
 }
 
@@ -762,13 +834,19 @@ function hookWelcome() {
 
 export function setupIdeShell() {
   if (toolbar) return;
-  document.getElementById('app-shell')?.classList.add('ide-shell');
+  const shell = document.getElementById('app-shell');
+  shell?.classList.add('ide-shell');
+  if (isMac()) {
+    shell?.classList.add('platform-mac');
+    if (window.electronAPI.titlebarHeight > 0) shell?.style.setProperty('--native-titlebar-height', window.electronAPI.titlebarHeight + 'px');
+  }
   buildToolbar();
   buildStripes();
   buildRight();
   buildBottom();
   buildStatusBar();
   hookWelcome();
+  hookChatTools();
   applySizes();
   setWorkbenchOpener(openTool);
   setupDoubleShift();
@@ -807,6 +885,11 @@ export function setupIdeShell() {
   window.addEventListener('frogee:content', onContent);
   window.addEventListener('frogee:ext-diagnostics', onContent);
   window.addEventListener('frogee:activity', paintStripes);
+  for (const event of ['frogee:bookmarks', 'frogee:workspace']) {
+    window.addEventListener(event, () => {
+      if (layout.bottom === 'bookmarks') renderBookmarks(bottomHost.querySelector('.tool-window-body'));
+    });
+  }
   window.addEventListener('frogee:title', () => {
     onContent();
     refreshGit();

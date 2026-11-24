@@ -81,7 +81,7 @@ export const looseEn = {
   'Плотность тонировки': 'Tint density',
   'Поиск по проекту': 'Search project',
   'Показывать приветствие при запуске': 'Show welcome page on startup',
-  'Права агентов в чате': 'Chat agent permissions',
+  'Доступ агента в новом чате': 'Agent access for new chats',
   'Правка файлов проекта': 'Edit project files',
   'Провайдер по умолчанию': 'Default provider',
   'Провайдер подсказок': 'Suggestion provider',

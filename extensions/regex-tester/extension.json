@@ -1,0 +1,10 @@
+{
+  "publisher": "frogeesoft",
+  "name": "regex-tester",
+  "version": "1.0.0",
+  "displayName": "Regex Tester",
+  "description": "Проверяет регулярные выражения JavaScript, показывает группы и предпросмотр замены.",
+  "license": "MIT",
+  "keywords": ["regex", "search", "test"],
+  "plugins": ["plugin.js"]
+}

@@ -7,11 +7,13 @@
 const { ipcMain } = require('electron');
 const { spawn, execFile } = require('child_process');
 const fs = require('fs');
+const { createInterface } = require('readline');
 const net = require('net');
 const os = require('os');
 const path = require('path');
 const opencode = require('./opencode');
-const { abortAll } = require('./abort');
+const { track, abortAll } = require('./abort');
+const { agentOutput } = require('./agent-output');
 
 const AGENTS = {
   claude: { bin: 'claude', install: 'npm i -g @anthropic-ai/claude-code' },
@@ -69,95 +71,64 @@ function versionOf(bin) {
 
 // ───────── running headless agents ─────────
 
-const running = new Set();
 let serveProc = null;
 let serveBase = '';
 
-function abortAgents() {
-  for (const child of running) { try { child.kill('SIGTERM'); } catch {} }
-  running.clear();
-}
-
-function toolLine(block) {
-  const input = block.input || {};
-  const target = input.file_path || input.path || input.command || input.pattern || input.url || input.description || '';
-  return `\n\n> **${block.name}** ${target ? '`' + String(target).slice(0, 160).replace(/`/g, "'") + '`' : ''}\n\n`;
-}
-
-function runClaude({ bin, prompt, cwd, model, mode, sessionId }, emit) {
-  return new Promise((resolve) => {
+function agentArgs(agent, { model, mode, sessionId }) {
+  if (agent === 'claude') {
     const args = ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages',
       '--permission-mode', mode === 'edit' ? 'acceptEdits' : 'plan'];
     if (model) args.push('--model', model);
     if (sessionId) args.push('--resume', sessionId);
-    const child = spawn(bin, args, { cwd, env: agentEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
-    running.add(child);
-    child.stdin.end(prompt);
-
-    let full = '';
-    let session = sessionId || '';
-    let streamed = false;
-    let failure = '';
-    let buffer = '';
-    let stderr = '';
-    const push = (text) => { full += text; emit(text, full); };
-
-    const handleLine = (line) => {
-      let msg;
-      try { msg = JSON.parse(line); } catch { return; }
-      if (msg.session_id) session = msg.session_id;
-      if (msg.type === 'stream_event') {
-        const d = msg.event?.delta;
-        if (msg.event?.type === 'content_block_delta' && d?.type === 'text_delta' && d.text) { streamed = true; push(d.text); }
-      } else if (msg.type === 'assistant') {
-        for (const block of msg.message?.content || []) {
-          if (block.type === 'tool_use') push(toolLine(block));
-        }
-      } else if (msg.type === 'result') {
-        if (msg.is_error) failure = msg.result || 'Claude Code завершился с ошибкой';
-        else if (!streamed && msg.result) push(msg.result);
-      }
-    };
-
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => {
-      buffer += chunk;
-      let nl;
-      while ((nl = buffer.indexOf('\n')) >= 0) { handleLine(buffer.slice(0, nl)); buffer = buffer.slice(nl + 1); }
-    });
-    child.stderr.setEncoding('utf8');
-    child.stderr.on('data', (t) => { stderr += t; });
-    child.on('error', (err) => { running.delete(child); resolve({ success: false, error: err.message }); });
-    child.on('close', (code, signal) => {
-      running.delete(child);
-      if (buffer.trim()) handleLine(buffer);
-      if (signal === 'SIGTERM') resolve({ success: true, answer: full, sessionId: session, aborted: true });
-      else if (failure || (code !== 0 && !full)) resolve({ success: false, error: failure || stderr.trim().slice(-600) || `Claude Code завершился с кодом ${code}` });
-      else resolve({ success: true, answer: full, sessionId: session });
-    });
-  });
+    return args;
+  }
+  const args = ['exec', '--skip-git-repo-check', '-s', mode === 'edit' ? 'workspace-write' : 'read-only'];
+  if (sessionId) args.push('resume');
+  args.push('--json');
+  if (model) args.push('-m', model);
+  if (sessionId) args.push(sessionId);
+  return [...args, '-'];
 }
 
-function runCodex({ bin, prompt, cwd, model, mode }, emit) {
+function runAgent(agent, { bin, prompt, cwd, signal, ...settings }, emit) {
   return new Promise((resolve) => {
-    const args = ['exec', '--skip-git-repo-check', '-s', mode === 'edit' ? 'workspace-write' : 'read-only'];
-    if (model) args.push('-m', model);
-    args.push('-');
-    const child = spawn(bin, args, { cwd, env: agentEnv(), stdio: ['pipe', 'pipe', 'pipe'] });
-    running.add(child);
-    child.stdin.end(prompt);
-    let full = '';
+    const child = spawn(bin, agentArgs(agent, settings), {
+      cwd, env: agentEnv(), detached: !isWin, stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const output = agentOutput(agent, emit);
+    const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
+    lines.on('line', (line) => output.line(line));
     let stderr = '';
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (t) => { full += t; emit(t, full); });
+    let processError = '';
+    let killTimer;
+    const kill = (signalName) => {
+      if (!child.pid) return;
+      try {
+        if (isWin) child.kill(signalName);
+        else process.kill(-child.pid, signalName);
+      } catch { /* The process already exited. */ }
+    };
+    const cancel = () => {
+      kill('SIGTERM');
+      killTimer = setTimeout(() => kill('SIGKILL'), 1500);
+      killTimer.unref();
+    };
+    signal.addEventListener('abort', cancel, { once: true });
+    if (signal.aborted) cancel();
+
+    child.stdin.on('error', (err) => { if (err.code !== 'EPIPE') processError = err.message; });
+    child.stdin.end(prompt);
     child.stderr.setEncoding('utf8');
-    child.stderr.on('data', (t) => { stderr += t; });
-    child.on('error', (err) => { running.delete(child); resolve({ success: false, error: err.message }); });
-    child.on('close', (code, signal) => {
-      running.delete(child);
-      if (signal === 'SIGTERM') resolve({ success: true, answer: full, aborted: true });
-      else if (code !== 0 && !full.trim()) resolve({ success: false, error: stderr.trim().slice(-600) || `Codex завершился с кодом ${code}` });
-      else resolve({ success: true, answer: full.trim() });
+    child.stderr.on('data', (chunk) => { stderr = (stderr + chunk).slice(-3000); });
+    child.on('error', (err) => { processError = err.message; });
+    child.on('close', (code) => {
+      clearTimeout(killTimer);
+      signal.removeEventListener('abort', cancel);
+      const { error, ...result } = output.result(signal.aborted || code !== 0);
+      if (signal.aborted) resolve({ success: true, ...result, aborted: true });
+      else if (code !== 0 || error || processError) {
+        resolve({ success: false, ...result, error: error || processError || stderr.trim() || `${AGENTS[agent].bin} exited with code ${code}` });
+      } else resolve({ success: true, ...result });
     });
   });
 }
@@ -196,7 +167,7 @@ function stopServe() {
   if (serveProc) { try { serveProc.kill('SIGTERM'); } catch {} serveProc = null; }
 }
 
-function registerAgentsIpc(getMainWindow) {
+function registerAgentsIpc() {
   for (const ch of ['agents-detect', 'agent-send', 'agent-abort', 'abort-request', 'opencode-serve-start', 'opencode-serve-stop', 'opencode-serve-status']) {
     try { ipcMain.removeHandler(ch); } catch {}
   }
@@ -215,18 +186,32 @@ function registerAgentsIpc(getMainWindow) {
 
   ipcMain.handle('agent-send', async (event, payload = {}) => {
     const { agent, prompt, cwd, model, mode, sessionId, bin: custom } = payload;
-    if (!AGENTS[agent] || agent === 'opencode') return { success: false, error: 'Неизвестный агент' };
-    if (!prompt || !String(prompt).trim()) return { success: false, error: 'Пустой запрос' };
-    const bin = await resolveBin(agent, custom);
-    if (!bin) return { success: false, error: `${AGENTS[agent].bin} не найден. Установите: ${AGENTS[agent].install}` };
-    const emit = (content, fullMessage) => { try { event.sender.send('stream-update', { content, fullMessage }); } catch {} };
-    const workdir = cwd && fs.existsSync(cwd) ? cwd : os.homedir();
-    const args = { bin, prompt: String(prompt), cwd: workdir, model: model || '', mode, sessionId };
-    return agent === 'claude' ? runClaude(args, emit) : runCodex(args, emit);
+    if (!Object.hasOwn(AGENTS, agent) || agent === 'opencode') return { success: false, error: 'Неизвестный агент' };
+    if (typeof prompt !== 'string' || !prompt.trim()) return { success: false, error: 'Пустой запрос' };
+    if (sessionId && !/^[a-f0-9-]{36}$/i.test(sessionId)) return { success: false, error: 'Некорректный идентификатор сессии' };
+
+    const controller = new AbortController();
+    const untrack = track(controller, event.sender.id);
+    try {
+      const workdir = typeof cwd === 'string' && path.isAbsolute(cwd) ? await fs.promises.realpath(cwd).catch(() => null) : null;
+      if (!workdir || !(await fs.promises.stat(workdir)).isDirectory()) {
+        return { success: false, error: 'Откройте существующую папку проекта' };
+      }
+      const bin = await resolveBin(agent, custom);
+      if (controller.signal.aborted) return { success: true, aborted: true };
+      if (!bin) return { success: false, error: `${AGENTS[agent].bin} не найден. Установите: ${AGENTS[agent].install}` };
+      const emit = (data) => { if (!event.sender.isDestroyed()) event.sender.send('stream-update', data); };
+      return await runAgent(agent, { bin, prompt, cwd: workdir, model, mode, sessionId, signal: controller.signal }, emit);
+    } catch (err) {
+      return { success: false, error: err.message };
+    } finally {
+      untrack();
+    }
   });
 
-  ipcMain.handle('agent-abort', () => { abortAgents(); return { success: true }; });
-  ipcMain.handle('abort-request', () => { abortAgents(); abortAll(); return { success: true }; });
+  const cancelChat = (event) => { abortAll(event.sender.id); return { success: true }; };
+  ipcMain.handle('agent-abort', cancelChat);
+  ipcMain.handle('abort-request', cancelChat);
 
   ipcMain.handle('opencode-serve-start', async (e, { bin: custom, cwd, port } = {}) => {
     const bin = await resolveBin('opencode', custom);
@@ -238,7 +223,7 @@ function registerAgentsIpc(getMainWindow) {
 }
 
 function killAgents() {
-  abortAgents();
+  abortAll();
   stopServe();
 }
 

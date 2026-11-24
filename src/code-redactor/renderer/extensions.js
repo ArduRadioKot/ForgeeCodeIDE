@@ -13,6 +13,7 @@ import { loadContributions } from './ext-contrib.js';
 import { activateExtensionRuntime, deactivateExtensionRuntime } from './vscode-bridge.js';
 import { icon } from './glyphs.js';
 import { getLang, onLangChange, t } from './i18n.js';
+import { openOpenIdeaTool, syncOpenIdeaPlugins, setupOpenIdeaEditorMenu } from './openidea-plugins.js';
 
 const dom = getDom();
 let installed = [];
@@ -157,14 +158,16 @@ function row(ext, isInstalled) {
     if (ext.languages?.length) parts.push(`${en ? 'languages' : 'языки'}: ${ext.languages.length}`);
     if (ext.grammars?.length) parts.push(`${en ? 'grammars' : 'грамматики'}: ${ext.grammars.length}`);
     if (ext.commands?.length) parts.push(`${en ? 'commands' : 'команды'}: ${ext.commands.length}`);
-    if (ext.main) parts.push(ext.codeEnabled ? (en ? 'code: enabled' : 'код: включён') : (en ? 'code: off' : 'код: выкл.'));
+    if (ext.main || ext.openidea) parts.push(ext.codeEnabled ? (en ? 'code: enabled' : 'код: включён') : (en ? 'code: off' : 'код: выкл.'));
   }
   const newer = isInstalled ? frogeeList.find((x) => x.id === id && newerVersion(x.version, ext.version)) : null;
-  const codeBtn = isInstalled && ext.main
+  const codeBtn = isInstalled && (ext.main || ext.openidea)
     ? (ext.codeEnabled
       ? `<button type="button" class="ext-btn ghost" data-code-off="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${t('ext.stopCode')}</button>`
       : `<button type="button" class="ext-btn" data-code-on="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${t('ext.runCode')}</button>`)
     : '';
+  const views = isInstalled && ext.codeEnabled ? (ext.openidea?.views || []).map((view) =>
+    `<button type="button" class="ext-btn" data-openidea="${escapeHtml(id)}" data-view="${escapeHtml(view.id)}">${escapeHtml(view.title)}</button>`).join('') : '';
   const action = isInstalled
     ? `${newer ? `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${en ? 'Update to' : 'Обновить до'} ${escapeHtml(newer.version)}</button>` : ''}${ext.themeIds?.length ? `<button type="button" class="ext-btn" data-apply="${escapeHtml(id)}">${t('ext.applyTheme')}</button>` : ''}${codeBtn}<button type="button" class="ext-btn ghost" data-remove="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${t(working ? 'ext.removing' : 'ext.remove')}</button>`
     : `<button type="button" class="ext-btn" data-install="${escapeHtml(id)}" ${working ? 'disabled' : ''}>${t(working ? 'ext.installing' : 'ext.install')}</button>`;
@@ -172,9 +175,9 @@ function row(ext, isInstalled) {
     ${iconHtml(ext)}
     <div class="ext-main">
       <div class="ext-name">${escapeHtml(ext.displayName || ext.name)}${ext.version ? ` <span>${escapeHtml(ext.version)}</span>` : ''}</div>
-      <div class="ext-meta">${ext.forFrogee || ext.frogee ? `<em class="ext-badge">${en ? 'for' : 'для'} FrogeeCodeIDE</em>` : ''}${escapeHtml(ext.namespace || '')}${ext.downloads != null && !isInstalled ? ` · ${fmtDownloads(ext.downloads)} ${en ? 'downloads' : 'загрузок'}` : ''}${parts.length ? ` · ${escapeHtml(parts.join(', '))}` : ''}</div>
+      <div class="ext-meta">${ext.source === 'openidea' ? '<em class="ext-badge">OpenIDEA</em>' : ext.forFrogee || ext.frogee ? `<em class="ext-badge">${en ? 'for' : 'для'} FrogeeCodeIDE</em>` : ''}${escapeHtml(ext.namespace || '')}${ext.downloads != null && !isInstalled ? ` · ${fmtDownloads(ext.downloads)} ${en ? 'downloads' : 'загрузок'}` : ''}${parts.length ? ` · ${escapeHtml(parts.join(', '))}` : ''}</div>
       ${ext.description ? `<div class="ext-desc">${escapeHtml(ext.description)}</div>` : ''}
-      <div class="ext-actions">${action}</div>
+      <div class="ext-actions">${views}${action}</div>
     </div>
   </div>`;
 }
@@ -207,6 +210,7 @@ onLangChange(() => { if (panel()) render(); });
 async function refreshInstalled() {
   const res = await window.electronAPI.extensionsInstalled();
   installed = Array.isArray(res) ? res : [];
+  syncOpenIdeaPlugins(installed);
 }
 
 async function runSearch(query) {
@@ -248,10 +252,10 @@ async function afterInstall(res) {
     got.languages?.length ? `${en ? 'languages' : 'языков'}: ${got.languages.length}` : '',
     got.grammars?.length ? `${en ? 'grammars' : 'грамматик'}: ${got.grammars.length}` : '',
     got.commands?.length ? `${en ? 'commands' : 'команд'}: ${got.commands.length}` : '',
-    got.codeEnabled ? (en ? 'code running' : 'код запущен') : (got.main ? (en ? 'code off' : 'код выкл.') : ''),
+    got.codeEnabled ? (en ? 'code enabled' : 'код включён') : (got.main ? (en ? 'code off' : 'код выкл.') : ''),
   ].filter(Boolean).join(', ');
   toast(en ? `“${got.displayName}” installed (${what || 'data enabled'})` : `«${got.displayName}» установлено (${what || 'данные подключены'})`);
-  if (got.codeEnabled) {
+  if (got.main && got.codeEnabled) {
     const act = await activateExtensionRuntime(got.id);
     if (act?.ok === false) toast(`Код «${got.displayName}»: ${act.error}`);
   }
@@ -268,6 +272,12 @@ async function onClick(e) {
     return;
   }
   if (b.dataset.apply) { applyTheme(installed.find((x) => x.id === b.dataset.apply)); return; }
+  if (b.dataset.openidea) {
+    const plugin = installed.find((x) => x.id === b.dataset.openidea);
+    const view = plugin?.openidea?.views.find((item) => item.id === b.dataset.view);
+    if (view) await openOpenIdeaTool(plugin, view);
+    return;
+  }
   if (b.dataset.codeOn || b.dataset.codeOff) {
     const id = b.dataset.codeOn || b.dataset.codeOff;
     const on = !!b.dataset.codeOn;
@@ -275,6 +285,13 @@ async function onClick(e) {
     busy.add(id);
     render();
     try {
+      const ext = installed.find((x) => x.id === id);
+      if (ext?.openidea) {
+        const res = await window.electronAPI.extensionsSetCode({ id, enabled: on });
+        if (!res?.success) toast(res?.error || 'OpenIDEA');
+        else await refreshInstalled();
+        return;
+      }
       if (on) {
         const name = installed.find((x) => x.id === id)?.displayName || id;
         const ok = window.confirm(getLang() === 'en' ? `Run extension code “${name}”?\n\nIt runs with editor permissions through Frogee’s vscode.* API (not full VS Code).` : `Запустить код расширения «${name}»?\n\nКод выполняется с правами редактора через vscode.* API Frogee (не полный VS Code).`);
@@ -310,7 +327,7 @@ async function onClick(e) {
       const ext = installed.find((x) => x.id === id);
       const select = document.getElementById('theme-select');
       const usesTheme = ext?.themeIds?.some((t) => select?.value === `custom:${t}`);
-      if (ext?.codeEnabled) await deactivateExtensionRuntime(id);
+      if (ext?.main && ext.codeEnabled) await deactivateExtensionRuntime(id);
       await disablePluginFiles(ext?.pluginFiles || []);
       const res = await window.electronAPI.extensionsRemove(id);
       if (!res?.success) { toast(res?.error || (getLang() === 'en' ? 'Could not remove extension' : 'Не удалось удалить расширение')); return; }
@@ -327,7 +344,7 @@ async function onClick(e) {
 export async function showExtensionsPanel() {
   dom.activityPanel.innerHTML = `
     <div class="activity-header"><h3>Расширения</h3>
-      <div class="activity-buttons"><button class="activity-btn" id="ext-from-folder" title="Установить из папки (с extension.json)">${icon('folderAdd', 16)}</button><button class="activity-btn" id="ext-open-folder" title="Открыть папку установленных расширений">${icon('folderOpen', 16)}</button></div>
+      <div class="activity-buttons"><button class="activity-btn" id="ext-from-folder" title="${getLang() === 'en' ? 'Install from folder (extension.json or plugin.toml)' : 'Установить из папки (extension.json или plugin.toml)'}">${icon('folderAdd', 16)}</button><button class="activity-btn" id="ext-open-folder" title="Открыть папку установленных расширений">${icon('folderOpen', 16)}</button></div>
     </div>
     <div class="ext-panel" id="ext-panel">
       <input type="search" class="ext-search" id="ext-search" placeholder="Поиск в Open VSX: темы, сниппеты, языки…" spellcheck="false" value="${escapeHtml(lastQuery || '')}">
@@ -362,8 +379,10 @@ export async function showExtensionsPanel() {
 }
 
 export function setupExtensions() {
+  setupOpenIdeaEditorMenu();
   loadSnippets();
   loadContributions();
+  refreshInstalled().catch(() => {});
 }
 
 state.extensions = { snippetsFor, expandSnippet };

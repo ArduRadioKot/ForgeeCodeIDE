@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-10-30",
+  "updated": "2026-11-24",
   "extensions": [
     {
       "id": "frogeesoft.insert-date",
@@ -50,7 +50,7 @@
         "icon.png",
         "plugin.js"
       ],
-      "size": 31129,
+      "size": 34013,
       "plugins": 1,
       "themes": 0,
       "snippets": 0,
@@ -110,12 +110,64 @@
         "icon.png",
         "plugin.js"
       ],
-      "size": 249112,
+      "size": 249416,
       "plugins": 1,
       "themes": 0,
       "snippets": 0,
       "license": "GPL-2.0-only",
       "repository": "https://github.com/ArduRadioKot/ForgeeCodeIDE"
+    },
+    {
+      "id": "frogeesoft.regex-tester",
+      "publisher": "frogeesoft",
+      "name": "regex-tester",
+      "displayName": "Regex Tester",
+      "description": "Проверяет регулярные выражения JavaScript, показывает группы и предпросмотр замены.",
+      "version": "1.0.0",
+      "author": "frogeesoft",
+      "tags": [
+        "regex",
+        "search",
+        "test"
+      ],
+      "icon": "",
+      "path": "frogeesoft.regex-tester/",
+      "files": [
+        "extension.json",
+        "plugin.js"
+      ],
+      "size": 7756,
+      "plugins": 1,
+      "themes": 0,
+      "snippets": 0,
+      "license": "MIT",
+      "repository": ""
+    },
+    {
+      "id": "frogeesoft.string-tools",
+      "publisher": "frogeesoft",
+      "name": "string-tools",
+      "displayName": "String Tools",
+      "description": "Преобразует выделенный текст или слово под курсором через палитру команд.",
+      "version": "1.0.0",
+      "author": "frogeesoft",
+      "tags": [
+        "text",
+        "case",
+        "sort"
+      ],
+      "icon": "",
+      "path": "frogeesoft.string-tools/",
+      "files": [
+        "extension.json",
+        "plugin.js"
+      ],
+      "size": 3070,
+      "plugins": 1,
+      "themes": 0,
+      "snippets": 0,
+      "license": "MIT",
+      "repository": ""
     }
   ]
 }

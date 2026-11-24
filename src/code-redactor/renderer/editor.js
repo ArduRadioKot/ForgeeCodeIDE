@@ -137,6 +137,7 @@ export function handleEditorInput() {
       // the tab strip and title only change when the file first becomes modified, not on every key
       if (!tab.modified) {
         tab.modified = true;
+        tab.preview = false;
         updateTabsList();
         updateTabTitle();
       }

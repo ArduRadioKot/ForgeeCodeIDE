@@ -1,0 +1,10 @@
+{
+  "publisher": "frogeesoft",
+  "name": "string-tools",
+  "version": "1.0.0",
+  "displayName": "String Tools",
+  "description": "Преобразует выделенный текст или слово под курсором через палитру команд.",
+  "license": "MIT",
+  "keywords": ["text", "case", "sort"],
+  "plugins": ["plugin.js"]
+}

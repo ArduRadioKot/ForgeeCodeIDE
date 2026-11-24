@@ -224,6 +224,7 @@ export async function openFolder() {
 export async function loadFolderContents(folderPath) {
   try {
     state.currentFolder = folderPath;
+    window.dispatchEvent(new Event('frogee:workspace'));
     // Callers often set state.currentFolder before calling this, so "did it change" is judged by each terminal's own folder.
     onFolderChanged(folderPath).catch((err) => console.warn('[terminal] restart in folder:', err));
     invalidatePythonEnvCache();
@@ -434,7 +435,7 @@ export function renderExplorerChildren(container, items, depth) {
       if (state.contextMenu && state.contextMenu.contains(e.target)) return;
       e.stopPropagation();
       state.selectedExplorerPath = item.path;
-      handleFileItemClick(item);
+      handleFileItemClick(item, { preview: e.altKey });
     });
 
     row.addEventListener('contextmenu', (e) => {
@@ -501,7 +502,7 @@ export function getFileIcon(fileName) {
   };
   const label = labelMap[ext] || (ext ? ext.slice(0, 2).toUpperCase() : 'F');
   const safeExt = (ext || 'file').replace(/[^a-z0-9]/gi, '');
-  return `<span class="file-icon ext-${safeExt}" aria-hidden="true">${label}</span>`;
+  return `<span class="file-icon ext-${safeExt}" aria-hidden="true">${escapeHtml(label)}</span>`;
 }
 
 // Функции для создания файлов и папок в текущей папке
@@ -568,6 +569,10 @@ export function showContextMenu(event, item) {
   state.contextMenu.style.zIndex = '10000';
   
   const menuItems = [];
+  if (!item.isDirectory) menuItems.push({
+    label: getLang() === 'en' ? 'Preview file' : 'Предпросмотр файла',
+    action: () => handleFileItemClick(item, { preview: true }),
+  });
   if (!item.isDirectory && /\.html?$/i.test(item.path)) {
     menuItems.push({ label: 'Открыть в Live Server', action: () => liveOpenPath(item.path) });
   }
@@ -812,16 +817,20 @@ export async function deleteFileItem(item) {
   }
 }
 
-export async function handleFileItemClick(item) {
+let fileOpenRevision = 0;
+
+export async function handleFileItemClick(item, { preview = false } = {}) {
   if (item.isDirectory) {
     await toggleFolderExpand(item.path);
     return;
   }
+  const revision = ++fileOpenRevision;
   try {
     const result = await window.electronAPI.getFileContent(item.path);
+    if (preview && revision !== fileOpenRevision) return;
     if (result.success) {
       hideWelcomePage();
-      createTab(item.name, result.content, item.path);
+      createTab(item.name, result.content, item.path, { preview });
       updateFileExplorer();
     } else {
       refreshExplorerTree(); // the entry is stale (file removed outside the editor)

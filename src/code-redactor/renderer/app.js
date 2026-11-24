@@ -85,6 +85,7 @@ import { setupAiSettings } from './ai-settings.js';
 import { setupDiagnostics, goToProblem } from './diagnostics.js';
 import { setupMarkdown } from './markdown.js';
 import { setupNavExtras } from './nav-extras.js';
+import { setupBookmarks } from './bookmarks.js';
 import { setupIdeShell } from './ide-shell.js';
 import { setupAiReview } from './ai-review.js';
 import { setupAutocomplete } from './autocomplete.js';
@@ -374,6 +375,7 @@ export function setupEventListeners() {
   hydrateIcons();
   setupMarkdown();
   setupNavExtras();
+  setupBookmarks();
   setupAiReview();
   import('./run-configs.js').then((m) => m.refreshRunButton());
   setupAutocomplete();

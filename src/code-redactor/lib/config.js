@@ -51,7 +51,6 @@ function getDefaultConfig() {
     opencodeBaseUrl: 'http://127.0.0.1:4096',
     ollamaBaseUrl: 'http://127.0.0.1:11434',
     bionicBaseUrl: 'http://127.0.0.1:1234',
-    opencodeSessionId: '',
     glassOpacity: 0.78,
     glassBlur: 16,
     glassBlurEnabled: true,

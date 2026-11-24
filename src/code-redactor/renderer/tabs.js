@@ -38,6 +38,7 @@ import { icon } from './glyphs.js';
 import { getLang, uiText } from './i18n.js';
 
 const dom = getDom();
+const tr = (ru, en) => getLang() === 'en' ? en : ru;
 
 export { isTerminalTab, findTerminalTabIndex, isNotebookTab, isNotebookPath };
 
@@ -144,7 +145,7 @@ export function restoreTab(name, content = '', filePath = null, kind = 'file') {
   });
 }
 
-export function createTab(name, content = '', filePath = null) {
+export function createTab(name, content = '', filePath = null, { preview = false } = {}) {
   // Pictures get a viewer; binary files (wheels, archives, executables…) are never shown as text.
   if (filePath && isImagePath(filePath)) {
     const at = state.currentTabs.findIndex((t) => isImageTab(t) && t.filePath === filePath);
@@ -166,6 +167,7 @@ export function createTab(name, content = '', filePath = null) {
     );
     if (existing >= 0) {
       const tab = state.currentTabs[existing];
+      if (!preview) tab.preview = false;
       if (!tab.modified && tab.content !== content) {
         tab.content = content;
         tab.diskContent = content;
@@ -183,9 +185,18 @@ export function createTab(name, content = '', filePath = null) {
     state.terminalInEditor = false;
     applyTerminalPlacement();
   }
+  const keepSplit = state.splitView && state.focusedPane === 'right' && !isBrowserSplit() && !previewOwnsPane();
+  const temporary = !!(preview && filePath && !isNotebookPath(filePath) && !isNotebookPath(name));
+  if (temporary) {
+    const previous = state.currentTabs.findIndex((tab) => tab.preview && !tab.modified && !tab.pinned);
+    if (previous >= 0) closeTab(previous);
+  }
   restoreTab(name, content, filePath);
+  const index = state.currentTabs.length - 1;
+  state.currentTabs[index].preview = temporary;
   hideWelcomePage();
-  showTab(state.currentTabs.length - 1);
+  if (temporary && keepSplit) openTabInSplit(index);
+  else showTab(index);
   saveTabs();
 }
 
@@ -370,9 +381,22 @@ function showTabMenu(event, index) {
   if (!tab) return;
   state.contextMenu?.remove();
   const menu = document.createElement('div');
-  menu.className = 'context-menu';
+  menu.className = 'context-menu tab-menu';
+  const cleanup = new AbortController();
+  const close = () => {
+    cleanup.abort();
+    menu.remove();
+    if (state.contextMenu === menu) state.contextMenu = null;
+  };
   menu.style.cssText = `position:fixed;left:${event.clientX}px;top:${event.clientY}px;z-index:10000`;
   const items = [];
+  if (!isTerminalTab(tab)) {
+    items.push({
+      label: tab.pinned ? tr('Открепить вкладку', 'Unpin tab') : tr('Закрепить вкладку', 'Pin tab'),
+      run: () => toggleTabPin(tab),
+    });
+  }
+  if (tab.preview) items.push({ label: tr('Оставить вкладку', 'Keep tab open'), run: () => keepTab(tab) });
   if (isBrowserTab(tab)) {
     const isRight = state.splitView && state.rightTabIndex === index;
     items.push(isRight
@@ -386,29 +410,65 @@ function showTabMenu(event, index) {
     if (state.splitView) items.push({ label: 'Поменять панели местами', run: swapPanes });
   }
   if (tab.filePath) items.push({ label: 'Скопировать путь', run: () => navigator.clipboard?.writeText(tab.filePath) });
-  items.push({ label: 'Закрыть', run: () => closeTab(index) });
-  items.push({ label: 'Закрыть остальные', run: () => {
-    for (let i = state.currentTabs.length - 1; i >= 0; i--) if (i !== index && state.currentTabs[i].kind !== 'terminal') closeTab(i);
-  } });
+  items.push({ label: tr('Закрыть', 'Close'), run: () => closeTab(state.currentTabs.indexOf(tab)) });
+  items.push({ label: tr('Закрыть остальные', 'Close other tabs'), run: () => closeUnpinnedTabs((other) => other !== tab) });
+  if (state.currentTabs.slice(index + 1).some(canBulkClose)) {
+    items.push({ label: tr('Закрыть вкладки справа', 'Close tabs to the right'), run: () => closeUnpinnedTabs((_, at) => at > state.currentTabs.indexOf(tab)) });
+  }
+  items.push({ label: tr('Открытые вкладки…', 'Open tabs…'), run: showOpenTabs });
   items.forEach((item) => {
-    const el = document.createElement('div');
+    const el = document.createElement('button');
+    el.type = 'button';
     el.className = 'context-menu-item';
     el.textContent = item.label;
-    el.addEventListener('click', () => { menu.remove(); state.contextMenu = null; item.run(); });
+    el.addEventListener('click', () => { close(); item.run(); });
     menu.appendChild(el);
   });
   document.body.appendChild(menu);
+  menu.style.left = Math.max(4, Math.min(event.clientX, innerWidth - menu.offsetWidth - 4)) + 'px';
+  menu.style.top = Math.max(4, Math.min(event.clientY, innerHeight - menu.offsetHeight - 4)) + 'px';
   state.contextMenu = menu;
-  const close = (e) => {
-    if (!menu.contains(e.target)) { menu.remove(); state.contextMenu = null; document.removeEventListener('mousedown', close, true); }
-  };
-  setTimeout(() => document.addEventListener('mousedown', close, true), 0);
+  document.addEventListener('pointerdown', (e) => { if (!menu.contains(e.target)) close(); }, { signal: cleanup.signal });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    close();
+    dom.tabsList.querySelector('[data-index="' + index + '"] .tab-select')?.focus({ preventScroll: true });
+  }, { signal: cleanup.signal });
+  menu.querySelector('button')?.focus({ preventScroll: true });
+}
+
+function canBulkClose(tab) {
+  return !tab.pinned && !isTerminalTab(tab) && !isPreviewTab(tab);
+}
+
+export function closeUnpinnedTabs(predicate = () => true) {
+  const closing = state.currentTabs.filter((tab, index) => canBulkClose(tab) && predicate(tab, index));
+  for (const tab of closing.reverse()) closeTab(state.currentTabs.indexOf(tab));
+}
+
+function pinnedCount() { return state.currentTabs.filter((tab) => tab.pinned).length; }
+
+function keepTab(tab) {
+  if (!tab.preview) return;
+  tab.preview = false;
+  updateTabsList();
+}
+
+function toggleTabPin(tab) {
+  const from = state.currentTabs.indexOf(tab);
+  if (from < 0) return;
+  tab.pinned = !tab.pinned;
+  tab.preview = false;
+  const to = pinnedCount() - (tab.pinned ? 1 : 0);
+  if (from === to) updateTabsList();
+  else reorderTab(from, to);
 }
 
 export function setFocusedPane(side) {
   state.focusedPane = side === 'right' && state.splitView ? 'right' : 'left';
   document.getElementById('editor-container')?.classList.toggle('pane-focused', state.focusedPane === 'left');
   document.getElementById('editor-container-right')?.classList.toggle('pane-focused', state.focusedPane === 'right');
+  paintFocusedTab();
 }
 
 export function swapPanes() {
@@ -432,9 +492,9 @@ function updatePaneTitles() {
 }
 
 function rememberClosedTab(tab) {
-  if (!tab.filePath && !tab.content) return;
+  if (tab.preview || (!tab.filePath && !tab.content)) return;
   if (!state.closedTabs) state.closedTabs = [];
-  state.closedTabs.push({ name: tab.name, content: tab.content || '', filePath: tab.filePath || null, kind: tab.kind || 'file' });
+  state.closedTabs.push({ name: tab.name, content: tab.content || '', filePath: tab.filePath || null, kind: tab.kind || 'file', pinned: !!tab.pinned });
   if (state.closedTabs.length > 20) state.closedTabs.shift();
 }
 
@@ -442,7 +502,9 @@ export function reopenClosedTab() {
   const last = state.closedTabs?.pop();
   if (!last) return false;
   restoreTab(last.name, last.content, last.filePath, last.kind);
-  switchToTab(state.currentTabs.length - 1);
+  const tab = state.currentTabs.at(-1);
+  if (last.pinned) toggleTabPin(tab);
+  switchToTab(state.currentTabs.indexOf(tab));
   saveTabs();
   return true;
 }
@@ -535,6 +597,7 @@ export function closeTab(index) {
 
 export function updateTabsList() {
   if (!dom.tabsList) return;
+  const previous = document.activeElement?.closest('.tab-item')?.dataset.tabId;
   dom.tabsList.innerHTML = '';
 
   state.currentTabs.forEach((tab, index) => {
@@ -546,15 +609,21 @@ export function updateTabsList() {
     const isNb = isNotebookTab(tab);
     const isBr = isBrowserTab(tab);
     const isPlugin = isPluginTab(tab);
-    tabElement.className = `tab-item${isLeft ? ' active' : ''}${isRight ? ' split-active' : ''}${isTerm ? ' terminal-tab-item' : ''}${isNb ? ' notebook-tab-item' : ''}${isBr ? ' browser-tab-item' : ''}${isPlugin ? ' plugin-tab-item' : ''}${tab.missing ? ' tab-missing' : ''}`;
+    tabElement.className = `tab-item${isLeft ? ' active' : ''}${isRight ? ' split-active' : ''}${tab.pinned ? ' pinned' : ''}${tab.preview ? ' temporary' : ''}${isTerm ? ' terminal-tab-item' : ''}${isNb ? ' notebook-tab-item' : ''}${isBr ? ' browser-tab-item' : ''}${isPlugin ? ' plugin-tab-item' : ''}${tab.missing ? ' tab-missing' : ''}`;
     tabElement.draggable = true;
     tabElement.dataset.index = String(index);
+    tabElement.dataset.tabId = String(tab.id);
+    tabElement.setAttribute('role', 'presentation');
     tabElement.dataset.kind = isTerm ? 'terminal' : (isNb ? 'notebook' : (isBr ? 'browser' : (isPlugin ? 'plugin' : 'file')));
+    const closeLabel = tr('Закрыть', 'Close');
     tabElement.innerHTML = `
-      <span class="tab-name">${escapeHtml(tab.name)}${tab.modified ? ' *' : ''}</span>
-      ${isRight ? '<span class="tab-pane-badge" title="Справа">R</span>' : ''}
-      <button class="tab-close" type="button" data-close="${index}" title="Закрыть">${icon('close', 10)}</button>
+      <button type="button" role="tab" class="tab-name tab-select" tabindex="-1">${escapeHtml(tab.name)}${tab.modified ? ' *' : ''}</button>
+      ${isRight ? '<span class="tab-pane-badge" title="' + tr('Справа', 'Right pane') + '">R</span>' : ''}
+      <button class="tab-close" type="button" data-close="${index}" title="${closeLabel}" aria-label="${closeLabel}">${icon('close', 10)}</button>
     `;
+    const select = tabElement.querySelector('.tab-select');
+    select.title = [tab.filePath || tab.name, tab.pinned ? tr('Закреплена', 'Pinned') : null].filter(Boolean).join('\n');
+    select.addEventListener('keydown', (event) => handleTabKey(event, tabElement, index));
     tabElement.querySelector('.tab-close')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -571,6 +640,15 @@ export function updateTabsList() {
     tabElement.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       showTabMenu(e, index);
+    });
+    tabElement.addEventListener('dblclick', (event) => {
+      if (!event.target.closest('.tab-close')) keepTab(tab);
+    });
+    tabElement.addEventListener('auxclick', (event) => {
+      if (event.button === 1 && !tab.pinned) {
+        event.preventDefault();
+        closeTab(index);
+      }
     });
 
     tabElement.addEventListener('dragstart', (e) => {
@@ -613,9 +691,53 @@ export function updateTabsList() {
     dom.tabsList.appendChild(tabElement);
   });
 
+  const focused = paintFocusedTab();
+  if (previous) {
+    const node = Array.from(dom.tabsList.children).find((tab) => tab.dataset.tabId === previous);
+    node?.querySelector('.tab-select')?.focus({ preventScroll: true });
+  }
+  if (focused) focused.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   updatePaneTitles();
   setupSplitDropTargets();
   setupTabsBarDrop();
+}
+
+function paintFocusedTab() {
+  const index = state.splitView && state.focusedPane === 'right' ? state.rightTabIndex : state.activeTabIndex;
+  const focused = dom.tabsList.querySelector(`[data-index="${index}"]`) || dom.tabsList.firstElementChild;
+  for (const item of dom.tabsList.children) {
+    const active = item === focused;
+    const button = item.querySelector('.tab-select');
+    button.tabIndex = active ? 0 : -1;
+    button.setAttribute('aria-selected', String(active));
+  }
+  return focused;
+}
+
+function handleTabKey(event, target, index) {
+  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+    event.preventDefault();
+    const rect = target.getBoundingClientRect();
+    showTabMenu({ clientX: rect.left, clientY: rect.bottom }, index);
+    return;
+  }
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  event.preventDefault();
+  const list = Array.from(dom.tabsList.children);
+  const here = list.indexOf(target);
+  const next = { ArrowLeft: here - 1, ArrowRight: here + 1, Home: 0, End: list.length - 1 }[event.key];
+  const selected = list[(next + list.length) % list.length];
+  showTab(Number(selected.dataset.index));
+  dom.tabsList.querySelector(`[data-index="${selected.dataset.index}"] .tab-select`)?.focus();
+}
+
+export async function showOpenTabs() {
+  const { openPicker } = await import('./palette.js');
+  const items = state.currentTabs.filter((tab) => !isPreviewTab(tab)).map((tab) => ({
+    label: tab.name, detail: tab.filePath || '', search: [tab.name, tab.filePath].filter(Boolean).join(' '),
+    kind: 'tab', run: () => showTab(state.currentTabs.indexOf(tab)),
+  }));
+  openPicker(tr('Открытые вкладки…', 'Open tabs…'), items, tr('Enter — открыть вкладку', 'Enter to switch tabs'));
 }
 
 export function setupTabsBarDrop() {
@@ -661,6 +783,8 @@ export function setupTabsBarDrop() {
 
 export function reorderTab(from, to) {
   if (from < 0 || to < 0 || from >= state.currentTabs.length || to >= state.currentTabs.length) return;
+  const count = pinnedCount();
+  to = state.currentTabs[from].pinned ? Math.min(to, count - 1) : Math.max(to, count);
   if (from === to) return;
   const [item] = state.currentTabs.splice(from, 1);
   state.currentTabs.splice(to, 0, item);
@@ -1028,6 +1152,7 @@ export function setupSplitUi() {
       if (state.rightTabIndex >= 0 && state.currentTabs[state.rightTabIndex]) {
         state.currentTabs[state.rightTabIndex].content = editorRight.value;
         state.currentTabs[state.rightTabIndex].modified = true;
+        state.currentTabs[state.rightTabIndex].preview = false;
         // The same file can be open in both panes: keep them identical.
         if (state.rightTabIndex === state.activeTabIndex && dom.editor && dom.editor.value !== editorRight.value) {
           dom.editor.value = editorRight.value;

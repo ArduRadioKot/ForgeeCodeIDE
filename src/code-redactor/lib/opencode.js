@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { openCodeTurn, subscribeOpenCode } = require('./opencode-events');
 
 const DEFAULT_BASE = 'http://127.0.0.1:4096';
 
@@ -19,13 +20,14 @@ function withDirectory(url, directory) {
   }
 }
 
-async function request(base, method, path, { directory, data, timeout = 60000 } = {}) {
+async function request(base, method, path, { directory, data, signal, timeout = 60000 } = {}) {
   const url = withDirectory(`${normalizeBase(base)}${path}`, directory);
   const res = await axios({
     method,
     url,
     data,
     timeout,
+    signal,
     validateStatus: () => true,
     headers: { 'Content-Type': 'application/json' }
   });
@@ -125,112 +127,74 @@ function parseModelRef(model) {
   return { providerID: 'opencode', modelID: model };
 }
 
-async function ensureSession(baseUrl, directory, existingId) {
-  const base = normalizeBase(baseUrl);
-  if (existingId) {
-    try {
-      await request(base, 'get', `/session/${existingId}`, { directory, timeout: 5000 });
-      return existingId;
-    } catch {
-      // recreate
-    }
-  }
-  // classic create
+const unknownEndpoint = (err) => err.status === 404 || err.status === 405;
+
+async function createSession(base, directory, signal) {
+  const options = { directory, signal, data: { title: 'FrogeeCodeIDE Chat' }, timeout: 10000 };
+  let session;
   try {
-    const session = await request(base, 'post', '/session', {
-      directory,
-      data: { title: 'FrogeeCodeIDE Chat' },
-      timeout: 10000
-    });
-    return session?.id || session?.sessionID || session?.data?.id;
-  } catch {
-    // v2
-    const session = await request(base, 'post', '/api/session', {
-      directory,
-      data: { title: 'FrogeeCodeIDE Chat' },
-      timeout: 10000
-    });
-    return session?.id || session?.data?.id;
-  }
-}
-
-function extractTextFromMessagePayload(payload) {
-  if (!payload) return '';
-  if (typeof payload === 'string') return payload;
-  if (payload.answer) return payload.answer;
-  const parts = payload.parts || payload.data?.parts || [];
-  if (Array.isArray(parts)) {
-    return parts
-      .map((p) => {
-        if (!p) return '';
-        if (typeof p === 'string') return p;
-        if (p.type === 'text') return p.text || p.content || '';
-        if (p.text) return p.text;
-        return '';
-      })
-      .filter(Boolean)
-      .join('\n');
-  }
-  if (payload.info && payload.parts) return extractTextFromMessagePayload(payload);
-  return JSON.stringify(payload);
-}
-
-async function sendMessage(baseUrl, directory, { model, text, sessionId, onChunk }) {
-  const base = normalizeBase(baseUrl);
-  if (!text || !String(text).trim()) {
-    throw new Error('Пустое сообщение');
-  }
-  const modelRef = parseModelRef(model);
-  const sid = await ensureSession(base, directory, sessionId);
-  if (!sid) throw new Error('Не удалось создать OpenCode session');
-
-  // Prefer classic /session/:id/message (waits for response)
-  try {
-    const body = {
-      parts: [{ type: 'text', text: String(text) }],
-    };
-    if (modelRef) {
-      body.model = { providerID: modelRef.providerID, modelID: modelRef.modelID };
-    }
-    const data = await request(base, 'post', `/session/${sid}/message`, {
-      directory,
-      data: body,
-      timeout: 300000
-    });
-    const answer = extractTextFromMessagePayload(data) || 'OK';
-    if (onChunk) onChunk(answer, answer);
-    return { answer, sessionId: sid, think: '' };
+    session = await request(base, 'post', '/session', options);
   } catch (err) {
-    // v2 prompt API
+    if (!unknownEndpoint(err)) throw err;
+    session = await request(base, 'post', '/api/session', options);
+  }
+  return session?.id || session?.sessionID || session?.data?.id;
+}
+
+async function sendMessage(baseUrl, directory, { model, text, sessionId, onChunk, signal }) {
+  if (!text || !String(text).trim()) throw new Error('Пустое сообщение');
+  const base = normalizeBase(baseUrl);
+  const modelRef = parseModelRef(model);
+  let sid = sessionId;
+  let abortTurn;
+  let stopping;
+  let unsubscribe;
+  let turn;
+  try {
+    sid ||= await createSession(base, directory, signal);
+    if (!sid) throw new Error('Не удалось создать OpenCode session');
+    if (signal?.aborted) return { sessionId: sid, aborted: true };
+    const sessionPath = '/session/' + encodeURIComponent(sid);
+    turn = openCodeTurn(sid, onChunk);
+    if (onChunk) unsubscribe = await subscribeOpenCode(withDirectory(base + '/event', directory), turn, signal);
+    if (signal?.aborted) return { sessionId: sid, aborted: true };
+
+    abortTurn = () => {
+      stopping = request(base, 'post', sessionPath + '/abort', { directory, timeout: 3000 }).catch(() => {});
+    };
+    signal?.addEventListener('abort', abortTurn, { once: true });
+
+    const options = { directory, signal, timeout: 300000 };
+    const selected = modelRef ? { model: modelRef } : {};
+    let data;
     try {
-      const body = { text: String(text) };
-      if (modelRef) {
-        body.model = { providerID: modelRef.providerID, modelID: modelRef.modelID };
-      }
-      const data = await request(base, 'post', `/api/session/${sid}/prompt`, {
-        directory,
-        data: body,
-        timeout: 300000
+      data = await request(base, 'post', sessionPath + '/message', {
+        ...options, data: { parts: [{ type: 'text', text: String(text) }], ...selected },
       });
-      // may need to poll messages
-      let answer = extractTextFromMessagePayload(data);
-      if (!answer) {
-        try {
-          const msgs = await request(base, 'get', `/session/${sid}/message`, {
-            directory,
-            timeout: 15000
-          });
-          const arr = Array.isArray(msgs) ? msgs : (msgs?.data || []);
-          const last = arr[arr.length - 1];
-          answer = extractTextFromMessagePayload(last) || '';
-        } catch {}
+    } catch (err) {
+      if (!unknownEndpoint(err)) throw err;
+      data = await request(base, 'post', '/api' + sessionPath + '/prompt', {
+        ...options, data: { text: String(text), ...selected },
+      });
+      if (!data || (typeof data === 'object' && !data.parts && !data.data?.parts && !data.answer)) {
+        const messages = await request(base, 'get', sessionPath + '/message', { ...options, timeout: 15000 });
+        const list = Array.isArray(messages) ? messages : messages?.data || [];
+        data = list.at(-1);
       }
-      if (!answer) answer = 'Запрос отправлен в OpenCode (пустой ответ).';
-      if (onChunk) onChunk(answer, answer);
-      return { answer, sessionId: sid, think: '' };
-    } catch (err2) {
-      throw new Error(err2.message || err.message || 'OpenCode request failed');
     }
+    const { answer: textAnswer, thinking, activity, timeline } = turn.finish(data);
+    const answer = textAnswer || (timeline.length ? '' : 'Запрос отправлен в OpenCode (пустой ответ).');
+    const result = { answer, sessionId: sid, ...(thinking ? { thinking } : {}),
+      ...(activity.length ? { activity } : {}), ...(timeline.length ? { timeline } : {}) };
+    onChunk?.(answer, answer, result);
+    return result;
+  } catch (err) {
+    if (signal?.aborted) return { sessionId: sid, aborted: true, ...(onChunk && turn ? turn.finish(null, true) : {}) };
+    throw err;
+  } finally {
+    unsubscribe?.();
+    if (abortTurn) signal?.removeEventListener('abort', abortTurn);
+    if (stopping) await stopping;
   }
 }
 

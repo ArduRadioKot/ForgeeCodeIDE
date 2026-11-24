@@ -9,7 +9,7 @@ import { isNotebookTab, isBrowserTab, isEditorTab } from './tab-model.js';
 import { openBrowserTab, browserCommand } from './browser.js';
 import { toggleLive, liveOpenCurrent, stopLive } from './liveserver-ui.js';
 import { openAgentInTerminal, askAgent } from './agents.js';
-import { createNewFile, closeTab, setSplitView, openTabInSplit, updateTabsList, switchToTab, reopenClosedTab } from './tabs.js';
+import { createNewFile, closeTab, setSplitView, openTabInSplit, updateTabsList, switchToTab, reopenClosedTab, closeUnpinnedTabs, showOpenTabs } from './tabs.js';
 import {
   saveFile, saveFileAs, openFileOrFolder, createNewNotebook, openFindBar, openReplaceBar,
   applyWordWrap, applyLineNumbers, changeEditorZoom, applyEditorZoom, updateStatusBar,
@@ -26,6 +26,9 @@ import { configCommands } from './run-configs.js';
 import { toggleMarkdownPreview, formatTable, insertTable } from './markdown.js';
 import { extensionPaletteCommands } from './ext-contrib.js';
 import { runtimePaletteCommands } from './vscode-bridge.js';
+import { pluginPaletteCommands } from './plugins.js';
+import { openIdeaPaletteCommands } from './openidea-plugins.js';
+import { bookmarkItems, toggleBookmark } from './bookmarks.js';
 import { getLang, t, uiText } from './i18n.js';
 import { recentPaletteItems, jumpToBracket, expandSelection, shrinkSelection } from './nav-extras.js';
 
@@ -297,6 +300,8 @@ function buildCommands() {
     ...extra,
     ...fromExt,
     ...fromRuntime,
+    ...pluginPaletteCommands(),
+    ...openIdeaPaletteCommands(),
     cmd('Файл: новый файл', createNewFile, 'Ctrl+N'),
     cmd('Файл: новый ноутбук', createNewNotebook),
     cmd('Файл: открыть…', openFileOrFolder, 'Ctrl+O'),
@@ -349,10 +354,17 @@ function buildCommands() {
     cmd('Правка: сортировать строки', () => transformSelection((t) => t.split('\n').sort((a, b) => a.localeCompare(b)).join('\n'), true)),
     cmd('Правка: удалить повторяющиеся строки', () => transformSelection((t) => [...new Set(t.split('\n'))].join('\n'), true)),
     cmd('Файл: открыть закрытую вкладку', reopenClosedTab, 'Ctrl+Shift+T'),
+    { label: getLang() === 'en' ? 'Bookmarks: toggle at current line' : 'Закладки: добавить или снять на текущей строке', key: 'Cmd/Ctrl+F2', run: toggleBookmark },
+    { label: getLang() === 'en' ? 'Bookmarks: go to bookmark…' : 'Закладки: перейти…', run: () => {
+      const en = getLang() === 'en';
+      openPicker(en ? 'Find a bookmark…' : 'Найти закладку…', bookmarkItems(), en ? 'Enter opens the bookmarked line' : 'Enter открывает строку закладки');
+    } },
     cmd('Файл: закрыть остальные вкладки', () => {
       const keep = state.currentTabs[state.activeTabIndex];
-      for (let i = state.currentTabs.length - 1; i >= 0; i--) if (state.currentTabs[i] !== keep && state.currentTabs[i].kind !== 'terminal') closeTab(i);
+      closeUnpinnedTabs((tab) => tab !== keep);
     }),
+    { label: getLang() === 'en' ? 'Tabs: show open tabs…' : 'Вкладки: показать открытые…', run: showOpenTabs },
+    { label: getLang() === 'en' ? 'Tabs: close unpinned tabs' : 'Вкладки: закрыть незакреплённые', run: () => closeUnpinnedTabs() },
     cmd('Файл: закрыть все вкладки', () => { for (let i = state.currentTabs.length - 1; i >= 0; i--) closeTab(i); }),
     cmd('Файл: скопировать путь', () => copyPath(false)),
     cmd('Файл: скопировать относительный путь', () => copyPath(true)),
