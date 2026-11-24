@@ -79,4 +79,4 @@ macOS is fully tested. Windows and Linux builds are available, but window blur i
 
 ## License
 
-MIT, Frogeesoft.
+GPL2.0, Frogeesoft.
